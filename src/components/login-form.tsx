@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loginAction } from "./actions";
+import { loginAction } from "@/app/(auth)/login/actions";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -51,7 +51,7 @@ export default function LoginForm() {
             <Input
               id="email"
               type="email"
-              placeholder="usuario@demo.com"
+              placeholder="correo@ejemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -80,17 +80,6 @@ export default function LoginForm() {
             {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
         </form>
-
-        <div className="mt-6 space-y-2 text-xs text-muted-foreground">
-          <p className="font-semibold">Usuarios de prueba:</p>
-          <ul className="space-y-1">
-            <li>• universitas@demo.com / demo123</li>
-            <li>• ente@demo.com / demo123</li>
-            <li>• supervisor@demo.com / demo123</li>
-            <li>• visualizador@demo.com / demo123</li>
-            <li>• ejecutor@demo.com / demo123</li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );

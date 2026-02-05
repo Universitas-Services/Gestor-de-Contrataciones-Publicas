@@ -27,21 +27,29 @@ export async function proxy(request: NextRequest) {
   // Verificar y validar el token
   const session = await verifySession(sessionCookie.value);
 
+  console.log("🔐 Proxy - pathname:", pathname);
+  console.log("🔐 Proxy - session:", session);
+
   if (!session) {
     // Token inválido o expirado, redirigir a login
+    console.log("❌ Proxy - Sesión inválida, redirigiendo a login");
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete(SESSION_CONSTANTS.COOKIE_NAME);
     return response;
   }
 
+  console.log("🔐 Proxy - Verificando rol:", session.role, "para pathname:", pathname);
+
   // Verificar si la ruta está permitida para el rol del usuario
   if (!isRouteAllowedForRole(pathname, session.role)) {
     // Usuario intentando acceder a ruta de otro rol
     // Redirigir a su dashboard correspondiente
+    console.log("❌ Proxy - Rol no permitido, redirigiendo a dashboard");
     const dashboardRoute = getDashboardRoute(session.role);
     return NextResponse.redirect(new URL(dashboardRoute, request.url));
   }
 
+  console.log("✅ Proxy - Acceso permitido");
   // Todo OK, permitir acceso
   return NextResponse.next();
 }

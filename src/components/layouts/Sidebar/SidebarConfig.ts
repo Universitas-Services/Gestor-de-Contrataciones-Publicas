@@ -37,35 +37,6 @@ export interface SidebarConfig {
  * Configuraciones de sidebar por rol
  */
 export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
-  universitas: {
-    items: [
-      {
-        label: "Dashboard",
-        href: ROLE_ROUTES.universitas.dashboard,
-        icon: LayoutDashboard,
-      },
-      {
-        label: "Contratos",
-        href: ROLE_ROUTES.universitas.contratos,
-        icon: FileText,
-      },
-      {
-        label: "Proveedores",
-        href: ROLE_ROUTES.universitas.proveedores,
-        icon: Users,
-      },
-      {
-        label: "Reportes",
-        href: ROLE_ROUTES.universitas.reportes,
-        icon: BarChart3,
-      },
-      {
-        label: "Analytics",
-        href: ROLE_ROUTES.universitas.analytics,
-        icon: TrendingUp,
-      },
-    ],
-  },
   ente: {
     items: [
       {

@@ -5,13 +5,6 @@ import { ROLES, type UserRole } from "@/types/role.types";
  * Define qué acciones puede realizar cada rol
  */
 export const ROLE_PERMISSIONS = {
-  [ROLES.UNIVERSITAS]: {
-    canApproveContracts: true,
-    canViewAllData: true,
-    canGenerateReports: true,
-    canManageUsers: true,
-    canAccessExecutiveDashboard: true,
-  },
   [ROLES.ENTE]: {
     canCreateTenders: true,
     canEvaluateProposals: true,
@@ -53,8 +46,6 @@ export function hasPermission(
  * Descripción de cada rol
  */
 export const ROLE_DESCRIPTIONS = {
-  [ROLES.UNIVERSITAS]:
-    "Máxima autoridad con acceso completo a reportes ejecutivos y aprobación de contratos",
   [ROLES.ENTE]: "Gestiona licitaciones, evalúa propuestas y adjudica contratos",
   [ROLES.SUPERVISOR]: "Monitorea procesos, valida etapas y audita cumplimiento normativo",
   [ROLES.VISUALIZADOR]: "Consulta información pública y genera reportes de transparencia",

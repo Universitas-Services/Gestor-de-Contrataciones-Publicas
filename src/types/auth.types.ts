@@ -47,3 +47,30 @@ export const SESSION_CONSTANTS = {
   MAX_AGE: 60 * 60 * 4, // 4 horas
   SECRET_KEY: process.env.JWT_SECRET || "demo-secret-key-change-in-production",
 } as const;
+
+/**
+ * Respuesta del backend al hacer login
+ */
+export interface LoginResponse {
+  access_token: string;
+  user: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    email: string;
+    rol: string;
+    ente: string | null;
+  };
+}
+
+/**
+ * Estructura del token decodificado (JWT)
+ */
+export interface DecodedToken {
+  userId: string;
+  role: string;
+  email: string;
+  name: string;
+  iat?: number;
+  exp?: number;
+}

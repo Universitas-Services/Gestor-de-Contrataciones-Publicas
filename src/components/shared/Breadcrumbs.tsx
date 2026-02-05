@@ -17,7 +17,7 @@ import { Fragment } from "react";
  * Componente de Breadcrumbs que genera automáticamente la navegación desde la URL
  * Utiliza los componentes de shadcn/ui para mejor accesibilidad y estilo
  *
- * Ejemplo: /universitas/dashboard → Inicio > Universitas > Dashboard
+ * Ejemplo: /ente/dashboard → Inicio > Ente > Dashboard
  */
 export function Breadcrumbs() {
   const pathname = usePathname();

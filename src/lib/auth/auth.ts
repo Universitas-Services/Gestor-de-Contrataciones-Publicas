@@ -1,52 +1,48 @@
 import type { AuthResult, SessionPayload } from "@/types/auth.types";
 import type { LoginCredentials } from "@/types/user.types";
-import { validateCredentials } from "./mock-users";
 import { setSessionCookie, deleteSessionCookie, getSessionCookie } from "./session";
 import { getDashboardRoute } from "@/lib/constants/routes";
+import * as authService from "@/services/authService";
 
 /**
- * Autenticar usuario con credenciales
- * En producción, esto llamará al backend
+ * Autenticar usuario con el backend
+ * Esta función se ejecuta en el servidor (Server Action)
  */
 export async function login(credentials: LoginCredentials): Promise<AuthResult> {
   try {
-    // Validar credenciales con mock data
-    // TODO: Reemplazar con llamada al backend cuando esté disponible
-    const user = validateCredentials(credentials.email, credentials.password);
+    // Llamar al servicio de autenticación
+    const response = await authService.login(credentials.email, credentials.password);
 
-    if (!user) {
-      return {
-        success: false,
-        error: "Credenciales inválidas",
-      };
-    }
+    const { access_token, user } = response;
 
-    // Crear payload de sesión
+    // Normalizar el rol a minúsculas
+    const normalizedRole = user.rol.toLowerCase() as any;
+
+    // Crear el payload de sesión con la info del usuario
     const sessionPayload: SessionPayload = {
       userId: user.id,
-      role: user.role,
-      name: user.name,
       email: user.email,
+      role: normalizedRole,
+      name: `${user.nombre} ${user.apellido}`,
     };
 
-    // Guardar sesión en cookie
-    await setSessionCookie(sessionPayload);
+    // Guardar el token del backend Y el payload en cookie del servidor
+    await setSessionCookie(access_token, sessionPayload);
 
     return {
       success: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: `${user.nombre} ${user.apellido}`,
         email: user.email,
-        role: user.role,
-        avatar: user.avatar,
+        role: normalizedRole,
       },
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error en login:", error);
     return {
       success: false,
-      error: "Error al iniciar sesión",
+      error: error.message || "Error al iniciar sesión",
     };
   }
 }
