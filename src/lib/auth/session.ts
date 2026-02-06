@@ -23,9 +23,6 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
     // Decodificar el token del backend
     const decoded = jwtDecode<BackendJWT>(token);
 
-    // DEBUG: Ver estructura del token del backend
-    console.log("🔍 Token decodificado del backend:", JSON.stringify(decoded, null, 2));
-
     // Verificar si el token ha expirado
     if (decoded.exp) {
       const currentTime = Date.now() / 1000;
@@ -45,7 +42,6 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
       exp: decoded.exp,
     };
 
-    console.log("✅ Token válido, role:", session.role);
     return session;
   } catch (error) {
     console.error("❌ Error verificando sesión:", error);
