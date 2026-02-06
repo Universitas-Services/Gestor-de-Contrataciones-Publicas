@@ -45,7 +45,6 @@ export interface SessionConfig {
 export const SESSION_CONSTANTS = {
   COOKIE_NAME: "session",
   MAX_AGE: 60 * 60 * 4, // 4 horas
-  SECRET_KEY: process.env.JWT_SECRET || "demo-secret-key-change-in-production",
 } as const;
 
 /**
