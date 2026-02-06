@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { ROLES } from "@/types/role.types";
 
 export const metadata: Metadata = {
-  title: "Ente | Dashboard",
+  title: "Admin Ente | Dashboard",
   description: "Panel de Control - Entidad Contratante",
 };
 

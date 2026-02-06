@@ -44,8 +44,8 @@
   --radius-4xl: calc(var(--radius) + 16px);
 
   /* Role-specific colors */
-  --color-role-ente: var(--role-ente);
-  --color-role-ente-foreground: var(--role-ente-foreground);
+  --color-role-admin-ente: var(--role-admin-ente);
+  --color-role-admin-ente-foreground: var(--role-admin-ente-foreground);
   --color-role-supervisor: var(--role-supervisor);
   --color-role-supervisor-foreground: var(--role-supervisor-foreground);
   --color-role-visualizador: var(--role-visualizador);
@@ -90,8 +90,8 @@
 
   /* Role-specific colors in OKLCH */
   /* Ente - Azul oscuro (confianza, profesionalidad) */
-  --role-ente: oklch(0.53 0.15 250);
-  --role-ente-foreground: oklch(1 0 0);
+  --role-admin-ente: oklch(0.53 0.15 250);
+  --role-admin-ente-foreground: oklch(1 0 0);
 
   /* Supervisor - Verde (validación, seguridad) */
   --role-supervisor: oklch(0.6 0.15 145);

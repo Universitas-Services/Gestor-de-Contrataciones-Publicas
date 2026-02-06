@@ -4,7 +4,7 @@ import { ROLES, type UserRole } from "@/types/role.types";
  * Rutas base por rol
  */
 export const ROLE_BASE_ROUTES = {
-  [ROLES.ENTE]: "/ente",
+  [ROLES.ENTE]: "/admin_ente",
   [ROLES.SUPERVISOR]: "/supervisor",
   [ROLES.VISUALIZADOR]: "/visualizador",
   [ROLES.EJECUTOR]: "/ejecutor",
@@ -14,7 +14,7 @@ export const ROLE_BASE_ROUTES = {
  * Rutas de dashboard por rol
  */
 export const DASHBOARD_ROUTES = {
-  [ROLES.ENTE]: "/ente/dashboard",
+  [ROLES.ENTE]: "/admin_ente/dashboard",
   [ROLES.SUPERVISOR]: "/supervisor/dashboard",
   [ROLES.VISUALIZADOR]: "/visualizador/dashboard",
   [ROLES.EJECUTOR]: "/ejecutor/dashboard",
@@ -25,11 +25,11 @@ export const DASHBOARD_ROUTES = {
  */
 export const ROLE_ROUTES = {
   [ROLES.ENTE]: {
-    dashboard: "/ente/dashboard",
-    licitaciones: "/ente/licitaciones",
-    propuestas: "/ente/propuestas",
-    adjudicaciones: "/ente/adjudicaciones",
-    fiscalizacion: "/ente/fiscalizacion",
+    dashboard: "/admin_ente/dashboard",
+    licitaciones: "/admin_ente/licitaciones",
+    propuestas: "/admin_ente/propuestas",
+    adjudicaciones: "/admin_ente/adjudicaciones",
+    fiscalizacion: "/admin_ente/fiscalizacion",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",

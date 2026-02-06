@@ -50,7 +50,7 @@ export async function proxy(request: NextRequest) {
  * Helper para obtener ruta de dashboard
  */
 function getDashboardRoute(role: string): string {
-  return `/${role}/dashboard`;
+  return `/${role.toLowerCase()}/dashboard`;
 }
 
 /**
