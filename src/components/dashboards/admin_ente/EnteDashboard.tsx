@@ -6,7 +6,7 @@ export function EnteDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard Ente</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard Admin Ente</h2>
         <p className="text-muted-foreground">Gestión de Licitaciones y Contrataciones</p>
       </div>
 

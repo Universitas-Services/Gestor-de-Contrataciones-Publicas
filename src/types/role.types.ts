@@ -4,7 +4,7 @@
  */
 
 export const ROLES = {
-  ENTE: "ente",
+  ENTE: "admin_ente",
   SUPERVISOR: "supervisor",
   VISUALIZADOR: "visualizador",
   EJECUTOR: "ejecutor",
@@ -19,8 +19,8 @@ export type UserRole = (typeof ROLES)[keyof typeof ROLES];
  */
 export const ROLE_COLORS = {
   [ROLES.ENTE]: {
-    cssVar: "role-ente", // Referencia a --role-ente en globals.css
-    name: "Ente",
+    cssVar: "role-admin-ente", // Referencia a --role-admin-ente en globals.css
+    name: "Admin Ente",
     description: "Entidad Contratante",
   },
   [ROLES.SUPERVISOR]: {

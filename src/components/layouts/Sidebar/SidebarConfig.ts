@@ -37,31 +37,31 @@ export interface SidebarConfig {
  * Configuraciones de sidebar por rol
  */
 export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
-  ente: {
+  admin_ente: {
     items: [
       {
         label: "Dashboard",
-        href: ROLE_ROUTES.ente.dashboard,
+        href: ROLE_ROUTES.admin_ente.dashboard,
         icon: LayoutDashboard,
       },
       {
         label: "Licitaciones",
-        href: ROLE_ROUTES.ente.licitaciones,
+        href: ROLE_ROUTES.admin_ente.licitaciones,
         icon: Gavel,
       },
       {
         label: "Propuestas",
-        href: ROLE_ROUTES.ente.propuestas,
+        href: ROLE_ROUTES.admin_ente.propuestas,
         icon: FileCheck,
       },
       {
         label: "Adjudicaciones",
-        href: ROLE_ROUTES.ente.adjudicaciones,
+        href: ROLE_ROUTES.admin_ente.adjudicaciones,
         icon: Award,
       },
       {
         label: "Fiscalización",
-        href: ROLE_ROUTES.ente.fiscalizacion,
+        href: ROLE_ROUTES.admin_ente.fiscalizacion,
         icon: Shield,
       },
     ],
