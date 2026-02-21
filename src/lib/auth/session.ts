@@ -102,6 +102,16 @@ export async function getSessionCookie(): Promise<SessionPayload | null> {
 }
 
 /**
+ * Obtener el token JWT del backend directamente desde la cookie del servidor
+ * Usado por los services privados para adjuntar el Bearer token a sus peticiones
+ */
+export async function getServerToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_CONSTANTS.COOKIE_NAME);
+  return sessionCookie?.value ?? null;
+}
+
+/**
  * Eliminar sesión (logout)
  */
 export async function deleteSessionCookie(): Promise<void> {
@@ -114,5 +124,7 @@ export async function deleteSessionCookie(): Promise<void> {
  * Actualizar tiempo de expiración de la sesión con un nuevo token
  */
 export async function refreshSession(newToken: string): Promise<void> {
-  await setSessionCookie(newToken);
+  const payload = await verifySession(newToken);
+  if (!payload) throw new Error("Invalid session token");
+  await setSessionCookie(newToken, payload);
 }

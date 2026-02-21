@@ -1,30 +1,34 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import prettierConfig from "eslint-config-prettier";
-import prettierPlugin from "eslint-plugin-prettier";
+import prettier from "eslint-config-prettier/flat";
 
 const eslintConfig = defineConfig([
+  // Configuración base de Next.js con Core Web Vitals (warnings → errors para métricas web)
   ...nextVitals,
+
+  // Reglas de TypeScript de @typescript-eslint/recommended
   ...nextTs,
-  prettierConfig,
+
+  // Desactiva reglas de ESLint que conflictan con Prettier (DEBE ir después de las demás configs)
+  prettier,
+
+  // Reglas personalizadas del proyecto
   {
-    plugins: {
-      prettier: prettierPlugin,
-    },
     rules: {
-      "prettier/prettier": "warn",
+      // Variables no usadas solo como warning (para no bloquear desarrollo)
       "@typescript-eslint/no-unused-vars": "warn",
+
+      // 'any' solo como warning (para migración gradual a tipos estrictos)
       "@typescript-eslint/no-explicit-any": "warn",
-      // Desactiva la regla que prohíbe 'require()'
+
+      // Permite require() en archivos de configuración (.js)
       "@typescript-eslint/no-require-imports": "off",
-      // Desactiva la regla que prohíbe 'module.exports'
-      "@typescript-eslint/no-var-requires": "off",
     },
   },
-  // Override default ignores of eslint-config-next.
+
+  // Ignorar directorios que no deben ser analizados
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
