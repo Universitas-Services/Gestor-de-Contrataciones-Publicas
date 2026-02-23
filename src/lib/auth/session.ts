@@ -38,6 +38,7 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
       email: decoded.email,
       role: decoded.rol.toLowerCase() as any, // rol → role (normalizado a minúsculas)
       name: decoded.email.split("@")[0], // Temporal: extraer nombre del email
+      enteId: decoded.enteId ?? null,
       iat: decoded.iat,
       exp: decoded.exp,
     };

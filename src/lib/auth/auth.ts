@@ -1,8 +1,30 @@
-import type { AuthResult, SessionPayload } from "@/types/auth.types";
+"use server";
+
+import type { SessionPayload } from "@/types/auth.types";
 import type { LoginCredentials } from "@/types/user.types";
+import type { UserRole } from "@/types/role.types";
+import { ROLES } from "@/types/role.types";
 import { setSessionCookie, deleteSessionCookie, getSessionCookie } from "./session";
 import { getDashboardRoute } from "@/lib/constants/routes";
 import * as authService from "@/services/authService";
+
+/**
+ * Resultado de la autenticación (extendido con campos de primer login)
+ */
+export interface AuthResult {
+  success: boolean;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    avatar?: string;
+    enteId: string | null;
+    cambioPasswordDefault: boolean;
+    datosConfirmados: boolean;
+  };
+  error?: string;
+}
 
 /**
  * Autenticar usuario con el backend
@@ -16,7 +38,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResult> 
     const { access_token, user } = response;
 
     // Normalizar el rol a minúsculas
-    const normalizedRole = user.rol.toLowerCase() as any;
+    const normalizedRole = user.rol.toLowerCase() as UserRole;
 
     // Crear el payload de sesión con la info del usuario
     const sessionPayload: SessionPayload = {
@@ -24,6 +46,9 @@ export async function login(credentials: LoginCredentials): Promise<AuthResult> 
       email: user.email,
       role: normalizedRole,
       name: `${user.nombre} ${user.apellido}`,
+      enteId: user.ente?.id ?? null,
+      cambioPasswordDefault: user.cambioPasswordDefault,
+      datosConfirmados: user.ente?.datosConfirmados ?? false,
     };
 
     // Guardar el token del backend Y el payload en cookie del servidor
@@ -36,6 +61,9 @@ export async function login(credentials: LoginCredentials): Promise<AuthResult> 
         name: `${user.nombre} ${user.apellido}`,
         email: user.email,
         role: normalizedRole,
+        enteId: user.ente?.id ?? null,
+        cambioPasswordDefault: user.cambioPasswordDefault,
+        datosConfirmados: user.ente?.datosConfirmados ?? false,
       },
     };
   } catch (error: any) {
@@ -80,4 +108,49 @@ export async function getRedirectRoute(): Promise<string | null> {
   }
 
   return getDashboardRoute(session.role);
+}
+
+/**
+ * Server Action para el formulario de login.
+ * Autentica al usuario y determina la URL de redirección según el rol y estado del primer login.
+ */
+interface LoginActionResult {
+  success: boolean;
+  error?: string;
+  redirectUrl?: string;
+}
+
+export async function loginAction(credentials: LoginCredentials): Promise<LoginActionResult> {
+  const result = await login(credentials);
+
+  if (result.success && result.user) {
+    const { role, cambioPasswordDefault, datosConfirmados } = result.user;
+
+    // Lógica de redirección especial para Admin_Ente (flujo de primer login)
+    if (role === ROLES.ENTE) {
+      if (!cambioPasswordDefault) {
+        return {
+          success: true,
+          redirectUrl: "/admin_ente/cambiar-contrasena",
+        };
+      }
+
+      if (!datosConfirmados) {
+        return {
+          success: true,
+          redirectUrl: "/admin_ente/completar-ente",
+        };
+      }
+    }
+
+    return {
+      success: true,
+      redirectUrl: getDashboardRoute(result.user.role),
+    };
+  }
+
+  return {
+    success: false,
+    error: result.error || "Error al iniciar sesión",
+  };
 }
