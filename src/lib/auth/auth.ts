@@ -1,6 +1,9 @@
+"use server";
+
 import type { SessionPayload } from "@/types/auth.types";
 import type { LoginCredentials } from "@/types/user.types";
 import type { UserRole } from "@/types/role.types";
+import { ROLES } from "@/types/role.types";
 import { setSessionCookie, deleteSessionCookie, getSessionCookie } from "./session";
 import { getDashboardRoute } from "@/lib/constants/routes";
 import * as authService from "@/services/authService";
@@ -105,4 +108,49 @@ export async function getRedirectRoute(): Promise<string | null> {
   }
 
   return getDashboardRoute(session.role);
+}
+
+/**
+ * Server Action para el formulario de login.
+ * Autentica al usuario y determina la URL de redirección según el rol y estado del primer login.
+ */
+interface LoginActionResult {
+  success: boolean;
+  error?: string;
+  redirectUrl?: string;
+}
+
+export async function loginAction(credentials: LoginCredentials): Promise<LoginActionResult> {
+  const result = await login(credentials);
+
+  if (result.success && result.user) {
+    const { role, cambioPasswordDefault, datosConfirmados } = result.user;
+
+    // Lógica de redirección especial para Admin_Ente (flujo de primer login)
+    if (role === ROLES.ENTE) {
+      if (!cambioPasswordDefault) {
+        return {
+          success: true,
+          redirectUrl: "/admin_ente/cambiar-contrasena",
+        };
+      }
+
+      if (!datosConfirmados) {
+        return {
+          success: true,
+          redirectUrl: "/admin_ente/completar-ente",
+        };
+      }
+    }
+
+    return {
+      success: true,
+      redirectUrl: getDashboardRoute(result.user.role),
+    };
+  }
+
+  return {
+    success: false,
+    error: result.error || "Error al iniciar sesión",
+  };
 }

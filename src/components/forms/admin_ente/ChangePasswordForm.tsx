@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Eye, EyeOff, Lock } from "lucide-react";
-import { cambiarContrasena } from "@/services/changePasswordService";
+import { cambiarContrasena } from "@/services/authService";
 import {
   Form,
   FormControl,
