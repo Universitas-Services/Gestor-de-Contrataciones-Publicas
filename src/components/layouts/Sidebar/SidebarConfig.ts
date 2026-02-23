@@ -3,10 +3,6 @@ import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
-  FileText,
-  Users,
-  BarChart3,
-  TrendingUp,
   Gavel,
   FileCheck,
   Award,
@@ -21,6 +17,7 @@ import {
   Search,
   Download,
   Globe,
+  Settings,
 } from "lucide-react";
 
 export interface SidebarItem {
@@ -63,6 +60,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Fiscalización",
         href: ROLE_ROUTES.admin_ente.fiscalizacion,
         icon: Shield,
+      },
+      {
+        label: "Configuración",
+        href: ROLE_ROUTES.admin_ente.configuracion,
+        icon: Settings,
       },
     ],
   },
