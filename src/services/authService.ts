@@ -1,29 +1,13 @@
 import { axiosPublic } from "@/lib/axios";
 import { isAxiosError } from "axios";
+import type { LoginResponse } from "@/types/auth.types";
 
 /**
  * Servicio de autenticación con el backend
  * Usa axiosPublic para endpoints públicos (no requieren token)
  */
 
-// --- Tipos ---
-
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  user: {
-    id: string;
-    nombre: string;
-    apellido: string;
-    email: string;
-    rol: string;
-    ente: string | null;
-  };
-}
+export type { LoginResponse };
 
 // --- Endpoints de Autenticación ---
 

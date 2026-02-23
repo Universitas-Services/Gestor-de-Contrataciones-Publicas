@@ -34,6 +34,8 @@ export const ROLE_ROUTES = {
     maximaAutoridad: "/admin_ente/configuracion/maxima-autoridad",
     unidadUsuaria: "/admin_ente/configuracion/unidad-usuaria",
     unidadContratante: "/admin_ente/configuracion/unidad-contratante",
+    cambiarContrasena: "/admin_ente/cambiar-contrasena",
+    completarEnte: "/admin_ente/completar-ente",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",

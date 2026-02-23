@@ -8,24 +8,12 @@ export interface SessionPayload {
   role: UserRole;
   name: string;
   email: string;
-  iat?: number; // issued at
-  exp?: number; // expiration
+  enteId: string | null;
+  cambioPasswordDefault?: boolean;
+  datosConfirmados?: boolean;
+  iat?: number;
+  exp?: number;
   [key: string]: unknown; // Index signature for JWT compatibility
-}
-
-/**
- * Resultado de la autenticación
- */
-export interface AuthResult {
-  success: boolean;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role: UserRole;
-    avatar?: string;
-  };
-  error?: string;
 }
 
 /**
@@ -50,6 +38,12 @@ export const SESSION_CONSTANTS = {
 /**
  * Respuesta del backend al hacer login
  */
+export interface LoginResponseEnte {
+  id: string;
+  nombre: string;
+  datosConfirmados: boolean;
+}
+
 export interface LoginResponse {
   access_token: string;
   user: {
@@ -58,7 +52,8 @@ export interface LoginResponse {
     apellido: string;
     email: string;
     rol: string;
-    ente: string | null;
+    cambioPasswordDefault: boolean;
+    ente: LoginResponseEnte | null;
   };
 }
 
