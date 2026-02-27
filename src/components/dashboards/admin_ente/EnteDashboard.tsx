@@ -1,13 +1,17 @@
 import { StatCard } from "@/components/dashboards/shared/StatCard";
 import { ChartCard } from "@/components/dashboards/shared/ChartCard";
+import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons";
 import { Gavel, FileCheck, Clock, Award } from "lucide-react";
 
 export function EnteDashboard() {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard Admin Ente</h2>
-        <p className="text-muted-foreground">Gestión de Licitaciones y Contrataciones</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard Admin Ente</h2>
+          <p className="text-muted-foreground">Gestión de Licitaciones y Contrataciones</p>
+        </div>
+        <ManualButtons />
       </div>
 
       {/* KPIs de Ente */}
