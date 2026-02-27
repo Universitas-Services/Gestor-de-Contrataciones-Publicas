@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Building2, Users, Briefcase, ChevronRight } from "lucide-react";
+import { Building2, Users, Briefcase, UsersRound, ChevronRight } from "lucide-react";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 
 const configuracionCards = [
@@ -24,6 +24,13 @@ const configuracionCards = [
       "Registra la Unidad Contratante del Ente, estableciendo la comisión responsable del proceso de contratación.",
     icon: Briefcase,
     href: ROLE_ROUTES.admin_ente.unidadContratante,
+  },
+  {
+    title: "Comisión de Contrataciones",
+    description:
+      "Crea una comisión y opcionalmente registra sus miembros iniciales para el proceso de contratación.",
+    icon: UsersRound,
+    href: ROLE_ROUTES.admin_ente.comisionContrataciones,
   },
 ];
 
