@@ -1,8 +1,10 @@
 "use client";
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import Image from "next/image";
+import { Menu } from "lucide-react";
+import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
 import { SidebarNavigation } from "./SidebarNavigation";
-import { getRoleConfig } from "@/types/role.types";
+import { Button } from "@/components/ui/button";
 import type { UserRole } from "@/types/role.types";
 
 interface AppSidebarProps {
@@ -10,36 +12,34 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ role }: AppSidebarProps) {
-  const roleConfig = getRoleConfig(role);
+  const { toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-4">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-primary-foreground font-bold text-sm"
-            style={{
-              background: `linear-gradient(to bottom right, oklch(var(--${roleConfig.cssVar})), oklch(var(--${roleConfig.cssVar}) / 0.5))`,
-            }}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 cursor-pointer text-sidebar-foreground hover:bg-sidebar-accent"
+            onClick={toggleSidebar}
           >
-            {roleConfig.name.charAt(0)}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">{roleConfig.name}</span>
-            <span className="text-xs text-muted-foreground">{roleConfig.description}</span>
-          </div>
+            <Menu className="h-5 w-5" />
+          </Button>
+          <Image
+            src="/img_app/SI_relleno.png"
+            alt="Sistema Integrado"
+            width={160}
+            height={40}
+            priority
+            className="group-data-[collapsible=icon]:hidden"
+          />
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarNavigation role={role} />
       </SidebarContent>
-
-      <SidebarFooter>
-        <div className="px-2 py-2 text-xs text-muted-foreground">
-          Sistema de Contrataciones v1.0
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

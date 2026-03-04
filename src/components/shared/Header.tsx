@@ -27,8 +27,8 @@ export function Header({
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="flex h-16 items-center gap-4 px-6">
-        {/* Trigger para mobile */}
-        <SidebarTrigger className="cursor-pointer" />
+        {/* Trigger solo para mobile */}
+        <SidebarTrigger className="cursor-pointer md:hidden" />
 
         {/* Logo y título del rol */}
         <div className="flex items-center gap-3">

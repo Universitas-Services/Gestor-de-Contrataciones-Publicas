@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SidebarGroup,
@@ -24,7 +25,7 @@ export function SidebarNavigation({ role }: SidebarNavigationProps) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Navegación</SidebarGroupLabel>
+      <SidebarGroupLabel>Menú Principal</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {config.items.map((item) => {
@@ -33,8 +34,8 @@ export function SidebarNavigation({ role }: SidebarNavigationProps) {
 
             return (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive}>
-                  <a
+                <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                  <Link
                     href={item.href}
                     className="flex items-center gap-3"
                     style={
@@ -47,7 +48,7 @@ export function SidebarNavigation({ role }: SidebarNavigationProps) {
                   >
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
