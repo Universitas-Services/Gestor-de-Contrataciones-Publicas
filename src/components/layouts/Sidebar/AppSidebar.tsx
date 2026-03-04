@@ -27,7 +27,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <Image
-            src="/img_app/SI_relleno.png"
+            src="/img_app/SI_blanco.png"
             alt="Sistema Integrado"
             width={160}
             height={40}

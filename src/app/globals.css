@@ -52,6 +52,12 @@
   --color-role-visualizador-foreground: var(--role-visualizador-foreground);
   --color-role-ejecutor: var(--role-ejecutor);
   --color-role-ejecutor-foreground: var(--role-ejecutor-foreground);
+
+  /* Login colors */
+  --color-izq-login: var(--izq-login);
+  --color-color-boton-1: var(--color-boton-1);
+  --color-color-titulos: var(--color-titulos);
+  --color-color-subtitulos: var(--color-subtitulos);
 }
 
 :root {
@@ -104,6 +110,12 @@
   /* Ejecutor - Naranja (acción, energía) */
   --role-ejecutor: oklch(0.65 0.19 40);
   --role-ejecutor-foreground: oklch(1 0 0);
+
+  /* Login colors */
+  --izq-login: oklch(0.7345 0.0106 267.33);
+  --color-boton-1: oklch(0.3832 0.0857 251.07);
+  --color-titulos: oklch(0.397 0.0444 249);
+  --color-subtitulos: oklch(0.5162 0.004 247.9);
 }
 
 @layer base {
