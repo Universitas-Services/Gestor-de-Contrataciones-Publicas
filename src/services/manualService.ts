@@ -53,16 +53,50 @@ export const generarManual = async (): Promise<ManualResponse> => {
 };
 
 /**
- * GET /manuales/{id}/download
- * Descarga directamente el archivo DOCX del manual.
- * Retorna los bytes del archivo como Uint8Array (las Server Actions no pueden retornar Blob/ArrayBuffer).
+ * Respuesta del endpoint GET /manuales/preview
  */
-export const descargarManual = async (
-  id: string
-): Promise<{ data: Uint8Array; fileName: string }> => {
+export interface PreviewResponse {
+  previewUrl: string;
+  tituloManual: string;
+  urlArchivo: string;
+}
+
+/**
+ * GET /manuales/preview
+ * Retorna la URL de previsualización del manual (Google Docs Viewer).
+ * No requiere parámetros — el backend detecta el Ente a través del token.
+ */
+export const previewManual = async (): Promise<PreviewResponse> => {
   const token = await getServerToken();
 
-  const response = await fetch(`${API_URL}/manuales/${id}/download`, {
+  const response = await fetch(`${API_URL}/manuales/preview`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Este ente no tiene un manual generado");
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener la previsualización");
+  }
+
+  return response.json() as Promise<PreviewResponse>;
+};
+
+/**
+ * GET /manuales/download
+ * Descarga el manual DOCX del ente del usuario autenticado.
+ * Retorna los bytes del archivo como Uint8Array (las Server Actions no pueden retornar Blob/ArrayBuffer).
+ */
+export const descargarManual = async (): Promise<{ data: Uint8Array; fileName: string }> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/manuales/download`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

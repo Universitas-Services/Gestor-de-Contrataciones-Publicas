@@ -2,35 +2,48 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileText, Download, Loader2 } from "lucide-react";
+import { Eye, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generarManual, descargarManual } from "@/services/manualService";
+import { previewManual, descargarManual } from "@/services/manualService";
+import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 
 export function ManualButtons() {
-  const [manualId, setManualId] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [urlArchivo, setUrlArchivo] = useState<string | null>(null);
+  const [tituloManual, setTituloManual] = useState<string | null>(null);
 
-  const handleGenerar = async () => {
-    setIsGenerating(true);
+  const handlePreview = async () => {
+    setIsPreviewing(true);
+    setIsPreviewOpen(true);
     try {
-      const result = await generarManual();
-      setManualId(result.id);
-      toast.success("Manual generado exitosamente");
+      const result = await previewManual();
+      setUrlArchivo(result.urlArchivo);
+      setTituloManual(result.tituloManual);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Error al generar el manual";
+      const message =
+        error instanceof Error ? error.message : "Error al obtener la previsualización";
       toast.error(message);
+      setIsPreviewOpen(false);
     } finally {
-      setIsGenerating(false);
+      setIsPreviewing(false);
+    }
+  };
+
+  const handlePreviewClose = (open: boolean) => {
+    setIsPreviewOpen(open);
+    if (!open) {
+      // Limpiar estado al cerrar
+      setUrlArchivo(null);
+      setTituloManual(null);
     }
   };
 
   const handleDescargar = async () => {
-    if (!manualId) return;
-
     setIsDownloading(true);
     try {
-      const { data, fileName } = await descargarManual(manualId);
+      const { data, fileName } = await descargarManual();
 
       // Crear Blob a partir del Uint8Array recibido del servidor
       const blob = new Blob([new Uint8Array(data)], {
@@ -59,26 +72,36 @@ export function ManualButtons() {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={handleGenerar}
-        disabled={isGenerating}
-        size="sm"
-        className="bg-green-600 hover:bg-green-700 text-white"
-      >
-        {isGenerating ? <Loader2 className="animate-spin" /> : <FileText />}
-        {isGenerating ? "Generando..." : "Generar Manual"}
-      </Button>
+    <>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handlePreview}
+          disabled={isPreviewing}
+          size="sm"
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          {isPreviewing ? <Loader2 className="animate-spin" /> : <Eye />}
+          {isPreviewing ? "Cargando..." : "Pre-visualización del Manual"}
+        </Button>
 
-      <Button
-        onClick={handleDescargar}
-        disabled={!manualId || isDownloading}
-        size="sm"
-        className="bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
-        {isDownloading ? "Descargando..." : "Descargar Manual"}
-      </Button>
-    </div>
+        <Button
+          onClick={handleDescargar}
+          disabled={isDownloading}
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
+          {isDownloading ? "Descargando..." : "Descargar Manual"}
+        </Button>
+      </div>
+
+      <ManualPreviewDialog
+        open={isPreviewOpen}
+        onOpenChange={handlePreviewClose}
+        urlArchivo={urlArchivo}
+        tituloManual={tituloManual}
+        isLoading={isPreviewing}
+      />
+    </>
   );
 }
