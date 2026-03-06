@@ -32,9 +32,10 @@ import {
 
 // --- Datos manuales para los Selects ---
 
-const ESTADOS = ["Distrito Capital", "Miranda"];
-const MUNICIPIOS = ["Libertador", "Sucre"];
-const PARROQUIAS = ["Catedral", "El Recreo"];
+const ESTADOS = ["Distrito Capital", "Miranda", "Lara"];
+const MUNICIPIOS = ["Libertador", "Sucre", "Iribarren"];
+const CIUDADES = ["Caracas", "Los Teques", "Barquisimeto"];
+const PARROQUIAS = ["Catedral", "El Recreo", "Concepcion"];
 
 // --- Props ---
 
@@ -58,6 +59,12 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploaded, setLogoUploaded] = useState(false);
+  const [step, setStep] = useState(1);
+
+  // Estados visuales para el RIF dividido
+  const [rifTipo, setRifTipo] = useState("G");
+  const [rifNumero, setRifNumero] = useState("");
+  const [rifDigito, setRifDigito] = useState("");
 
   const form = useForm<CompletarEnteFormValues>({
     resolver: zodResolver(completarEnteSchema),
@@ -68,6 +75,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
       direccionFiscal: "",
       estado: "",
       municipio: "",
+      ciudad: "",
       parroquia: "",
       nombreUnidadAdminFinanciera: "",
       nombreUnidadTecnologia: "",
@@ -76,6 +84,14 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
     },
     mode: "onChange",
   });
+
+  // Sincronizar estados locales de RIF con react-hook-form
+  useEffect(() => {
+    if (rifTipo && rifNumero) {
+      const formattedRif = `${rifTipo}-${rifNumero}${rifDigito ? `-${rifDigito}` : ""}`;
+      form.setValue("rif", formattedRif, { shouldValidate: true });
+    }
+  }, [rifTipo, rifNumero, rifDigito, form]);
 
   // Cargar datos del ente al montar
   useEffect(() => {
@@ -89,12 +105,25 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
           direccionFiscal: ente.direccionFiscal || "",
           estado: ente.estado || "",
           municipio: ente.municipio || "",
+          ciudad: ente.ciudad || "",
           parroquia: ente.parroquia || "",
           nombreUnidadAdminFinanciera: ente.nombreUnidadAdminFinanciera || "",
           nombreUnidadTecnologia: ente.nombreUnidadTecnologia || "",
           nombreUnidadContratante: ente.nombreUnidadContratante || "",
           organoAdscripcion: ente.organoAdscripcion || "",
         });
+
+        // Cargar RIF dividido si existe
+        if (ente.rif) {
+          const parts = ente.rif.split("-");
+          if (parts.length >= 2) {
+            setRifTipo(parts[0] || "G");
+            setRifNumero(parts[1] || "");
+            if (parts[2]) setRifDigito(parts[2]);
+          } else {
+            setRifNumero(ente.rif); // fallback
+          }
+        }
 
         // Si ya tiene logo, mostrar la URL
         if (ente.logoUrl) {
@@ -174,6 +203,18 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
     }
   };
 
+  const handleNextStep = async () => {
+    // Validamos solo campos de paso 1
+    const isValid = await form.trigger(["nombre", "rif", "siglas", "organoAdscripcion"]);
+
+    if (isValid) {
+      setStep(2);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      toast.error("Por favor completa los campos requeridos marcados en rojo.");
+    }
+  };
+
   // Guardar datos del ente
   const onSubmit = async (values: CompletarEnteFormValues) => {
     setIsSubmitting(true);
@@ -181,7 +222,22 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
     const toastId = toast.loading("Guardando datos del ente...");
 
     try {
-      await actualizarEnte(enteId, values);
+      const payload = {
+        nombre: values.nombre,
+        rif: values.rif,
+        siglas: values.siglas,
+        direccionFiscal: values.direccionFiscal || "",
+        estado: values.estado || "",
+        municipio: values.municipio || "",
+        ciudad: values.ciudad || "",
+        parroquia: values.parroquia || "",
+        nombreUnidadAdminFinanciera: values.nombreUnidadAdminFinanciera || "",
+        nombreUnidadTecnologia: values.nombreUnidadTecnologia || "",
+        nombreUnidadContratante: values.nombreUnidadContratante || "",
+        organoAdscripcion: values.organoAdscripcion || "",
+      };
+
+      await actualizarEnte(enteId, payload);
 
       toast.success("Datos del ente guardados correctamente", { id: toastId });
       router.push("/admin_ente/dashboard");
@@ -197,375 +253,529 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   // Loading state inicial
   if (isLoadingData) {
     return (
-      <Card className="mx-auto w-full max-w-3xl">
-        <CardContent className="flex items-center justify-center py-16">
+      <div className="mx-auto w-full max-w-4xl bg-white shadow-sm pb-16">
+        <div className="flex items-center justify-center py-24">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Cargando datos del ente...</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="mx-auto w-full max-w-3xl">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">Completar Datos del Ente</CardTitle>
-        <CardDescription>
-          Completa la información de tu ente público para continuar al sistema
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="mx-auto w-full max-w-4xl bg-white shadow-sm pb-16">
+      <div className="px-10 pt-12 pb-6 border-b border-slate-300">
+        <h2 className="text-[28px] font-bold text-[#34495e] font-inter">
+          {step === 1 ? "Datos generales" : "Ubicación y estructura"}
+        </h2>
+        <p className="text-slate-500 italic mt-1 font-inter">
+          Ingresa los datos básicos para comenzar el registro
+        </p>
+      </div>
+
+      <div className="px-10 pt-8">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* ── Sección: Información del Ente ── */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Información del Ente</h3>
+            {/* Contenedor principal de los campos */}
+            <div className="space-y-0">
+              {step === 1 && (
+                <>
+                  {/* Nombre del Ente (full width) */}
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="nombre"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el nombre del Órgano o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Instituto Nacional de Tránsito Terrestre
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-              {/* Nombre del Ente (full width) */}
-              <FormField
-                control={form.control}
-                name="nombre"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre del Ente *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ej: Alcaldía del Municipio Libertador"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  {/* RIF + Siglas (separados verticalmente como pide la imagen) */}
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="siglas"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el acrónimo y/o siglas del Órgano o Ente Contratante
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: INTT
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-              {/* RIF + Siglas (2 cols) */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="rif"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>RIF *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: G-20000000-0" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="rif"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el RIF del Órgano o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: G-00000000-0
+                          </p>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={rifTipo}
+                                onValueChange={setRifTipo}
+                                disabled={isSubmitting}
+                              >
+                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-500 font-inter">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="G" className="font-inter">
+                                    G
+                                  </SelectItem>
+                                  <SelectItem value="J" className="font-inter">
+                                    J
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                value={rifNumero}
+                                onChange={(e) => setRifNumero(e.target.value.replace(/\D/g, ""))}
+                                disabled={isSubmitting}
+                                placeholder="00000000"
+                                className="w-[120px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 placeholder:text-slate-300 font-inter text-center"
+                                maxLength={8}
+                              />
+                              <Input
+                                value={rifDigito}
+                                onChange={(e) => setRifDigito(e.target.value.replace(/\D/g, ""))}
+                                disabled={isSubmitting}
+                                placeholder="0"
+                                className="w-[50px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 placeholder:text-slate-300 font-inter text-center px-1"
+                                maxLength={1}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="siglas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Siglas *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: AML" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                  {/* Logo / Imagen */}
+                  <div className="mb-6">
+                    <h3 className="text-[#34495e] font-bold font-inter text-base mb-3 leading-none">
+                      Inserte el logo del Órgano o Ente Contratante.
+                    </h3>
 
-              {/* Dirección Fiscal (full width) */}
-              <FormField
-                control={form.control}
-                name="direccionFiscal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Dirección Fiscal *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ej: Av. Urdaneta, Palacio Municipal"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Estado + Municipio (2 cols) */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="estado"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isSubmitting}
+                    <div className="flex items-start gap-4">
+                      <div
+                        className="flex items-center justify-between border border-slate-300 rounded-md px-3 h-10 min-w-40 cursor-pointer bg-white hover:bg-slate-50 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
                       >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un estado" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {ESTADOS.map((estado) => (
-                            <SelectItem key={estado} value={estado}>
-                              {estado}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <span className="text-sm text-slate-400 font-inter">Subir imagen</span>
+                        <span className="text-slate-400 ml-4 font-inter text-lg">+</span>
+                      </div>
 
-                <FormField
-                  control={form.control}
-                  name="municipio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Municipio *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isSubmitting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un municipio" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {MUNICIPIOS.map((municipio) => (
-                            <SelectItem key={municipio} value={municipio}>
-                              {municipio}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      {logoFile && !logoUploaded && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-10 border-[#1B456F] text-[#1B456F] hover:bg-[#1B456F] hover:text-white"
+                          disabled={isUploadingLogo || logoUploaded}
+                          onClick={handleUploadLogo}
+                        >
+                          {isUploadingLogo ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Confirmar Logo"
+                          )}
+                        </Button>
+                      )}
+                    </div>
 
-              {/* Parroquia + Órgano de Adscripción (2 cols) */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="parroquia"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Parroquia *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isSubmitting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione una parroquia" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {PARROQUIAS.map((parroquia) => (
-                            <SelectItem key={parroquia} value={parroquia}>
-                              {parroquia}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".png,.jpg,.jpeg,.webp"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="organoAdscripcion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Órgano de Adscripción *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Ej: Ministerio del Poder Popular para..."
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="organoAdscripcion"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el nombre del órgano de adscripción al que pertenece el Órgano o
+                            Ente Contratante (si aplica)
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Ministerio del Poder Popular para Relaciones Interiores,
+                            Justicia y Paz
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* --- PASO 2 --- */}
+              {step === 2 && (
+                <>
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="estado"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Seleccione el Estado donde se ubica el Órgano o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Lara
+                          </p>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={isSubmitting}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                                <SelectValue placeholder="selecciona estado" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {ESTADOS.map((estado) => (
+                                <SelectItem key={estado} value={estado} className="font-inter">
+                                  {estado}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="municipio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Seleccione el Municipio donde se ubica el Órgano o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Iribarren
+                          </p>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={isSubmitting}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                                <SelectValue placeholder="selecciona municipio" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {MUNICIPIOS.map((municipio) => (
+                                <SelectItem
+                                  key={municipio}
+                                  value={municipio}
+                                  className="font-inter"
+                                >
+                                  {municipio}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="ciudad"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Seleccione la ciudad donde se ubica el Órgano o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Barquisimeto
+                          </p>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={isSubmitting}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                                <SelectValue placeholder="selecciona ciudad" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CIUDADES.map((ciudad) => (
+                                <SelectItem key={ciudad} value={ciudad} className="font-inter">
+                                  {ciudad}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="parroquia"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Seleccione la parroquia donde se ubica el Órgano o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Concepcion
+                          </p>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={isSubmitting}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                                <SelectValue placeholder="selecciona parroquia" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {PARROQUIAS.map((parroquia) => (
+                                <SelectItem
+                                  key={parroquia}
+                                  value={parroquia}
+                                  className="font-inter"
+                                >
+                                  {parroquia}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="direccionFiscal"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique la dirección fiscal completa (calle, edificio, etc.) del Órgano
+                            o Ente Contratante.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Avenida 00, entre calles 00 y 00, Edif. Central, Piso 2.
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="nombreUnidadContratante"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el nombre de la Unidad / Gerencia que cumple funciones de Unidad
+                            Contratante
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Unidad de compras
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="nombreUnidadAdminFinanciera"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el nombre de la Unidad / Gerencia responsable de la Gestión
+                            Administrativa y Financiera.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Gerencia de administración y finanzas
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <FormField
+                      control={form.control}
+                      name="nombreUnidadTecnologia"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                            Indique el nombre de la Unidad / Gerencia responsable del Área de
+                            Sistema y Tecnología.
+                          </FormLabel>
+                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                            Ejemplo: Unidad de telemática
+                          </p>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              disabled={isSubmitting}
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Fin de campos que restan */}
             </div>
 
-            {/* ── Sección: Unidades del Ente ── */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Unidades del Ente</h3>
-
-              <FormField
-                control={form.control}
-                name="nombreUnidadAdminFinanciera"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre de la Unidad Administrativa Financiera *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ej: Oficina de Planificación y Presupuesto"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="nombreUnidadTecnologia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre de la Unidad de Tecnología *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ej: Centro de Tecnologías de Información"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="nombreUnidadContratante"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre de la Unidad Contratante *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ej: Oficina de Adquisiciones"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* ── Sección: Logo del Ente ── */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Logo del Ente</h3>
-
-              <div className="space-y-3">
-                {/* Área de upload */}
-                <div
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 transition-colors hover:border-muted-foreground/50 cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
+            {/* ── Botones ── */}
+            <div className={`flex mt-12 ${step === 2 ? "justify-between" : "justify-end"}`}>
+              {step === 2 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setStep(1);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  disabled={isSubmitting}
+                  className="w-32 hover:bg-slate-50 font-inter h-11 border-slate-300 text-slate-500"
                 >
-                  {logoPreview ? (
-                    <div className="relative">
-                      <img
-                        src={logoPreview}
-                        alt="Preview del logo"
-                        className="h-32 w-32 rounded-lg object-contain"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveLogo();
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                  Regresar
+                </Button>
+              )}
+
+              {step === 1 ? (
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="w-32 bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11"
+                >
+                  Siguiente
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11 px-8"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
                   ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm font-medium">Haz clic para seleccionar una imagen</p>
-                        <p className="text-xs text-muted-foreground">
-                          Formatos: PNG, JPG, WEBP | Máximo: 2MB
-                        </p>
-                      </div>
-                    </div>
+                    "Configuración del Ente"
                   )}
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".png,.jpg,.jpeg,.webp"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                </div>
-
-                {/* Botón Enviar Logo */}
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!logoFile || isUploadingLogo || logoUploaded}
-                    onClick={handleUploadLogo}
-                    className="min-w-37.5"
-                  >
-                    {isUploadingLogo ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Subiendo...
-                      </>
-                    ) : logoUploaded ? (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Logo enviado
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Enviar Logo
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Botón Guardar datos ── */}
-            <div className="flex justify-end pt-4 border-t">
-              <Button
-                type="submit"
-                disabled={!form.formState.isValid || isSubmitting}
-                className="min-w-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Guardar datos"
-                )}
-              </Button>
+                </Button>
+              )}
             </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
