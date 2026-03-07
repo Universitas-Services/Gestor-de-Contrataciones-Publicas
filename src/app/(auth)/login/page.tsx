@@ -25,6 +25,12 @@ export default function LoginPage() {
       <div className="flex w-full md:w-1/2 items-center justify-center bg-background p-4">
         <LoginForm />
       </div>
+      {/* Floating Badge - Opción C */}
+      <div className="fixed bottom-6 right-6 z-10 hidden sm:block">
+        <p className="text-xs font-medium tracking-wide text-color-subtitulos/70">
+          Desarrollado por <span className="font-bold">Universitas</span> © 2026
+        </p>
+      </div>
     </div>
   );
 }
