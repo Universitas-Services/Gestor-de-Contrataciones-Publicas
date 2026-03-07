@@ -45,7 +45,7 @@ interface CompletarEnteFormProps {
 
 // --- Formatos y tamaño del logo ---
 
-const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg"];
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 // --- Componente ---
@@ -148,7 +148,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
     // Validar tipo
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.error("Formato no válido. Usa PNG, JPG o WEBP");
+      toast.error("Formato no válido. Usa PNG o JPG");
       return;
     }
 
@@ -392,42 +392,74 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                   </div>
 
                   {/* Logo / Imagen */}
-                  <div className="mb-6">
-                    <h3 className="text-[#34495e] font-bold font-inter text-base mb-3 leading-none">
+                  <div className="mb-8 space-y-6">
+                    <h3 className="text-[#34495e] font-bold font-inter text-base leading-none block">
                       Inserte el logo del Órgano o Ente Contratante.
                     </h3>
+                    <hr className="border-slate-200" />
 
-                    <div className="flex items-start gap-4">
-                      <div
-                        className="flex items-center justify-between border border-slate-300 rounded-md px-3 h-10 min-w-40 cursor-pointer bg-white hover:bg-slate-50 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <span className="text-sm text-slate-400 font-inter">Subir imagen</span>
-                        <span className="text-slate-400 ml-4 font-inter text-lg">+</span>
-                      </div>
-
-                      {logoFile && !logoUploaded && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-10 border-[#1B456F] text-[#1B456F] hover:bg-[#1B456F] hover:text-white"
-                          disabled={isUploadingLogo || logoUploaded}
-                          onClick={handleUploadLogo}
-                        >
-                          {isUploadingLogo ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            "Confirmar Logo"
-                          )}
-                        </Button>
+                    <div
+                      className={`border-2 border-dashed border-slate-300 rounded-lg p-6 min-h-[220px] flex flex-col items-center justify-center bg-white mt-4 ${!logoPreview ? "cursor-pointer hover:bg-slate-50 transition-colors" : ""}`}
+                      onClick={() => {
+                        if (!logoPreview) fileInputRef.current?.click();
+                      }}
+                    >
+                      {logoPreview ? (
+                        <div className="relative inline-block">
+                          <img
+                            src={logoPreview}
+                            alt="Preview del logo"
+                            className="max-h-32 w-auto object-contain rounded-md"
+                          />
+                          <button
+                            type="button"
+                            className="absolute -top-3 -right-3 h-6 w-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveLogo();
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                            <ImageIcon className="h-6 w-6 text-slate-500" />
+                          </div>
+                          <p className="text-base font-semibold text-[#34495e] font-inter">
+                            Haz clic para seleccionar una imagen
+                          </p>
+                          <p className="text-sm text-slate-400 mt-1 font-inter">
+                            Formatos: PNG, JPG | Máximo: 2MB
+                          </p>
+                        </>
                       )}
                     </div>
+
+                    <div className="flex justify-end pb-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="bg-[#f1f5f9] hover:bg-slate-200 text-slate-600 font-inter border border-slate-200 px-6 h-10"
+                        disabled={!logoFile || isUploadingLogo || logoUploaded}
+                        onClick={handleUploadLogo}
+                      >
+                        {isUploadingLogo ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="mr-2 h-4 w-4 text-slate-500" />
+                        )}
+                        {logoUploaded ? "Logo Enviado" : "Enviar Logo"}
+                      </Button>
+                    </div>
+
+                    <hr className="border-slate-200" />
 
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".png,.jpg,.jpeg,.webp"
+                      accept=".png,.jpg,.jpeg"
                       className="hidden"
                       onChange={handleFileChange}
                     />
