@@ -15,6 +15,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { AlertCircle } from "lucide-react";
 
 const Form = FormProvider;
 
@@ -132,9 +133,10 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn("text-destructive text-sm", className)}
+      className={cn("flex items-center gap-2 text-destructive text-sm", className)}
       {...props}
     >
+      {error && <AlertCircle className="size-4" />}
       {body}
     </p>
   );

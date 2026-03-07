@@ -2,25 +2,54 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { loginAction } from "@/lib/auth/auth";
+import { Eye, EyeOff } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const formSchema = z.object({
+  email: z
+    .string()
+    .min(1, { message: "El correo es requerido" })
+    .email({ message: "Formato de correo electrónico inválido" }),
+  password: z.string().min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
+});
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setError("");
     setIsLoading(true);
 
     try {
-      const result = await loginAction({ email, password });
+      const result = await loginAction({
+        email: values.email,
+        password: values.password,
+      });
 
       if (result.success) {
         router.push(result.redirectUrl || "/");
@@ -39,53 +68,75 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-md space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold">Iniciar sesión</h1>
-        <p className="text-color-subtitulos italic">Inicia sesión para continuar</p>
+        <p className="text-color-subtitulos font-semibold">Inicia sesión para continuar</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-color-titulos font-semibold">
-            Correo electrónico
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="Ingresa tu correo"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isLoading}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem className="">
+                <FormLabel className="text-color-titulos font-semibold">
+                  Correo electrónico
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="Ingresa tu correo"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password" className="text-color-titulos font-semibold">
-            Contraseña
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Ingresa tu contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem className="pb-2">
+                <FormLabel className="text-color-titulos font-semibold">Contraseña</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Ingresa tu contraseña"
+                      className="pr-10"
+                      disabled={isLoading}
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-color-subtitulos hover:text-color-titulos transition-colors outline-none cursor-pointer"
+                      disabled={isLoading}
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-        )}
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+          )}
 
-        <Button
-          type="submit"
-          className="w-full bg-color-boton-1 text-white hover:bg-color-boton-1/90"
-          disabled={isLoading}
-        >
-          {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            className="w-full cursor-pointer bg-color-boton-1 text-white hover:bg-color-boton-1/90"
+            disabled={isLoading}
+          >
+            {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 }
