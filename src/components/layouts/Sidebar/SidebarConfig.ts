@@ -16,14 +16,21 @@ import {
   Bell,
   Search,
   Download,
-  Globe,
   Settings,
+  Newspaper,
+  Globe,
 } from "lucide-react";
+
+import { IconType } from "react-icons";
+import { LiaRobotSolid } from "react-icons/lia";
+import { IoEarthOutline } from "react-icons/io5";
+import { AiOutlineBook } from "react-icons/ai";
 
 export interface SidebarItem {
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: LucideIcon | IconType;
+  submenu?: Omit<SidebarItem, "icon" | "submenu">[];
 }
 
 export interface SidebarConfig {
@@ -40,6 +47,17 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Dashboard",
         href: ROLE_ROUTES.admin_ente.dashboard,
         icon: LayoutDashboard,
+      },
+      {
+        label: "Gestión de datos",
+        href: "#",
+        icon: Newspaper,
+        submenu: [
+          {
+            label: "Perfil del Ente",
+            href: "/gestion-datos/perfil",
+          },
+        ],
       },
       {
         label: "Licitaciones",
@@ -158,3 +176,24 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
 export function getSidebarConfig(role: UserRole): SidebarConfig {
   return SIDEBAR_CONFIGS[role];
 }
+
+/**
+ * Items globales visibles para todos los roles
+ */
+export const GLOBAL_SIDEBAR_ITEMS: SidebarItem[] = [
+  {
+    label: "Consultor IA",
+    href: "#",
+    icon: LiaRobotSolid,
+  },
+  {
+    label: "Conocenos",
+    href: "#",
+    icon: IoEarthOutline,
+  },
+  {
+    label: "Repositorio legal",
+    href: "#",
+    icon: AiOutlineBook,
+  },
+];

@@ -83,7 +83,6 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
       nombreUnidadContratante: "",
       organoAdscripcion: "",
     },
-    mode: "onChange",
   });
 
   // Sincronizar estados locales de RIF con react-hook-form
@@ -286,7 +285,12 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
       <CardContent className="px-10 pt-8 pb-10">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault();
+            }}
+            className="space-y-6"
+          >
             {/* Contenedor principal de los campos */}
             <div className="space-y-0">
               {step === 1 && (
@@ -799,7 +803,8 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                 </Button>
               ) : (
                 <Button
-                  type="submit"
+                  type="button"
+                  onClick={form.handleSubmit(onSubmit)}
                   disabled={isSubmitting}
                   className="bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11 px-8"
                 >
