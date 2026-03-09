@@ -11,6 +11,7 @@ import {
   type CompletarEnteFormValues,
 } from "@/lib/schemas/completarEnteSchema";
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
+import { generarManual } from "@/services/manualService";
 import {
   Form,
   FormControl,
@@ -46,7 +47,7 @@ interface CompletarEnteFormProps {
 // --- Formatos y tamaño del logo ---
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg"];
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 
 // --- Componente ---
 
@@ -154,7 +155,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
     // Validar tamaño
     if (file.size > MAX_FILE_SIZE) {
-      toast.error("El archivo supera el tamaño máximo de 2MB");
+      toast.error("El archivo supera el tamaño máximo de 1MB");
       return;
     }
 
@@ -210,6 +211,11 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
     if (isValid) {
       setStep(2);
       window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // Limpiamos los errores del paso 2 una vez que los campos ya estén renderizados en el DOM
+      setTimeout(() => {
+        form.clearErrors();
+      }, 50);
     } else {
       toast.error("Por favor completa los campos requeridos marcados en rojo.");
     }
@@ -239,7 +245,10 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
       await actualizarEnte(enteId, payload);
 
-      toast.success("Datos del ente guardados correctamente", { id: toastId });
+      toast.loading("Generando manual del ente...", { id: toastId });
+      await generarManual();
+
+      toast.success("Datos guardados y manual generado correctamente", { id: toastId });
       router.push("/admin_ente/dashboard");
     } catch (error: unknown) {
       const message =
@@ -265,17 +274,17 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl bg-white shadow-sm pb-16">
-      <div className="px-10 pt-12 pb-6 border-b border-slate-300">
-        <h2 className="text-[28px] font-bold text-[#34495e] font-inter">
+    <Card className="mx-auto w-full max-w-4xl shadow-sm border-0 mb-16">
+      <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
+        <CardTitle className="text-[28px] font-bold text-[#34495e] font-inter">
           {step === 1 ? "Datos generales" : "Ubicación y estructura"}
-        </h2>
-        <p className="text-slate-500 italic mt-1 font-inter">
+        </CardTitle>
+        <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
           Ingresa los datos básicos para comenzar el registro
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
 
-      <div className="px-10 pt-8">
+      <CardContent className="px-10 pt-8 pb-10">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Contenedor principal de los campos */}
@@ -431,7 +440,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             Haz clic para seleccionar una imagen
                           </p>
                           <p className="text-sm text-slate-400 mt-1 font-inter">
-                            Formatos: PNG, JPG | Máximo: 2MB
+                            Formatos: PNG, JPG | Máximo: 1MB
                           </p>
                         </>
                       )}
@@ -776,7 +785,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                   disabled={isSubmitting}
                   className="w-32 hover:bg-slate-50 font-inter h-11 border-slate-300 text-slate-500"
                 >
-                  Regresar
+                  Anterior
                 </Button>
               )}
 
@@ -800,14 +809,14 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       Guardando...
                     </>
                   ) : (
-                    "Configuración del Ente"
+                    "Guardar"
                   )}
                 </Button>
               )}
             </div>
           </form>
         </Form>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
