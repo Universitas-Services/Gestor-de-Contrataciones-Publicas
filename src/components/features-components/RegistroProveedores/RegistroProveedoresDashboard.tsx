@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { List, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
 import { IoAlertCircleOutline } from "react-icons/io5";
@@ -86,10 +87,12 @@ export function RegistroProveedoresDashboard() {
             Resume general y control de solicitudes pendientes
           </p>
         </div>
-        <Button className="bg-[#1e3a5f] hover:bg-[#152c4a] text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
-          <List className="w-5 h-5" />
-          Ver lista de proveedores
-        </Button>
+        <Link href="/registro-proveedores/listado">
+          <Button className="bg-[#1e3a5f] hover:bg-[#152c4a] text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
+            <List className="w-5 h-5" />
+            Ver lista de proveedores
+          </Button>
+        </Link>
       </div>
 
       {/* Main KPI Cards */}
