@@ -37,6 +37,9 @@ export const ROLE_ROUTES = {
     comisionContrataciones: "/admin_ente/configuracion/comision-contrataciones",
     cambiarContrasena: "/admin_ente/cambiar-contrasena",
     completarEnte: "/admin_ente/completar-ente",
+    consultorIA: "/consultor-ia",
+    conocenos: "/conocenos",
+    repositorioLegal: "/repositorio-legal",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",

@@ -183,17 +183,17 @@ export function getSidebarConfig(role: UserRole): SidebarConfig {
 export const GLOBAL_SIDEBAR_ITEMS: SidebarItem[] = [
   {
     label: "Consultor IA",
-    href: "#",
+    href: "/consultor-ia",
     icon: LiaRobotSolid,
   },
   {
     label: "Conocenos",
-    href: "#",
+    href: "/conocenos",
     icon: IoEarthOutline,
   },
   {
     label: "Repositorio legal",
-    href: "#",
+    href: "/repositorio-legal",
     icon: AiOutlineBook,
   },
 ];
