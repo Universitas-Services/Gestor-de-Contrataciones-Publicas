@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, EyeOff, Lock } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { cambiarContrasena } from "@/services/authService";
 import {
   Form,
@@ -18,36 +18,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
-// --- Schema Zod inline ---
-
-const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, "La contraseña actual es requerida"),
-    newPassword: z
-      .string()
-      .min(8, "La contraseña debe tener mínimo 8 caracteres")
-      .regex(/[A-Z]/, "Debe contener al menos una letra mayúscula")
-      .regex(/[a-zA-Z]/, "Debe contener al menos una letra")
-      .regex(/\d/, "Debe contener al menos un número"),
-    confirmPassword: z.string().min(1, "Debes confirmar la nueva contraseña"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
-
-type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+import {
+  changePasswordSchema,
+  type ChangePasswordFormValues,
+} from "@/lib/schemas/changePasswordSchema";
 
 // --- Componente ---
 
 export function ChangePasswordForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -79,50 +61,38 @@ export function ChangePasswordForm() {
   };
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Lock className="h-6 w-6 text-primary" />
-        </div>
-        <CardTitle className="text-2xl font-bold">Cambiar Contraseña</CardTitle>
-        <CardDescription>
-          Por seguridad, debes cambiar tu contraseña temporal antes de continuar
+    <Card className="w-full max-w-md mx-auto shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-0">
+      <CardHeader className="text-center pt-8 sm:pt-10 pb-8">
+        <CardTitle className="text-[26px] font-bold text-[#005282] tracking-tight font-inter">
+          Nueva contraseña
+        </CardTitle>
+        <CardDescription className="text-sm text-slate-500 font-inter">
+          Tu nueva contraseña debe ser segura
         </CardDescription>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="px-8 pb-8 sm:px-10 sm:pb-10">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {/* Contraseña Actual */}
             <FormField
               control={form.control}
               name="currentPassword"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contraseña Actual</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-semibold text-[#34495E]">
+                    Ingresa tu contraseña anterior
+                  </FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showCurrentPassword ? "text" : "password"}
-                        placeholder="Ingresa tu contraseña actual"
-                        {...field}
-                        disabled={isLoading}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      >
-                        {showCurrentPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
+                    <Input
+                      type="password"
+                      placeholder="Mínimo de caracteres"
+                      className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
@@ -132,32 +102,20 @@ export function ChangePasswordForm() {
               control={form.control}
               name="newPassword"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nueva Contraseña</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-semibold text-[#34495E]">
+                    Nueva contraseña
+                  </FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showNewPassword ? "text" : "password"}
-                        placeholder="Mínimo 8 caracteres, 1 mayúscula, 1 número"
-                        {...field}
-                        disabled={isLoading}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
+                    <Input
+                      type="password"
+                      placeholder="Mínimo de caracteres"
+                      className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
@@ -167,32 +125,20 @@ export function ChangePasswordForm() {
               control={form.control}
               name="confirmPassword"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar Nueva Contraseña</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-semibold text-[#34495E]">
+                    Confirmar nueva contraseña
+                  </FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Repite tu nueva contraseña"
-                        {...field}
-                        disabled={isLoading}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
+                    <Input
+                      type="password"
+                      placeholder="Confirma tu nueva contraseña"
+                      className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
@@ -200,10 +146,10 @@ export function ChangePasswordForm() {
             {/* Botón Submit */}
             <Button
               type="submit"
-              className="w-full"
-              disabled={!form.formState.isValid || isLoading}
+              className="w-full h-10 bg-[#1B456F] hover:bg-[#273646] text-white font-medium rounded-md mt-6 transition-colors shadow-sm"
+              disabled={isLoading}
             >
-              {isLoading ? "Cambiando contraseña..." : "Cambiar Contraseña"}
+              {isLoading ? "Actualizando..." : "Actualizar"}
             </Button>
           </form>
         </Form>

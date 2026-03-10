@@ -14,6 +14,7 @@ export interface EnteResponse {
   direccionFiscal: string;
   estado: string;
   municipio: string;
+  ciudad: string;
   parroquia: string;
   nombreUnidadAdminFinanciera: string;
   nombreUnidadTecnologia: string;
@@ -35,6 +36,7 @@ export interface EnteUpdatePayload {
   direccionFiscal: string;
   estado: string;
   municipio: string;
+  ciudad: string;
   parroquia: string;
   nombreUnidadAdminFinanciera: string;
   nombreUnidadTecnologia: string;
