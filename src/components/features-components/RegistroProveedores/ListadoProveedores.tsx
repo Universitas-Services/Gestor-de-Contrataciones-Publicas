@@ -266,9 +266,14 @@ export function ListadoProveedores() {
                   {/* Acciones */}
                   <td className="p-4">
                     <div className="flex items-center justify-center gap-3">
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsEye className="w-5 h-5" />
-                      </button>
+                      <Link href={`/registro-proveedores/${provider.id}`}>
+                        <button
+                          className="text-slate-600 hover:text-slate-900 transition-colors"
+                          title="Ver perfil"
+                        >
+                          <BsEye className="w-5 h-5" />
+                        </button>
+                      </Link>
                       <button className="text-slate-600 hover:text-slate-900 transition-colors">
                         <BsPencilSquare className="w-5 h-5" />
                       </button>
