@@ -2,7 +2,9 @@ import { ChevronRight, Download, PenLine, FileText, SwitchCamera, MapPin } from 
 import Link from "next/link";
 import { ProveedorDetalleView } from "@/components/features-components/RegistroProveedores/ProveedorDetalleView";
 
-export default function ProveedorPerfilPage({ params }: { params: { id: string } }) {
+export default async function ProveedorPerfilPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+
   return (
     <div className="w-full max-w-[1280px] mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
       {/* Breadcrumb */}
@@ -23,7 +25,7 @@ export default function ProveedorPerfilPage({ params }: { params: { id: string }
 
       <h1 className="text-[28px] font-extrabold text-[#111827] mb-6">Información general</h1>
 
-      <ProveedorDetalleView id={params.id} />
+      <ProveedorDetalleView id={resolvedParams.id} />
     </div>
   );
 }
