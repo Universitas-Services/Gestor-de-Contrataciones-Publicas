@@ -104,9 +104,11 @@ export function ListadoProveedores() {
             Gestiona la base de datos centralizada de tus proveedores
           </p>
         </div>
-        <Button className="bg-[#1e3a5f] hover:bg-[#152c4a] text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
-          + Agregar nuevo proveedor
-        </Button>
+        <Link href="/registro-proveedores/nuevo">
+          <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
+            + Agregar nuevo proveedor
+          </Button>
+        </Link>
       </div>
 
       {/* Main Container White */}
