@@ -56,8 +56,12 @@
   /* Login colors */
   --color-izq-login: var(--izq-login);
   --color-color-boton-1: var(--color-boton-1);
+  --color-color-boton-2: var(--color-boton-2);
   --color-color-titulos: var(--color-titulos);
   --color-color-subtitulos: var(--color-subtitulos);
+  --color-df-bg: var(--df-bg);
+  --color-navy: var(--navy);
+  --color-navy-hover: var(--navy-hover);
 }
 
 :root {
@@ -116,6 +120,10 @@
   --color-boton-1: oklch(0.3832 0.0857 251.07);
   --color-titulos: oklch(0.397 0.0444 249);
   --color-subtitulos: oklch(0.5162 0.004 247.9);
+  --color-boton-2: #1b456f;
+  --df-bg: #dfeaf1;
+  --navy: #1e3a5f;
+  --navy-hover: #152c4a;
 }
 
 @layer base {

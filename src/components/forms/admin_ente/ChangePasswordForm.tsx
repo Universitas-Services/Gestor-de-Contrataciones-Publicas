@@ -80,7 +80,7 @@ export function ChangePasswordForm() {
               name="currentPassword"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold text-[#34495E]">
+                  <FormLabel className="text-xs font-semibold text-[slate-700]">
                     Ingresa tu contraseña anterior
                   </FormLabel>
                   <FormControl>
@@ -103,7 +103,7 @@ export function ChangePasswordForm() {
               name="newPassword"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold text-[#34495E]">
+                  <FormLabel className="text-xs font-semibold text-[slate-700]">
                     Nueva contraseña
                   </FormLabel>
                   <FormControl>
@@ -126,7 +126,7 @@ export function ChangePasswordForm() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold text-[#34495E]">
+                  <FormLabel className="text-xs font-semibold text-[slate-700]">
                     Confirmar nueva contraseña
                   </FormLabel>
                   <FormControl>
