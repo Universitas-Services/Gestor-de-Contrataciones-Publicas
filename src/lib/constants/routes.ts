@@ -37,6 +37,10 @@ export const ROLE_ROUTES = {
     comisionContrataciones: "/admin_ente/configuracion/comision-contrataciones",
     cambiarContrasena: "/admin_ente/cambiar-contrasena",
     completarEnte: "/admin_ente/completar-ente",
+    consultorIA: "/consultor-ia",
+    conocenos: "/conocenos",
+    repositorioLegal: "/repositorio-legal",
+    registroProveedores: "/registro-proveedores",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",
@@ -44,12 +48,14 @@ export const ROLE_ROUTES = {
     validaciones: "/supervisor/validaciones",
     observaciones: "/supervisor/observaciones",
     procesos: "/supervisor/procesos",
+    registroProveedores: "/registro-proveedores",
   },
   [ROLES.VISUALIZADOR]: {
     dashboard: "/visualizador/dashboard",
     consultas: "/visualizador/consultas",
     reportes: "/visualizador/reportes",
     transparencia: "/visualizador/transparencia",
+    registroProveedores: "/registro-proveedores",
   },
   [ROLES.EJECUTOR]: {
     dashboard: "/ejecutor/dashboard",
@@ -57,6 +63,7 @@ export const ROLE_ROUTES = {
     documentos: "/ejecutor/documentos",
     procesos: "/ejecutor/procesos",
     notificaciones: "/ejecutor/notificaciones",
+    registroProveedores: "/registro-proveedores",
   },
 } as const;
 

@@ -60,6 +60,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         ],
       },
       {
+        label: "Registro de proveedores",
+        href: "/registro-proveedores",
+        icon: Newspaper,
+      },
+      {
         label: "Licitaciones",
         href: ROLE_ROUTES.admin_ente.licitaciones,
         icon: Gavel,
@@ -94,6 +99,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         icon: LayoutDashboard,
       },
       {
+        label: "Registro de proveedores",
+        href: "/registro-proveedores",
+        icon: Newspaper,
+      },
+      {
         label: "Auditorías",
         href: ROLE_ROUTES.supervisor.auditorias,
         icon: CheckCircle,
@@ -123,6 +133,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         icon: LayoutDashboard,
       },
       {
+        label: "Registro de proveedores",
+        href: "/registro-proveedores",
+        icon: Newspaper,
+      },
+      {
         label: "Consultas",
         href: ROLE_ROUTES.visualizador.consultas,
         icon: Search,
@@ -145,6 +160,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Dashboard",
         href: ROLE_ROUTES.ejecutor.dashboard,
         icon: LayoutDashboard,
+      },
+      {
+        label: "Registro de proveedores",
+        href: "/registro-proveedores",
+        icon: Newspaper,
       },
       {
         label: "Tareas",
@@ -183,17 +203,17 @@ export function getSidebarConfig(role: UserRole): SidebarConfig {
 export const GLOBAL_SIDEBAR_ITEMS: SidebarItem[] = [
   {
     label: "Consultor IA",
-    href: "#",
+    href: "/consultor-ia",
     icon: LiaRobotSolid,
   },
   {
     label: "Conocenos",
-    href: "#",
+    href: "/conocenos",
     icon: IoEarthOutline,
   },
   {
     label: "Repositorio legal",
-    href: "#",
+    href: "/repositorio-legal",
     icon: AiOutlineBook,
   },
 ];

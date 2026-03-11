@@ -37,19 +37,15 @@ function NavItem({ item, roleCssVar }: { item: SidebarItem; roleCssVar: string }
           isActive={isActive}
           tooltip={item.label}
           onClick={() => setIsOpen(!isOpen)}
+          style={isActive ? { color: `oklch(var(--${roleCssVar}))` } : undefined}
         >
-          <div
-            className="flex items-center gap-3 w-full"
-            style={isActive ? { color: `oklch(var(--${roleCssVar}))` } : undefined}
-          >
-            <Icon className="h-5 w-5" />
-            <span>{item.label}</span>
-            <ChevronDown
-              className={`ml-auto h-4 w-4 transition-transform duration-200 ${
-                isOpen ? "rotate-180" : ""
-              }`}
-            />
-          </div>
+          <Icon className="h-5 w-5" />
+          <span>{item.label}</span>
+          <ChevronDown
+            className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
         </SidebarMenuButton>
 
         {isOpen && (
