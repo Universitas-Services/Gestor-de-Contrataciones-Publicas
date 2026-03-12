@@ -1,10 +1,9 @@
 name: CI Pipeline
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
+  workflow_call:
 
 jobs:
   # Job 1: ESLint
@@ -28,9 +27,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  # Job 2: Jest (depende de lint)
+  # Job 2: Vitest (depende de lint)
   test:
-    name: Jest Tests
+    name: Vitest Tests
     runs-on: ubuntu-latest
     needs: lint # ← Espera a que 'lint' termine exitosamente
 
