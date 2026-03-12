@@ -8,6 +8,23 @@ import { IoAlertCircleOutline } from "react-icons/io5";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ProviderData {
   id: string;
@@ -94,70 +111,60 @@ export function ListadoProveedores() {
 
   return (
     <div className="w-full max-w-[1280px] mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#1e293b] tracking-tight mb-1">
-            Listado de Proveedores
-          </h1>
-          <p className="text-slate-500 font-medium">
-            Gestiona la base de datos centralizada de tus proveedores
-          </p>
-        </div>
-        <Link href="/registro-proveedores/nuevo">
-          <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
-            + Agregar nuevo proveedor
-          </Button>
-        </Link>
-      </div>
-
       {/* Main Container White */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
+        {/* Header Area Inside Card */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-100 mb-6 pb-6">
+          <div>
+            <h1 className="text-2xl font-extrabold text-[#1e293b] tracking-tight mb-1">
+              Listado de Proveedores
+            </h1>
+            <p className="text-slate-500 font-medium text-sm">
+              Gestiona la base de datos centralizada de tus proveedores
+            </p>
+          </div>
+          <Link href="/registro-proveedores/nuevo">
+            <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
+              + Agregar nuevo proveedor
+            </Button>
+          </Link>
+        </div>
+
         {/* Toolbar */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
+            <Input
               type="text"
               placeholder="Buscar por nombre, RIF o representante..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent text-sm"
+              className="w-full pl-10 pr-4 h-[42px] rounded-lg border-slate-300 focus-visible:ring-navy text-sm bg-white"
             />
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <select className="appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] text-sm font-medium w-36">
-                <option>Tipo: Todos</option>
-                <option>Obras</option>
-                <option>Bienes</option>
-                <option>Servicios</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                <svg
-                  className="fill-current h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
-            <div className="relative">
-              <select className="appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] text-sm font-medium w-40">
-                <option>Status: Todos</option>
-                <option>Activo</option>
-                <option>Por vencer</option>
-                <option>Vencido</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                <svg
-                  className="fill-current h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
+            <Select defaultValue="todos_tipos">
+              <SelectTrigger className="w-36 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Tipo: Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos_tipos">Tipo: Todos</SelectItem>
+                <SelectItem value="obras">Obras</SelectItem>
+                <SelectItem value="bienes">Bienes</SelectItem>
+                <SelectItem value="servicios">Servicios</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select defaultValue="todos_status">
+              <SelectTrigger className="w-40 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Status: Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos_status">Status: Todos</SelectItem>
+                <SelectItem value="activo">Activo</SelectItem>
+                <SelectItem value="por_vencer">Por vencer</SelectItem>
+                <SelectItem value="vencido">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Button
               variant="outline"
               className="h-[42px] px-4 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
@@ -168,56 +175,52 @@ export function ListadoProveedores() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-[#ffffff] text-[#1e293b] font-bold border-b border-slate-200">
-              <tr>
-                <th className="p-4 w-12 text-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                  />
-                </th>
-                <th className="p-4 whitespace-nowrap">
+        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+          <Table>
+            <TableHeader className="bg-white">
+              <TableRow className="border-b border-slate-200 hover:bg-transparent [&_th]:text-[#1e293b] [&_th]:font-bold border-t-0 border-x-0">
+                <TableHead className="w-12 text-center p-4">
+                  <Checkbox className="border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
+                </TableHead>
+                <TableHead className="p-4 whitespace-nowrap">
                   <div className="flex items-center gap-2 cursor-pointer hover:text-[#1e3a5f]">
                     Nombre del proveedor
                     <ArrowUpDown className="w-4 h-4 text-slate-400" />
                   </div>
-                </th>
-                <th className="p-4 text-center whitespace-nowrap">Rif</th>
-                <th className="p-4 text-center whitespace-nowrap">Representante Legal</th>
-                <th className="p-4 text-center whitespace-nowrap">tipo</th>
-                <th className="p-4 text-center whitespace-nowrap">Estatus</th>
-                <th className="p-4 text-center whitespace-nowrap">Aprobación</th>
-                <th className="p-4 text-center whitespace-nowrap">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+                <TableHead className="p-4 text-center whitespace-nowrap">Rif</TableHead>
+                <TableHead className="p-4 text-center whitespace-nowrap">
+                  Representante Legal
+                </TableHead>
+                <TableHead className="p-4 text-center whitespace-nowrap">Tipo</TableHead>
+                <TableHead className="p-4 text-center whitespace-nowrap">Estatus</TableHead>
+                <TableHead className="p-4 text-center whitespace-nowrap">Aprobación</TableHead>
+                <TableHead className="p-4 text-center whitespace-nowrap">Acción</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {providers.map((provider, index) => (
-                <tr
+                <TableRow
                   key={provider.id + index}
-                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
+                  className={`border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 border-t-0 border-x-0 ${
                     index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
                   }`}
                 >
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                    />
-                  </td>
-                  <td className="p-4 font-semibold text-[#1e293b] whitespace-nowrap">
+                  <TableCell className="p-4 text-center">
+                    <Checkbox className="border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
+                  </TableCell>
+                  <TableCell className="p-4 font-semibold text-[#1e293b] whitespace-nowrap">
                     {provider.name}
-                  </td>
-                  <td className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
                     {provider.rif}
-                  </td>
-                  <td className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
                     {provider.representative}
-                  </td>
+                  </TableCell>
 
                   {/* Tipo Pill */}
-                  <td className="p-4 text-center">
+                  <TableCell className="p-4 text-center">
                     <span
                       className={`inline-flex px-6 py-1 rounded-full text-xs font-bold border ${
                         provider.type === "Obras"
@@ -229,10 +232,10 @@ export function ListadoProveedores() {
                     >
                       {provider.type}
                     </span>
-                  </td>
+                  </TableCell>
 
                   {/* Estatus Pill */}
-                  <td className="p-4 text-center">
+                  <TableCell className="p-4 text-center">
                     <span
                       className={`inline-flex px-6 py-1 rounded-full text-xs font-bold border ${
                         provider.status === "Activo"
@@ -244,10 +247,10 @@ export function ListadoProveedores() {
                     >
                       {provider.status}
                     </span>
-                  </td>
+                  </TableCell>
 
                   {/* Aprobación Switch */}
-                  <td className="p-4 text-center">
+                  <TableCell className="p-4 text-center">
                     <button
                       onClick={() => toggleApproval(provider.id)}
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
@@ -261,10 +264,10 @@ export function ListadoProveedores() {
                         }`}
                       />
                     </button>
-                  </td>
+                  </TableCell>
 
                   {/* Acciones */}
-                  <td className="p-4">
+                  <TableCell className="p-4">
                     <div className="flex items-center justify-center gap-3">
                       <Link href={`/registro-proveedores/${provider.id}`}>
                         <button
@@ -281,11 +284,11 @@ export function ListadoProveedores() {
                         <FaRegTrashAlt className="w-5 h-5" />
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination Dummy */}
@@ -329,44 +332,42 @@ export function ListadoProveedores() {
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-      </div>
 
-      {/* Footer KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total Proveedores</h3>
-              <BsFillPeopleFill className="w-6 h-6 text-[#475569]" />
-            </div>
-            <div className="text-3xl font-extrabold text-[#1e293b] mb-1">124</div>
-            <p className="text-xs font-semibold text-[#84cc16]">+12 este mes</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Documentación vencida</h3>
-              <div className="p-1 bg-[#1e3a5f] rounded flex items-center justify-center">
-                <BsFillCheckSquareFill className="w-4 h-4 text-white" />
+        {/* Footer KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-[#1e293b]">Total Proveedores</h3>
+                <BsFillPeopleFill className="w-6 h-6 text-[#475569]" />
               </div>
-            </div>
-            <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">18</div>
-            <p className="text-xs font-semibold text-[#ef4444]">Requiere atención</p>
-          </CardContent>
-        </Card>
+              <div className="text-3xl font-extrabold text-[#1e293b] mb-1">124</div>
+              <p className="text-xs font-semibold text-[#84cc16]">+12 este mes</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Proceso de aprobación</h3>
-              <IoAlertCircleOutline className="w-7 h-7 text-[#334155]" />
-            </div>
-            <div className="text-3xl font-extrabold text-[#334155] mb-1">15</div>
-            <p className="text-xs font-semibold text-[#ef4444]">Pendiente revisión</p>
-          </CardContent>
-        </Card>
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-[#1e293b]">Documentación vencida</h3>
+                <BsFillCheckSquareFill className="w-6 h-6 text-[#1e3a5f]" />
+              </div>
+              <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">18</div>
+              <p className="text-xs font-semibold text-[#ef4444]">Requiere atención</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-[#1e293b]">Proceso de aprobación</h3>
+                <IoAlertCircleOutline className="w-7 h-7 text-[#334155]" />
+              </div>
+              <div className="text-3xl font-extrabold text-[#334155] mb-1">15</div>
+              <p className="text-xs font-semibold text-[#ef4444]">Pendiente revisión</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

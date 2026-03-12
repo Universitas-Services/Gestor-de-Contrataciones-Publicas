@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Upload, Trash2, ImageIcon } from "lucide-react";
+import { Trash2, ImageIcon, Loader2 } from "lucide-react";
+import { BsCloudUploadFill } from "react-icons/bs";
 
 import {
   nuevoProveedorSchema,
@@ -47,6 +48,7 @@ export function NuevoProveedorForm() {
   // Estados visuales duales (RIF y Cedula)
   const [rifTipo, setRifTipo] = useState("J");
   const [rifNumero, setRifNumero] = useState("");
+  const [rifDigito, setRifDigito] = useState("");
   const [cedulaTipo, setCedulaTipo] = useState("V");
   const [cedulaNumero, setCedulaNumero] = useState("");
 
@@ -74,7 +76,7 @@ export function NuevoProveedorForm() {
       rnc: undefined,
       solvenciaLaboral: undefined,
       licenciaMunicipal: undefined,
-      actividadPrincipal: "",
+      actividadPrincipal: "No" as any,
       areaEspecialidad: "",
       anosExperiencia: "",
       patrimonioNeto: "",
@@ -86,12 +88,12 @@ export function NuevoProveedorForm() {
 
   // Efecto para concatenar RIF
   useEffect(() => {
-    if (rifTipo && rifNumero.length >= 8) {
-      form.setValue("rif", `${rifTipo}-${rifNumero}`, { shouldValidate: true });
+    if (rifTipo && rifNumero.length >= 8 && rifDigito.length === 1) {
+      form.setValue("rif", `${rifTipo}-${rifNumero}-${rifDigito}`, { shouldValidate: true });
     } else {
       form.setValue("rif", ""); // Invalida hasta que se complete
     }
-  }, [rifTipo, rifNumero, form]);
+  }, [rifTipo, rifNumero, rifDigito, form]);
 
   // Efecto para concatenar Cédula Representante
   useEffect(() => {
@@ -180,6 +182,19 @@ export function NuevoProveedorForm() {
 
   return (
     <div className="w-full pb-10">
+      {/* Dynamic Header */}
+      <div className="mb-10">
+        <h1 className="text-[28px] font-extrabold text-color-titulos tracking-tight">
+          {step === 1 ? "Identificación y validación" : "Carga de documentos"}
+        </h1>
+        <p className="text-muted-foreground italic mt-1 text-sm">
+          {step === 1
+            ? "Complete los datos iniciales para el registro formal del proveedor en el sistema centralizado"
+            : "Por favor cargar los documentos legales del proveedor que valide los datos suministrados."}
+        </p>
+        <hr className="mt-8 border-border" />
+      </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
           {step === 1 && (
@@ -188,28 +203,28 @@ export function NuevoProveedorForm() {
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-6 bg-[#84cc16] rounded-full"></div>
-                  <h2 className="text-xl font-bold text-slate-800">
+                  <h2 className="text-xl font-bold text-color-titulos">
                     1. Identificación y validación
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-[800px]">
                   {/* Correo */}
                   <FormField
                     control={form.control}
                     name="correo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Correo electrónico del proveedor
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: prueba@gmail.com
                         </p>
                         <FormControl>
                           <Input
                             placeholder="correo@proveedor.com"
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -224,16 +239,16 @@ export function NuevoProveedorForm() {
                     name="nombre"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Nombre de la empresa o Razón Social
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: Industrias Carabobo C.A
                         </p>
                         <FormControl>
                           <Input
                             placeholder="Razón social"
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -244,28 +259,35 @@ export function NuevoProveedorForm() {
 
                   {/* RIF */}
                   <div className="space-y-2">
-                    <FormLabel className="font-bold text-slate-700">
+                    <FormLabel className="font-bold text-color-subtitulos">
                       Registro de Información Fiscal (RIF)
                     </FormLabel>
-                    <p className="text-xs text-slate-500 italic mb-2">Ejemplo: J-00000000-0</p>
-                    <div className="flex gap-2">
+                    <p className="text-xs text-muted-foreground italic mb-2">
+                      Ejemplo: J-12345678-9
+                    </p>
+                    <div className="flex items-center gap-2">
                       <Select value={rifTipo} onValueChange={setRifTipo}>
-                        <SelectTrigger className="w-[80px] h-11 border-slate-300">
+                        <SelectTrigger className="w-[80px] h-11 border border-border bg-white">
                           <SelectValue placeholder="J" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="J">J</SelectItem>
-                          <SelectItem value="V">V</SelectItem>
                           <SelectItem value="G">G</SelectItem>
-                          <SelectItem value="E">E</SelectItem>
+                          <SelectItem value="J">J</SelectItem>
                         </SelectContent>
                       </Select>
                       <Input
-                        placeholder="00000000-0"
-                        maxLength={10}
+                        placeholder="00000000"
+                        maxLength={8}
                         value={rifNumero}
-                        onChange={(e) => setRifNumero(e.target.value.replace(/[^\d-]/g, ""))}
-                        className="flex-1 h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                        onChange={(e) => setRifNumero(e.target.value.replace(/\D/g, ""))}
+                        className="flex-1 max-w-[140px] h-11 border border-border focus-visible:ring-color-boton-2 bg-white"
+                      />
+                      <Input
+                        placeholder="0"
+                        maxLength={1}
+                        value={rifDigito}
+                        onChange={(e) => setRifDigito(e.target.value.replace(/\D/g, ""))}
+                        className="w-[50px] h-11 text-center border border-border focus-visible:ring-color-boton-2 bg-white"
                       />
                     </div>
                     {form.formState.errors.rif && (
@@ -281,15 +303,15 @@ export function NuevoProveedorForm() {
                     name="formaJuridica"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Forma jurídica (Si aplica)
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: C.A., S.A., S.R.L.
                         </p>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11 border-slate-300 focus-visible:ring-color-boton-2">
+                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Seleccionar opciones" />
                             </SelectTrigger>
                           </FormControl>
@@ -310,12 +332,14 @@ export function NuevoProveedorForm() {
                     name="tipoPersona"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">Tipo de Persona</FormLabel>
+                        <FormLabel className="font-bold text-color-subtitulos">
+                          Tipo de Persona
+                        </FormLabel>
                         <p className="text-xs text-transparent mb-2 h-4"></p>{" "}
                         {/* Margen visual para cuadrar con la otra columna si la otra tiene hint */}
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11 border-slate-300 focus-visible:ring-color-boton-2">
+                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona tipo" />
                             </SelectTrigger>
                           </FormControl>
@@ -335,17 +359,17 @@ export function NuevoProveedorForm() {
                     name="datosRegistroMercantil"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Indique los datos del Registro Mercantil de la empresa oferente
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: Registro Mercantil Segundo del Estado Lara, bajo el N° 0, Tomo
                           00-A del Año 0000
                         </p>
                         <FormControl>
                           <Input
                             placeholder=""
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -360,11 +384,11 @@ export function NuevoProveedorForm() {
                     name="estado"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">Estado</FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">Ejemplo: Lara</p>
+                        <FormLabel className="font-bold text-color-subtitulos">Estado</FormLabel>
+                        <p className="text-xs text-muted-foreground italic mb-2">Ejemplo: Lara</p>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11 border-slate-300 focus-visible:ring-color-boton-2">
+                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona estado" />
                             </SelectTrigger>
                           </FormControl>
@@ -387,11 +411,13 @@ export function NuevoProveedorForm() {
                     name="parroquia"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">Parroquia</FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">Ejemplo: Concepción</p>
+                        <FormLabel className="font-bold text-color-subtitulos">Parroquia</FormLabel>
+                        <p className="text-xs text-muted-foreground italic mb-2">
+                          Ejemplo: Concepción
+                        </p>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11 border-slate-300 focus-visible:ring-color-boton-2">
+                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona parroquia" />
                             </SelectTrigger>
                           </FormControl>
@@ -414,15 +440,15 @@ export function NuevoProveedorForm() {
                     name="representanteNombre"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Nombre del Representante Legal
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: José Ramírez González Pérez
                         </p>
                         <FormControl>
                           <Input
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -437,11 +463,13 @@ export function NuevoProveedorForm() {
                     name="municipio"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">Municipio</FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">Ejemplo: Iribarren</p>
+                        <FormLabel className="font-bold text-color-subtitulos">Municipio</FormLabel>
+                        <p className="text-xs text-muted-foreground italic mb-2">
+                          Ejemplo: Iribarren
+                        </p>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11 border-slate-300 focus-visible:ring-color-boton-2">
+                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona municipio" />
                             </SelectTrigger>
                           </FormControl>
@@ -460,13 +488,15 @@ export function NuevoProveedorForm() {
 
                   {/* Cedula Representante */}
                   <div className="space-y-2">
-                    <FormLabel className="font-bold text-slate-700">
+                    <FormLabel className="font-bold text-color-subtitulos">
                       Cédula del Representante Legal
                     </FormLabel>
-                    <p className="text-xs text-slate-500 italic mb-2">Ejemplo: V-00.000.000</p>
-                    <div className="flex gap-2">
+                    <p className="text-xs text-muted-foreground italic mb-2">
+                      Ejemplo: V-00.000.000
+                    </p>
+                    <div className="flex items-center gap-2">
                       <Select value={cedulaTipo} onValueChange={setCedulaTipo}>
-                        <SelectTrigger className="w-[80px] h-11 border-slate-300">
+                        <SelectTrigger className="w-[100px] h-11 border-border bg-white shadow-sm">
                           <SelectValue placeholder="V" />
                         </SelectTrigger>
                         <SelectContent>
@@ -476,10 +506,15 @@ export function NuevoProveedorForm() {
                       </Select>
                       <Input
                         placeholder="00000000"
-                        maxLength={9}
+                        maxLength={8}
                         value={cedulaNumero}
                         onChange={(e) => setCedulaNumero(e.target.value.replace(/\D/g, ""))}
-                        className="flex-1 h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                        className="flex-1 max-w-[140px] h-11 border-border focus-visible:ring-color-boton-2 bg-white shadow-sm"
+                      />
+                      <Input
+                        placeholder="0"
+                        maxLength={1}
+                        className="w-[50px] h-11 text-center border-border focus-visible:ring-color-boton-2 bg-white shadow-sm"
                       />
                     </div>
                     {form.formState.errors.representanteCedula && (
@@ -495,14 +530,16 @@ export function NuevoProveedorForm() {
                     name="telefono"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Teléfono de contacto
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">Ejemplo: 0412-5555555</p>
+                        <p className="text-xs text-muted-foreground italic mb-2">
+                          Ejemplo: 0412-5555555
+                        </p>
                         <FormControl>
                           <Input
                             placeholder="0000-0000000"
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -511,22 +548,22 @@ export function NuevoProveedorForm() {
                     )}
                   />
 
-                  {/* Dirección Fiscal (Toma todo el ancho) */}
+                  {/* Dirección Fiscal (Más pequeña) */}
                   <FormField
                     control={form.control}
                     name="direccionFiscal"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel className="font-bold text-slate-700">
+                      <FormItem>
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Dirección fiscal (como se indica en el RIF)
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: Avenida 00, entre calles 00 y 00, Centro Comercial Central, Piso
                           2, Local 3
                         </p>
                         <FormControl>
                           <Input
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -538,13 +575,15 @@ export function NuevoProveedorForm() {
               </div>
 
               {/* Separador */}
-              <div className="border-t border-slate-200"></div>
+              <div className="border-t border-border"></div>
 
               {/* Sección 2: Validación de requisitos */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-6 bg-color-boton-2 rounded-full"></div>
-                  <h2 className="text-xl font-bold text-slate-800">2. Validación de requisitos</h2>
+                  <h2 className="text-xl font-bold text-color-titulos">
+                    2. Validación de requisitos
+                  </h2>
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -566,23 +605,31 @@ export function NuevoProveedorForm() {
                       // @ts-expect-error dynamic strict
                       name={req.name}
                       render={({ field }) => (
-                        <FormItem className="flex items-center justify-between p-4 bg-white border border-slate-200 shadow-sm rounded-lg">
-                          <FormLabel className="text-[15px] text-slate-700 font-semibold m-0 flex-1">
+                        <FormItem className="flex items-center justify-between p-4 bg-white border border-border shadow-sm rounded-lg">
+                          <FormLabel className="text-[15px] text-color-subtitulos font-semibold m-0 flex-1">
                             {req.label}
                           </FormLabel>
                           <div className="flex gap-2">
                             <Button
                               type="button"
-                              variant={field.value === "Si" ? "default" : "outline"}
-                              className={`rounded w-14 h-10 ${field.value === "Si" ? "bg-color-boton-2 hover:bg-navy" : "border-slate-300 text-slate-600"}`}
+                              variant="outline"
+                              className={`rounded w-14 h-10 transition-colors ${
+                                field.value === "Si"
+                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                              }`}
                               onClick={() => field.onChange("Si")}
                             >
                               Si
                             </Button>
                             <Button
                               type="button"
-                              variant={field.value === "No" ? "default" : "outline"}
-                              className={`rounded w-14 h-10 ${field.value === "No" ? "bg-white text-slate-900 border border-slate-300 shadow-inner" : "border-slate-300 text-slate-600"}`}
+                              variant="outline"
+                              className={`rounded w-14 h-10 transition-colors ${
+                                field.value === "No"
+                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                              }`}
                               onClick={() => field.onChange("No")}
                             >
                               No
@@ -597,37 +644,58 @@ export function NuevoProveedorForm() {
               </div>
 
               {/* Separador */}
-              <div className="border-t border-slate-200"></div>
+              <div className="border-t border-border"></div>
 
               {/* Sección 3: Capacidad Técnica y Financiera */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-6 bg-navy rounded-full"></div>
-                  <h2 className="text-xl font-bold text-slate-800">
+                  <h2 className="text-xl font-bold text-color-titulos">
                     3. Capacidad técnica y financiera
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-[800px]">
                   {/* Actividad Comercial */}
                   <FormField
                     control={form.control}
                     name="actividadPrincipal"
                     render={({ field }) => (
                       <FormItem className="md:col-span-2">
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Actividad comercial principal
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic mb-2">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: El objeto principal es la prestación de servicios de consultoría
-                          y asesoría en el área de tecnología de información...
+                          y asesoría en el área de tecnología de información, lo que incluye el
+                          desarrollo de software, diseño de páginas web, y manejo de redes sociales.
                         </p>
-                        <FormControl>
-                          <Textarea
-                            className="resize-none min-h-[80px] border-slate-300 focus-visible:ring-color-boton-2"
-                            {...field}
-                          />
-                        </FormControl>
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={`rounded w-14 h-10 transition-colors ${
+                              field.value === "Si"
+                                ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                            }`}
+                            onClick={() => field.onChange("Si")}
+                          >
+                            Si
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={`rounded w-14 h-10 transition-colors ${
+                              field.value === "No"
+                                ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                            }`}
+                            onClick={() => field.onChange("No")}
+                          >
+                            No
+                          </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -638,7 +706,7 @@ export function NuevoProveedorForm() {
                     name="areaEspecialidad"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700 block mb-2">
+                        <FormLabel className="font-bold text-color-subtitulos block mb-2">
                           Área de especialidad
                         </FormLabel>
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -647,7 +715,11 @@ export function NuevoProveedorForm() {
                               key={area}
                               type="button"
                               variant="outline"
-                              className={`rounded-full px-6 h-10 transition-colors ${field.value === area ? "bg-df-bg border-color-boton-2 text-color-boton-2 font-bold" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                              className={`rounded px-6 h-10 transition-colors ${
+                                field.value === area
+                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                              }`}
                               onClick={() => field.onChange(area)}
                             >
                               {area}
@@ -665,14 +737,14 @@ export function NuevoProveedorForm() {
                     name="anosExperiencia"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Años de experiencia comprobable
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             min={0}
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -686,13 +758,13 @@ export function NuevoProveedorForm() {
                     name="patrimonioNeto"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Patrimonio neto reportado
                         </FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Ej: 10,000.00"
-                            className="h-11 border-slate-300 focus-visible:ring-color-boton-2"
+                            className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
                           />
                         </FormControl>
@@ -706,14 +778,14 @@ export function NuevoProveedorForm() {
                     name="fechaEstadoFinanciero"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700">
+                        <FormLabel className="font-bold text-color-subtitulos">
                           Fecha del último estado financiero
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input
                               type="date"
-                              className="h-11 border-slate-300 focus-visible:ring-color-boton-2 pl-4 pr-10"
+                              className="h-11 border-border focus-visible:ring-color-boton-2 pl-4 pr-10"
                               {...field}
                             />
                           </div>
@@ -728,7 +800,7 @@ export function NuevoProveedorForm() {
                     name="nivelContratacion"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-slate-700 block mb-2">
+                        <FormLabel className="font-bold text-color-subtitulos block mb-2">
                           Nivel de contratación
                         </FormLabel>
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -737,7 +809,11 @@ export function NuevoProveedorForm() {
                               key={nivel}
                               type="button"
                               variant="outline"
-                              className={`rounded px-6 h-10 transition-colors min-w-[80px] ${field.value === nivel ? "bg-df-bg border-color-boton-2 text-color-boton-2 font-bold" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                              className={`rounded px-6 h-10 transition-colors min-w-[80px] ${
+                                field.value === nivel
+                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                              }`}
                               onClick={() => field.onChange(nivel)}
                             >
                               {nivel}
@@ -770,18 +846,20 @@ export function NuevoProveedorForm() {
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-6 bg-[#0ea5e9] rounded-full"></div>
-                  <h2 className="text-xl font-bold text-slate-800">4. Carga de documentos</h2>
+                  <h2 className="text-xl font-bold text-color-titulos">4. Carga de documentos</h2>
                 </div>
 
                 <div className="max-w-[700px]">
                   <FormItem className="mb-6">
-                    <FormLabel className="font-bold text-slate-700">Tipo de documento</FormLabel>
-                    <p className="text-xs text-slate-500 italic mb-2">
+                    <FormLabel className="font-bold text-color-subtitulos">
+                      Tipo de documento
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground italic mb-2">
                       Seleccione el tipo de documento.
                     </p>
                     <Select defaultValue="rif">
                       <FormControl>
-                        <SelectTrigger className="h-11 border-slate-300 focus-visible:ring-color-boton-2">
+                        <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                           <SelectValue placeholder="Selecciona el tipo de documento" />
                         </SelectTrigger>
                       </FormControl>
@@ -795,16 +873,16 @@ export function NuevoProveedorForm() {
 
                   {/* Dropzone Simulada */}
                   <div
-                    className="w-full h-64 border-2 border-dashed border-slate-300 rounded-xl bg-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200/50 transition-colors mb-6 group relative"
+                    className="w-full h-64 border-2 border-dashed border-[#AAB7B8] rounded-xl bg-[#AAB7B8]/10 flex flex-col items-center justify-center cursor-pointer hover:bg-[#AAB7B8]/20 transition-colors mb-6 group relative"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform">
-                      <Upload className="w-8 h-8 text-slate-400" />
+                    <div className="w-16 h-16 bg-[#AAB7B8] rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform">
+                      <BsCloudUploadFill className="w-8 h-8 text-white" />
                     </div>
-                    <span className="text-slate-800 font-bold text-lg mb-1">
+                    <span className="text-color-titulos font-bold text-lg mb-1">
                       Adjunta el archivo aquí
                     </span>
-                    <span className="text-slate-500 text-sm">
+                    <span className="text-muted-foreground text-sm">
                       Arrastra y suelta o haz click para buscar
                     </span>
 
@@ -819,14 +897,14 @@ export function NuevoProveedorForm() {
 
                   {/* Observaciones extra */}
                   <FormItem className="mb-6">
-                    <FormLabel className="font-bold text-slate-700">Observaciones</FormLabel>
-                    <p className="text-xs text-slate-500 italic mb-2">
+                    <FormLabel className="font-bold text-color-subtitulos">Observaciones</FormLabel>
+                    <p className="text-xs text-muted-foreground italic mb-2">
                       Ingrese comentarios adicionales sobre este documento
                     </p>
                     <FormControl>
                       <Textarea
                         placeholder="Ingrese comentarios adicionales sobre este documento..."
-                        className="resize-none min-h-[120px] border-slate-300 focus-visible:ring-color-boton-2"
+                        className="resize-none min-h-[120px] border-border focus-visible:ring-color-boton-2"
                       />
                     </FormControl>
                   </FormItem>
@@ -835,25 +913,27 @@ export function NuevoProveedorForm() {
                   {documentos.length > 0 && (
                     <div className="space-y-4">
                       <div>
-                        <FormLabel className="font-bold text-slate-700 block">
+                        <FormLabel className="font-bold text-color-subtitulos block">
                           Documentos cargados
                         </FormLabel>
-                        <p className="text-xs text-slate-500 italic">Detalles de los archivos</p>
+                        <p className="text-xs text-muted-foreground italic">
+                          Detalles de los archivos
+                        </p>
                       </div>
 
                       <div className="flex flex-col gap-3">
                         {documentos.map((doc) => (
-                          <Card key={doc.id} className="border border-slate-200 shadow-sm">
+                          <Card key={doc.id} className="border border-border shadow-sm">
                             <div className="flex items-center justify-between p-4">
                               <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded bg-slate-200 flex items-center justify-center flex-shrink-0">
-                                  <ImageIcon className="w-5 h-5 text-slate-600" />
+                                  <ImageIcon className="w-5 h-5 text-muted-foreground" />
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-slate-800">
+                                  <span className="text-sm font-bold text-color-titulos">
                                     {doc.name}
                                   </span>
-                                  <span className="text-[11px] text-slate-400 font-medium">
+                                  <span className="text-[11px] text-muted-foreground font-medium">
                                     {doc.type} • {doc.size} • {doc.time}
                                   </span>
                                 </div>
@@ -876,11 +956,11 @@ export function NuevoProveedorForm() {
                 </div>
 
                 {/* Controles de avance final */}
-                <div className="flex justify-between pt-8 border-t border-slate-200">
+                <div className="flex justify-between pt-8 border-t border-border">
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 px-8 font-semibold rounded-md border-slate-300 text-slate-600 shadow-sm"
+                    className="h-12 px-8 font-semibold rounded-md border-border text-muted-foreground shadow-sm"
                     onClick={() => setStep(1)}
                     disabled={isSubmitting}
                   >
@@ -891,7 +971,7 @@ export function NuevoProveedorForm() {
                     disabled={isSubmitting}
                     className="bg-navy hover:bg-navy-hover h-12 px-8 text-white font-semibold rounded-md shadow"
                   >
-                    {isSubmitting && <Upload className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Guardar
                   </Button>
                 </div>

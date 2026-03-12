@@ -20,12 +20,12 @@ export const nuevoProveedorSchema = z.object({
   direccionFiscal: z.string().min(1, { message: "Dirección fiscal es requerida" }),
 
   // Sección 2: Validación de requisitos
-  rnc: z.enum(["Si", "No"]),
-  solvenciaLaboral: z.enum(["Si", "No"]),
-  licenciaMunicipal: z.enum(["Si", "No"]),
+  rnc: z.enum(["Si", "No"], { error: "Indique si posee RNC" }),
+  solvenciaLaboral: z.enum(["Si", "No"], { error: "Indique si posee solvencia" }),
+  licenciaMunicipal: z.enum(["Si", "No"], { error: "Indique si posee licencia" }),
 
   // Sección 3: Capacidad técnica y financiera
-  actividadPrincipal: z.string().min(1, { message: "La actividad comercial es requerida" }),
+  actividadPrincipal: z.enum(["Si", "No"], { error: "Indique su actividad principal" }),
   areaEspecialidad: z.string().min(1, { message: "Seleccione un área de especialidad" }),
   anosExperiencia: z.string().min(1, { message: "Años de experiencia requeridos" }),
   patrimonioNeto: z.string().min(1, { message: "Patrimonio neto reportado es requerido" }),
