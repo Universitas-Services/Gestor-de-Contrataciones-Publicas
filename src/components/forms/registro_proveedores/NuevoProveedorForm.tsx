@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Trash2, ImageIcon, Loader2 } from "lucide-react";
 import { BsCloudUploadFill } from "react-icons/bs";
+import { registrarProveedor } from "@/services/proveedores.service";
 
 import {
   nuevoProveedorSchema,
@@ -38,6 +39,18 @@ const ESTADOS = ["Distrito Capital", "Miranda", "Carabobo", "Lara"];
 const MUNICIPIOS = ["Libertador", "Sucre", "Valencia", "Iribarren"];
 const PARROQUIAS = ["Catedral", "El Recreo", "San Blas", "Concepcion"];
 
+// Tipos de documento para la carga de documentos del proveedor
+const TIPOS_DOCUMENTO = [
+  { value: "doc_registro_mercantil", label: "Acta constitutiva" },
+  { value: "doc_rif", label: "RIF" },
+  { value: "doc_referencias_bancarias", label: "Fotocopia de la cédula del representante legal" },
+  { value: "doc_rnc", label: "Certificado RNC" },
+  { value: "doc_estados_financieros", label: "Resumen informativo RNC" },
+  { value: "doc_solvencia_laboral", label: "Solvencia Laboral" },
+  { value: "doc_licencia_municipal", label: "Licencia de funcionamiento Municipal" },
+  { value: "doc_otro", label: "Otro" },
+] as const;
+
 export function NuevoProveedorForm() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,8 +66,20 @@ export function NuevoProveedorForm() {
   const [cedulaNumero, setCedulaNumero] = useState("");
 
   // Estado Local para Documentos
+  const [tipoDocActual, setTipoDocActual] = useState("doc_rif");
+  const [obsActual, setObsActual] = useState("");
+
   const [documentos, setDocumentos] = useState<
-    { id: string; name: string; size: string; time: string; type: string; observaciones: string }[]
+    {
+      id: string;
+      tipoDoc: string;
+      file: File;
+      name: string;
+      size: string;
+      time: string;
+      type: string;
+      observaciones: string;
+    }[]
   >([]);
 
   const form = useForm<NuevoProveedorFormValues>({
@@ -143,33 +168,78 @@ export function NuevoProveedorForm() {
   const onSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Simular tiempo de petición al backend
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const data = form.getValues();
+      const formData = new FormData();
+
+      formData.append("correo", data.correo);
+      formData.append("nombre", data.nombre);
+      formData.append("rif", data.rif);
+      formData.append("tipoPersona", data.tipoPersona);
+      if (data.formaJuridica) formData.append("tipoEntidadJuridica", data.formaJuridica);
+      formData.append("estado", data.estado);
+      formData.append("municipio", data.municipio);
+      formData.append("parroquia", data.parroquia);
+      formData.append("direccionFiscal", data.direccionFiscal);
+      formData.append("telefono", data.telefono);
+      formData.append("nombreRepLegal", data.representanteNombre);
+      formData.append("cedulaRepLegal", data.representanteCedula);
+
+      formData.append("registroRnc", data.rnc === "Si" ? "true" : "false");
+      formData.append("solvenciaLaboral", data.solvenciaLaboral === "Si" ? "true" : "false");
+      formData.append(
+        "licenciaFuncionamientoMunicipal",
+        data.licenciaMunicipal === "Si" ? "true" : "false"
+      );
+
+      formData.append("actividadComercial", data.actividadPrincipal);
+      formData.append("areaEspecialidad", data.areaEspecialidad);
+      formData.append("anosExperiencia", data.anosExperiencia.toString());
+      if (data.fechaEstadoFinanciero)
+        formData.append("fechaEstadoFinanciero", data.fechaEstadoFinanciero);
+      formData.append("patrimonioReportado", data.patrimonioNeto);
+      formData.append("nivelContratacion", data.nivelContratacion);
+
+      // Adjuntar archivos y observaciones
+      documentos.forEach((doc) => {
+        formData.append(doc.tipoDoc, doc.file);
+        if (doc.observaciones) {
+          formData.append(`obs_${doc.tipoDoc}`, doc.observaciones);
+        }
+      });
+
+      await registrarProveedor(formData);
+
       toast.success("Proveedor registrado exitosamente");
       router.push("/registro-proveedores/listado");
-    } catch (_error) {
-      toast.error("Error al registrar el proveedor");
+    } catch (error: unknown) {
+      console.error("Error en registrarProveedor:", error);
+      const msg = error instanceof Error ? error.message : "Error al registrar el proveedor";
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Funciones de Dropzone mockeadas
+  // Funciones de Dropzone
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Obtener la observación si existe (acá simplificado)
     const newDoc = {
       id: Math.random().toString(36).substr(2, 9),
+      tipoDoc: tipoDocActual,
+      file: file,
       name: file.name,
       size: (file.size / 1024).toFixed(0) + " KB",
-      time: "Cargado hace 1 min",
+      time: "Cargado justo ahora",
       type: file.type.includes("pdf") ? "PDF File" : "Image",
-      observaciones: form.getValues().datosRegistroMercantil || "", // Aprovechando para no crear otro local state suelto
+      observaciones: obsActual,
     };
 
-    setDocumentos((prev) => [...prev, newDoc]);
+    // Agregar reemplazando si ya existe un documento de ese tipo
+    setDocumentos((prev) => [...prev.filter((d) => d.tipoDoc !== tipoDocActual), newDoc]);
+    setObsActual(""); // Limpiar observaciones
+
     // Resetear input real
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -316,9 +386,11 @@ export function NuevoProveedorForm() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="C.A.">C.A.</SelectItem>
-                            <SelectItem value="S.A.">S.A.</SelectItem>
-                            <SelectItem value="S.R.L.">S.R.L.</SelectItem>
+                            <SelectItem value="EMPRESA_PRIVADA">EMPRESA_PRIVADA</SelectItem>
+                            <SelectItem value="COOPERATIVA">COOPERATIVA</SelectItem>
+                            <SelectItem value="FUNDACION">FUNDACION</SelectItem>
+                            <SelectItem value="ASOCIACION_CIVIL">ASOCIACION_CIVIL</SelectItem>
+                            <SelectItem value="CONSORCIO">CONSORCIO</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -344,8 +416,8 @@ export function NuevoProveedorForm() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Natural">Natural</SelectItem>
-                            <SelectItem value="Juridica">Jurídica</SelectItem>
+                            <SelectItem value="NATURAL">NATURAL</SelectItem>
+                            <SelectItem value="JURIDICA">JURIDICA</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -710,7 +782,7 @@ export function NuevoProveedorForm() {
                           Área de especialidad
                         </FormLabel>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {["Bienes", "Obras", "Servicio"].map((area) => (
+                          {["BIENES", "OBRAS", "SERVICIOS", "CONSULTORIA"].map((area) => (
                             <Button
                               key={area}
                               type="button"
@@ -804,7 +876,7 @@ export function NuevoProveedorForm() {
                           Nivel de contratación
                         </FormLabel>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {["Alta", "Media", "Baja"].map((nivel) => (
+                          {["EXPERTO", "AVANZADO", "INTERMEDIO", "BASICO"].map((nivel) => (
                             <Button
                               key={nivel}
                               type="button"
@@ -845,7 +917,7 @@ export function NuevoProveedorForm() {
               {/* Sección 4: Carga de documentos */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-1 h-6 bg-[#0ea5e9] rounded-full"></div>
+                  <div className="w-1 h-6 bg-section-docs rounded-full"></div>
                   <h2 className="text-xl font-bold text-color-titulos">4. Carga de documentos</h2>
                 </div>
 
@@ -857,26 +929,28 @@ export function NuevoProveedorForm() {
                     <p className="text-xs text-muted-foreground italic mb-2">
                       Seleccione el tipo de documento.
                     </p>
-                    <Select defaultValue="rif">
+                    <Select value={tipoDocActual} onValueChange={setTipoDocActual}>
                       <FormControl>
                         <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                           <SelectValue placeholder="Selecciona el tipo de documento" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="rif">Copia del RIF actualizado</SelectItem>
-                        <SelectItem value="cedula">Cédula del Representante</SelectItem>
-                        <SelectItem value="rnc">Certificado del RNC</SelectItem>
+                        {TIPOS_DOCUMENTO.map((tipo) => (
+                          <SelectItem key={tipo.value} value={tipo.value}>
+                            {tipo.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormItem>
 
                   {/* Dropzone Simulada */}
                   <div
-                    className="w-full h-64 border-2 border-dashed border-[#AAB7B8] rounded-xl bg-[#AAB7B8]/10 flex flex-col items-center justify-center cursor-pointer hover:bg-[#AAB7B8]/20 transition-colors mb-6 group relative"
+                    className="w-full h-64 border-2 border-dashed border-dropzone-border rounded-xl bg-dropzone-bg flex flex-col items-center justify-center cursor-pointer hover:bg-dropzone-border/20 transition-colors mb-6 group relative"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <div className="w-16 h-16 bg-[#AAB7B8] rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform">
+                    <div className="w-16 h-16 bg-dropzone-border rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform">
                       <BsCloudUploadFill className="w-8 h-8 text-white" />
                     </div>
                     <span className="text-color-titulos font-bold text-lg mb-1">
@@ -903,6 +977,8 @@ export function NuevoProveedorForm() {
                     </p>
                     <FormControl>
                       <Textarea
+                        value={obsActual}
+                        onChange={(e) => setObsActual(e.target.value)}
                         placeholder="Ingrese comentarios adicionales sobre este documento..."
                         className="resize-none min-h-[120px] border-border focus-visible:ring-color-boton-2"
                       />
