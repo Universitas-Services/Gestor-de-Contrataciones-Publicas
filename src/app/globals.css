@@ -68,6 +68,17 @@
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
   --color-success-text: var(--success-text);
+
+  /* Tipo (Area) colors */
+  --color-tipo-obras: var(--tipo-obras);
+  --color-tipo-obras-bg: var(--tipo-obras-bg);
+  --color-tipo-obras-border: var(--tipo-obras-border);
+  --color-tipo-bienes: var(--tipo-bienes);
+  --color-tipo-bienes-bg: var(--tipo-bienes-bg);
+  --color-tipo-bienes-border: var(--tipo-bienes-border);
+  --color-tipo-servicios: var(--tipo-servicios);
+  --color-tipo-servicios-bg: var(--tipo-servicios-bg);
+  --color-tipo-servicios-border: var(--tipo-servicios-border);
 }
 
 :root {
@@ -136,6 +147,17 @@
   --success: #22c55e;
   --success-bg: #f0fdf4;
   --success-text: #15803d;
+
+  /* Tipo (Area) colors */
+  --tipo-obras: #dc2626;
+  --tipo-obras-bg: #fecaca;
+  --tipo-obras-border: #f87171;
+  --tipo-bienes: #2563eb;
+  --tipo-bienes-bg: #bfdbfe;
+  --tipo-bienes-border: #60a5fa;
+  --tipo-servicios: #475569;
+  --tipo-servicios-bg: #e2e8f0;
+  --tipo-servicios-border: #94a3b8;
 }
 
 @layer base {

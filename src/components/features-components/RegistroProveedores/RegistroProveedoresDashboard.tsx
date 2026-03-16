@@ -9,71 +9,70 @@ import { IoIosBriefcase, IoIosHammer, IoIosPrint } from "react-icons/io";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getProveedores, cambiarEstatusProveedor } from "@/services/proveedores.service";
+import { toast } from "sonner";
 
-interface ProviderData {
+interface Provider {
   id: string;
-  name: string;
+  nombre: string;
   rif: string;
-  representative: string;
-  type: "Obras" | "Bienes" | "Servicios";
-  status: "Activo" | "Por vencer" | "Vencido";
-  isApproved: boolean;
+  nombreRepLegal: string;
+  areaEspecialidad: string;
+  estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
 
-const mockProviders: ProviderData[] = [
-  {
-    id: "1",
-    name: "Constructora Sambil C.A.",
-    rif: "J-30456890-1",
-    representative: "Ricardo Rodriguez",
-    type: "Obras",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "2",
-    name: "Insumos Logisticos Express",
-    rif: "J-41233455-2",
-    representative: "Mariana Valera",
-    type: "Bienes",
-    status: "Por vencer",
-    isApproved: false,
-  },
-  {
-    id: "3",
-    name: "Tecnologías del Sur",
-    rif: "J-50998122-0",
-    representative: "Héctor Méndez",
-    type: "Servicios",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "4",
-    name: "Suministros Médicos Global",
-    rif: "J-22877341-5",
-    representative: "Elena Farias",
-    type: "Bienes",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "5",
-    name: "Asesoria Contable & Cia",
-    rif: "J-31990442-8",
-    representative: "Juan Pablo Duarte",
-    type: "Servicios",
-    status: "Vencido",
-    isApproved: false,
-  },
-];
-
 export function RegistroProveedoresDashboard() {
-  const [providers, setProviders] = useState<ProviderData[]>(mockProviders);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [approvedCount, setApprovedCount] = useState(0);
 
-  const toggleApproval = (id: string) => {
-    setProviders(providers.map((p) => (p.id === id ? { ...p, isApproved: !p.isApproved } : p)));
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all to filter locally or make multiple calls
+      // For the "for approval" list, we fetch without status filter but will show PENDIENTE, RECHAZADO, EN_REVISION
+      // Alternatively, we fetch multiple and combine if API is strict
+      const [pendingRes, rejectedRes, allRes, approvedRes] = await Promise.all([
+        getProveedores({ estatusValidacion: "PENDIENTE", limit: 10 }),
+        getProveedores({ estatusValidacion: "RECHAZADO", limit: 10 }),
+        getProveedores({ limit: 1 }),
+        getProveedores({ estatusValidacion: "APROBADO", limit: 1 }),
+      ]);
+
+      // Combine PENDIENTE and RECHAZADO for the "for approval" list
+      const combinedPending = [...(pendingRes.data || []), ...(rejectedRes.data || [])];
+      setProviders(combinedPending.slice(0, 5)); // Show top 5
+
+      setPendingCount((pendingRes.meta?.totalItems || 0) + (rejectedRes.meta?.totalItems || 0));
+      setTotalCount(allRes.meta?.totalItems || 0);
+      setApprovedCount(approvedRes.meta?.totalItems || 0);
+    } catch (error) {
+      toast.error("Error al cargar datos del dashboard");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleToggleApproval = async (id: string) => {
+    try {
+      await cambiarEstatusProveedor(id, "APROBADO");
+      toast.success("Proveedor aprobado exitosamente");
+      // Remove from local list so it disappears as requested
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+      // Refresh counts
+      setPendingCount((prev) => Math.max(0, prev - 1));
+      setTotalCount((prev) => prev); // Total stays same
+      setApprovedCount((prev) => prev + 1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al aprobar el proveedor");
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <div className="w-full max-w-5xl mx-auto p-6 md:p-8 space-y-6 animate-in fade-in duration-500 bg-white min-h-[calc(100vh-64px)] rounded-xl">
@@ -97,15 +96,14 @@ export function RegistroProveedoresDashboard() {
 
       {/* Main KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-lg font-bold text-[#1e293b]">Total registrados</h3>
               <BsFillPeopleFill className="w-6 h-6 text-[#1e293b]" />
             </div>
-            <div className="text-3xl font-extrabold text-[#1e293b] mb-1">1,250</div>
-            <p className="text-xs font-semibold text-[#84cc16]">5% este mes</p>
+            <div className="text-3xl font-extrabold text-[#1e293b] mb-1">{totalCount}</div>
+            <p className="text-xs font-semibold text-[#84cc16]">Sincronizado</p>
           </CardContent>
         </Card>
 
@@ -113,11 +111,11 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total activos</h3>
+              <h3 className="text-lg font-bold text-[#1e293b]">Total aprobados</h3>
               <BsFillCheckSquareFill className="w-5 h-5 text-[#1e3a5f]" />
             </div>
-            <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">1,180</div>
-            <p className="text-xs font-semibold text-[#84cc16]">3% este mes</p>
+            <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">{approvedCount}</div>
+            <p className="text-xs font-semibold text-[#84cc16]">Validados</p>
           </CardContent>
         </Card>
 
@@ -125,11 +123,11 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total vencidos</h3>
-              <IoAlertCircleOutline className="w-6 h-6 text-[#334155]" />
+              <h3 className="text-lg font-bold text-[#1e293b]">Pendientes</h3>
+              <IoAlertCircleOutline className="w-6 h-6 text-[#ef4444]" />
             </div>
-            <div className="text-3xl font-extrabold text-[#334155] mb-1">70</div>
-            <p className="text-xs font-semibold text-[#ef4444]">2% este mes</p>
+            <div className="text-3xl font-extrabold text-[#ef4444] mb-1">{pendingCount}</div>
+            <p className="text-xs font-semibold text-[#ef4444]">Requieren revisión</p>
           </CardContent>
         </Card>
       </div>
@@ -173,119 +171,138 @@ export function RegistroProveedoresDashboard() {
           Lista de proveedores por aprobar
         </h2>
 
-        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm relative min-h-[200px]">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy"></div>
+            </div>
+          )}
           <table className="w-full text-[13px] text-left">
             <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
               <tr>
-                <th className="px-2 py-3 w-10 text-center">
+                <th className="px-4 py-3 w-10 text-center">
                   <input
                     type="checkbox"
                     className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
                   />
                 </th>
-                <th className="px-2 py-3 font-semibold whitespace-nowrap">
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
-                    Proveedor
+                    Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </th>
-                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">
-                  Representante
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Representante legal
                 </th>
-                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
-                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
-                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Aprobar</th>
-                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Aprobación
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {providers.map((provider, index) => (
-                <tr
-                  key={provider.id}
-                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-                    index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
-                  }`}
-                >
-                  <td className="px-2 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                    />
-                  </td>
-                  <td className="px-2 py-3 font-semibold text-slate-700 whitespace-nowrap max-w-[150px] truncate">
-                    {provider.name}
-                  </td>
-                  <td className="px-2 py-3 text-slate-600 text-center whitespace-nowrap">
-                    {provider.rif}
-                  </td>
-                  <td className="px-2 py-3 text-slate-600 text-center font-medium whitespace-nowrap max-w-[120px] truncate">
-                    {provider.representative}
-                  </td>
-
-                  {/* Tipo Pill */}
-                  <td className="px-2 py-3 text-center">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        provider.type === "Obras"
-                          ? "bg-[#fecaca] text-[#dc2626] border-[#f87171]"
-                          : provider.type === "Bienes"
-                            ? "bg-[#bfdbfe] text-[#2563eb] border-[#60a5fa]"
-                            : "bg-[#e2e8f0] text-[#475569] border-[#94a3b8]"
+              {providers.length > 0
+                ? providers.map((provider, index) => (
+                    <tr
+                      key={provider.id}
+                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
+                        index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
                       }`}
                     >
-                      {provider.type}
-                    </span>
-                  </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-700 whitespace-nowrap max-w-[200px] truncate">
+                        {provider.nombre}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-center whitespace-nowrap">
+                        {provider.rif}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-center font-medium whitespace-nowrap max-w-[150px] truncate">
+                        {provider.nombreRepLegal}
+                      </td>
 
-                  {/* Estatus Pill */}
-                  <td className="px-2 py-3 text-center">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        provider.status === "Activo"
-                          ? "bg-[#bbf7d0] text-[#16a34a] border-[#4ade80]"
-                          : provider.status === "Por vencer"
-                            ? "bg-[#ffedd5] text-[#d97706] border-[#fbbf24]"
-                            : "bg-[#fee2e2] text-[#dc2626] border-[#f87171]"
-                      }`}
-                    >
-                      {provider.status}
-                    </span>
-                  </td>
+                      {/* Area Pill */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            provider.areaEspecialidad === "OBRAS"
+                              ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
+                              : provider.areaEspecialidad === "BIENES"
+                                ? "bg-tipo-bienes-bg text-tipo-bienes border-tipo-bienes-border"
+                                : "bg-tipo-servicios-bg text-tipo-servicios border-tipo-servicios-border"
+                          }`}
+                        >
+                          {provider.areaEspecialidad}
+                        </span>
+                      </td>
 
-                  {/* Aprobación Switch */}
-                  <td className="px-2 py-3 text-center">
-                    <button
-                      onClick={() => toggleApproval(provider.id)}
-                      className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
-                        provider.isApproved ? "bg-[#84cc16]" : "bg-[#ef4444]"
-                      }`}
-                    >
-                      <span className="sr-only">Toggle approval</span>
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          provider.isApproved ? "translate-x-4" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </td>
+                      {/* Estatus Pill */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            provider.estatusValidacion === "APROBADO"
+                              ? "bg-success-bg text-success-text border-success/30"
+                              : provider.estatusValidacion === "PENDIENTE"
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                : provider.estatusValidacion === "RECHAZADO"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                          }`}
+                        >
+                          {provider.estatusValidacion === "APROBADO"
+                            ? "activo"
+                            : provider.estatusValidacion === "PENDIENTE"
+                              ? "por vencer"
+                              : provider.estatusValidacion === "RECHAZADO"
+                                ? "rechazado"
+                                : "en revisión"}
+                        </span>
+                      </td>
 
-                  {/* Acciones */}
-                  <td className="px-2 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsEye className="w-4 h-4" />
-                      </button>
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsPencilSquare className="w-4 h-4" />
-                      </button>
-                      <button className="text-red-500 hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      {/* Aprobación Switch */}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleToggleApproval(provider.id)}
+                          className="relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 bg-[#ef4444]"
+                        >
+                          <span className="sr-only">Aprobar proveedor</span>
+                          <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0" />
+                        </button>
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <Link href={`/registro-proveedores/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsEye className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
+                          <button className="text-slate-500 hover:text-navy transition-colors">
+                            <BsPencilSquare className="w-4.5 h-4.5" />
+                          </button>
+                          <button className="text-red-400 hover:text-red-600 transition-colors">
+                            <FaRegTrashAlt className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                : !loading && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-10 text-center text-slate-500 italic">
+                        No hay proveedores pendientes por aprobar
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
         </div>

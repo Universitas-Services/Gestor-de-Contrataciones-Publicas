@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Filter, ArrowUpDown, ChevronLeft } from "lucide-react";
+import { ChevronRight, Search, Filter, ArrowUpDown, ChevronLeft, Loader2 } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
 import { IoAlertCircleOutline } from "react-icons/io5";
 import { FaRegTrashAlt } from "react-icons/fa";
@@ -25,89 +25,74 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getProveedores, cambiarEstatusProveedor } from "@/services/proveedores.service";
+import { toast } from "sonner";
 
-interface ProviderData {
+interface Provider {
   id: string;
-  name: string;
+  nombre: string;
   rif: string;
-  representative: string;
-  type: "Obras" | "Bienes" | "Servicios";
-  status: "Activo" | "Por vencer" | "Vencido";
-  isApproved: boolean;
+  nombreRepLegal: string;
+  areaEspecialidad: string;
+  estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
+  // Add other fields as needed based on API response
 }
 
-const mockProviders: ProviderData[] = [
-  {
-    id: "1",
-    name: "Constructora Sambil C.A.",
-    rif: "J-30456890-1",
-    representative: "Ricardo Rodriguez",
-    type: "Obras",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "2",
-    name: "Insumos Logisticos Express",
-    rif: "J-41233455-2",
-    representative: "Mariana Valera",
-    type: "Bienes",
-    status: "Por vencer",
-    isApproved: false,
-  },
-  {
-    id: "3",
-    name: "Tecnologías del Sur",
-    rif: "J-50998122-0",
-    representative: "Héctor Méndez",
-    type: "Servicios",
-    status: "Vencido",
-    isApproved: false,
-  },
-  {
-    id: "4",
-    name: "Suministros Médicos Global",
-    rif: "J-22877341-5",
-    representative: "Elena Farias",
-    type: "Bienes",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "5",
-    name: "Asesoria Contable & Cia",
-    rif: "J-31990442-8",
-    representative: "Juan Pablo Duarte",
-    type: "Servicios",
-    status: "Vencido",
-    isApproved: false,
-  },
-  {
-    id: "6",
-    name: "Constructora Sambil C.A.",
-    rif: "J-30456890-1",
-    representative: "Ricardo Rodriguez",
-    type: "Obras",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "7",
-    name: "Insumos Logisticos Express",
-    rif: "J-41233455-2",
-    representative: "Mariana Valera",
-    type: "Bienes",
-    status: "Por vencer",
-    isApproved: false,
-  },
-];
-
 export function ListadoProveedores() {
-  const [providers, setProviders] = useState<ProviderData[]>(mockProviders);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const toggleApproval = (id: string) => {
-    setProviders(providers.map((p) => (p.id === id ? { ...p, isApproved: !p.isApproved } : p)));
+  // Filters
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("TODOS");
+  const [limit] = useState(10);
+
+  const fetchProviders = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Logic to determine if search is RIF or Name (simplistic approach)
+      const isRif = /^[VGJ]-?\d/.test(search);
+      const data = await getProveedores({
+        page,
+        limit,
+        estatusValidacion: statusFilter,
+        rif: isRif ? search : undefined,
+        nombre: !isRif ? search : undefined,
+      });
+
+      setProviders(data.data || []);
+      setTotalPages(data.meta?.totalPages || 1);
+      setTotalCount(data.meta?.totalItems || 0);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al cargar proveedores");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, statusFilter, search]);
+
+  const handleToggleApproval = async (id: string, currentStatus: string) => {
+    try {
+      // API only accepts APROBADO or RECHAZADO
+      const nextStatus = currentStatus === "APROBADO" ? "RECHAZADO" : "APROBADO";
+      await cambiarEstatusProveedor(id, nextStatus);
+      toast.success(nextStatus === "APROBADO" ? "Proveedor aprobado" : "Proveedor rechazado");
+      fetchProviders(); // Refresh list to reflect changes
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al cambiar el estatus del proveedor"
+      );
+    }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProviders();
+    }, 500); // Simple debounce
+    return () => clearTimeout(timer);
+  }, [fetchProviders]);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
@@ -136,38 +121,30 @@ export function ListadoProveedores() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <Input
               type="text"
-              placeholder="Buscar por nombre, RIF o representante..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o RIF..."
               className="w-full pl-10 pr-4 h-[42px] rounded-lg border-slate-300 focus-visible:ring-navy text-sm bg-white"
             />
           </div>
           <div className="flex items-center gap-3">
-            <Select defaultValue="todos_tipos">
-              <SelectTrigger className="w-36 h-[42px] border-slate-300 focus:ring-navy bg-white">
-                <SelectValue placeholder="Tipo: Todos" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-44 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Estatus: Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos_tipos">Tipo: Todos</SelectItem>
-                <SelectItem value="obras">Obras</SelectItem>
-                <SelectItem value="bienes">Bienes</SelectItem>
-                <SelectItem value="servicios">Servicios</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select defaultValue="todos_status">
-              <SelectTrigger className="w-40 h-[42px] border-slate-300 focus:ring-navy bg-white">
-                <SelectValue placeholder="Status: Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos_status">Status: Todos</SelectItem>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="por_vencer">Por vencer</SelectItem>
-                <SelectItem value="vencido">Vencido</SelectItem>
+                <SelectItem value="TODOS">Estatus: Todos</SelectItem>
+                <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
+                <SelectItem value="APROBADO">APROBADO</SelectItem>
+                <SelectItem value="RECHAZADO">RECHAZADO</SelectItem>
+                <SelectItem value="EN_REVISION">EN REVISIÓN</SelectItem>
               </SelectContent>
             </Select>
 
             <Button
               variant="outline"
               className="h-[42px] px-4 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
+              onClick={() => fetchProviders()}
             >
               <Filter className="w-5 h-5" />
             </Button>
@@ -175,196 +152,253 @@ export function ListadoProveedores() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white min-h-[400px] relative">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
+              <Loader2 className="w-8 h-8 text-navy animate-spin" />
+            </div>
+          )}
           <Table>
             <TableHeader className="bg-white">
               <TableRow className="border-b border-slate-200 hover:bg-transparent [&_th]:text-[#1e293b] [&_th]:font-bold border-t-0 border-x-0">
-                <TableHead className="w-10 text-center px-2 py-3">
+                <TableHead className="w-10 text-center px-4 py-3">
                   <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
                 </TableHead>
-                <TableHead className="px-2 py-3 whitespace-nowrap">
+                <TableHead className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
-                    Proveedor
+                    Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </TableHead>
-                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Rif</TableHead>
-                <TableHead className="px-2 py-3 text-center whitespace-nowrap">
-                  Representante
+                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Rif</TableHead>
+                <TableHead className="px-4 py-3 text-center whitespace-nowrap">
+                  Representante legal
                 </TableHead>
-                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Tipo</TableHead>
-                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Estatus</TableHead>
-                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Aprobar</TableHead>
-                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Acción</TableHead>
+                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Tipo</TableHead>
+                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Estatus</TableHead>
+                <TableHead className="px-4 py-3 text-center whitespace-nowrap">
+                  Aprobación
+                </TableHead>
+                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {providers.map((provider, index) => (
-                <TableRow
-                  key={provider.id + index}
-                  className={`border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 border-t-0 border-x-0 ${
-                    index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
-                  } text-[13px]`}
-                >
-                  <TableCell className="px-2 py-3 text-center">
-                    <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
-                  </TableCell>
-                  <TableCell className="px-2 py-3 font-semibold text-[#1e293b] whitespace-nowrap max-w-[150px] truncate">
-                    {provider.name}
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
-                    {provider.rif}
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-[#1e3a5f] font-medium text-center whitespace-nowrap max-w-[120px] truncate">
-                    {provider.representative}
-                  </TableCell>
-
-                  {/* Tipo Pill */}
-                  <TableCell className="px-2 py-3 text-center">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        provider.type === "Obras"
-                          ? "bg-[#fecaca] text-[#dc2626] border-[#fca5a5]"
-                          : provider.type === "Bienes"
-                            ? "bg-[#bfdbfe] text-[#2563eb] border-[#93c5fd]"
-                            : "bg-[#475569] text-white border-[#334155]"
-                      }`}
+              {providers.length > 0
+                ? providers.map((provider, index) => (
+                    <TableRow
+                      key={provider.id}
+                      className={`border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 border-t-0 border-x-0 ${
+                        index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
+                      } text-[13px]`}
                     >
-                      {provider.type}
-                    </span>
-                  </TableCell>
+                      <TableCell className="px-4 py-4 text-center">
+                        <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
+                      </TableCell>
+                      <TableCell className="px-4 py-4 font-semibold text-[#1e293b] whitespace-nowrap max-w-[200px] truncate">
+                        {provider.nombre}
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
+                        {provider.rif}
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap max-w-[150px] truncate">
+                        {provider.nombreRepLegal}
+                      </TableCell>
 
-                  {/* Estatus Pill */}
-                  <TableCell className="px-2 py-3 text-center">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        provider.status === "Activo"
-                          ? "bg-[#bbf7d0] text-[#16a34a] border-[#86efac]"
-                          : provider.status === "Por vencer"
-                            ? "bg-[#ffedd5] text-[#d97706] border-[#fcd34d]"
-                            : "bg-[#fee2e2] text-[#dc2626] border-[#fca5a5]"
-                      }`}
-                    >
-                      {provider.status}
-                    </span>
-                  </TableCell>
-
-                  {/* Aprobación Switch */}
-                  <TableCell className="px-2 py-3 text-center">
-                    <button
-                      onClick={() => toggleApproval(provider.id)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
-                        provider.isApproved ? "bg-[#84cc16]" : "bg-[#ef4444]"
-                      }`}
-                    >
-                      <span className="sr-only">Toggle approval</span>
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          provider.isApproved ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </TableCell>
-
-                  {/* Acciones */}
-                  <TableCell className="px-2 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <Link href={`/registro-proveedores/${provider.id}`}>
-                        <button
-                          className="text-slate-600 hover:text-slate-900 transition-colors"
-                          title="Ver perfil"
+                      {/* Tipo Pill */}
+                      <TableCell className="px-4 py-4 text-center">
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold border ${
+                            provider.areaEspecialidad === "OBRAS"
+                              ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
+                              : provider.areaEspecialidad === "BIENES"
+                                ? "bg-tipo-bienes-bg text-tipo-bienes border-tipo-bienes-border"
+                                : "bg-tipo-servicios-bg text-tipo-servicios border-tipo-servicios-border"
+                          }`}
                         >
-                          <BsEye className="w-4 h-4" />
+                          {provider.areaEspecialidad}
+                        </span>
+                      </TableCell>
+
+                      {/* Estatus Pill */}
+                      <TableCell className="px-4 py-4 text-center">
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold border ${
+                            provider.estatusValidacion === "APROBADO"
+                              ? "bg-success-bg text-success-text border-success/30"
+                              : provider.estatusValidacion === "PENDIENTE"
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                : provider.estatusValidacion === "RECHAZADO"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                          }`}
+                        >
+                          {provider.estatusValidacion === "APROBADO"
+                            ? "activo"
+                            : provider.estatusValidacion === "PENDIENTE"
+                              ? "por vencer"
+                              : provider.estatusValidacion === "RECHAZADO"
+                                ? "rechazado"
+                                : "en revisión"}
+                        </span>
+                      </TableCell>
+
+                      {/* Aprobación Switch */}
+                      <TableCell className="px-4 py-4 text-center">
+                        <button
+                          onClick={() =>
+                            handleToggleApproval(provider.id, provider.estatusValidacion)
+                          }
+                          className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 ${
+                            provider.estatusValidacion === "APROBADO"
+                              ? "bg-[#84cc16]"
+                              : "bg-[#ef4444]"
+                          }`}
+                        >
+                          <span className="sr-only">Cambiar estatus</span>
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              provider.estatusValidacion === "APROBADO"
+                                ? "translate-x-4"
+                                : "translate-x-0"
+                            }`}
+                          />
                         </button>
-                      </Link>
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsPencilSquare className="w-4 h-4" />
-                      </button>
-                      <button className="text-red-500 hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </TableCell>
+
+                      {/* Acciones */}
+                      <TableCell className="px-4 py-4">
+                        <div className="flex items-center justify-center gap-3">
+                          <Link href={`/registro-proveedores/${provider.id}`}>
+                            <button
+                              className="text-slate-500 hover:text-navy transition-colors p-1 hover:bg-slate-100 rounded"
+                              title="Ver perfil"
+                            >
+                              <BsEye className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
+                          <button className="text-slate-500 hover:text-navy transition-colors p-1 hover:bg-slate-100 rounded">
+                            <BsPencilSquare className="w-4.5 h-4.5" />
+                          </button>
+                          <button className="text-red-400 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded">
+                            <FaRegTrashAlt className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : !loading && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="h-32 text-center text-slate-500 font-medium font-inter"
+                      >
+                        No se encontraron proveedores
+                      </TableCell>
+                    </TableRow>
+                  )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Pagination Dummy */}
-        <div className="flex justify-end items-center mt-6 gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-8 h-8 rounded border-slate-300 text-slate-500 hover:text-slate-700"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="default"
-            className="w-8 h-8 rounded bg-[#1e3a5f] hover:bg-[#152c4a] text-white p-0"
-          >
-            1
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded border-slate-300 text-slate-600 hover:bg-slate-100 p-0"
-          >
-            2
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded border-slate-300 text-slate-600 hover:bg-slate-100 p-0"
-          >
-            3
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded border-slate-300 text-slate-600 hover:bg-slate-100 p-0"
-          >
-            4
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-8 h-8 rounded border-slate-300 text-slate-500 hover:text-slate-700"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+        {/* Pagination */}
+        <div className="flex justify-between items-center mt-6">
+          <p className="text-sm text-slate-500 font-medium">
+            Mostrando <span className="text-navy font-bold">{providers.length}</span> de{" "}
+            <span className="text-navy font-bold">{totalCount}</span> proveedores
+          </p>
+          <div className="flex justify-end items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-navy hover:border-navy transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <Button
+                  key={p}
+                  variant={page === p ? "default" : "outline"}
+                  onClick={() => setPage(p)}
+                  className={`w-9 h-9 rounded-lg p-0 font-bold transition-all ${
+                    page === p
+                      ? "bg-navy hover:bg-navy-hover text-white shadow-md scale-105"
+                      : "border-slate-300 text-slate-600 hover:border-navy hover:text-navy"
+                  }`}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-navy hover:border-navy transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Footer KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="text-base font-bold text-[#1e293b]">Total Proveedores</h3>
-                <BsFillPeopleFill className="w-5 h-5 text-[#475569]" />
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
+            <CardContent className="p-5">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Total Proveedores
+                </h3>
+                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-navy/10 transition-colors">
+                  <BsFillPeopleFill className="w-5 h-5 text-slate-500 group-hover:text-navy" />
+                </div>
               </div>
-              <div className="text-2xl font-extrabold text-[#1e293b] mb-0.5">124</div>
-              <p className="text-[11px] font-semibold text-[#84cc16]">+12 este mes</p>
+              <div className="text-3xl font-extrabold text-navy mb-1">{totalCount}</div>
+              <p className="text-[11px] font-bold text-success-text flex items-center gap-1">
+                <span className="px-1.5 py-0.5 bg-success-bg rounded-md">+12%</span>
+                <span className="text-slate-400 font-medium italic">respecto al mes anterior</span>
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="text-base font-bold text-[#1e293b]">Documentación vencida</h3>
-                <BsFillCheckSquareFill className="w-5 h-5 text-[#1e3a5f]" />
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
+            <CardContent className="p-5">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Aprobados
+                </h3>
+                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-navy/10 transition-colors">
+                  <BsFillCheckSquareFill className="w-5 h-5 text-slate-500 group-hover:text-navy" />
+                </div>
               </div>
-              <div className="text-2xl font-extrabold text-[#1e3a5f] mb-0.5">18</div>
-              <p className="text-[11px] font-semibold text-[#ef4444]">Requiere atención</p>
+              <div className="text-3xl font-extrabold text-navy mb-1">
+                {providers.filter((p) => p.estatusValidacion === "APROBADO").length}
+              </div>
+              <p className="text-[11px] font-bold text-success-text italic">Validación activa</p>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="text-base font-bold text-[#1e293b]">Proceso de aprobación</h3>
-                <IoAlertCircleOutline className="w-6 h-6 text-[#334155]" />
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
+            <CardContent className="p-5">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Por aprobar
+                </h3>
+                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-navy/10 transition-colors">
+                  <IoAlertCircleOutline className="w-6 h-6 text-slate-500 group-hover:text-navy" />
+                </div>
               </div>
-              <div className="text-2xl font-extrabold text-[#334155] mb-0.5">15</div>
-              <p className="text-[11px] font-semibold text-[#ef4444]">Pendiente revisión</p>
+              <div className="text-3xl font-extrabold text-navy mb-1">
+                {providers.filter((p) => p.estatusValidacion === "PENDIENTE").length}
+              </div>
+              <p className="text-[11px] font-bold text-red-500 flex items-center gap-1 italic">
+                Requiere revisión inmediata
+              </p>
             </CardContent>
           </Card>
         </div>

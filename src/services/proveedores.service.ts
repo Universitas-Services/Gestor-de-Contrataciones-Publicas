@@ -17,6 +17,43 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
  * IMPORTANTE: No se debe setear Content-Type manualmente;
  * fetch genera automáticamente el boundary correcto para multipart/form-data.
  */
+/**
+ * GET /proveedores
+ * Obtiene el listado paginado de proveedores asociados al Ente.
+ */
+export const getProveedores = async (params: {
+  page?: number;
+  limit?: number;
+  estatusValidacion?: string;
+  rif?: string;
+  nombre?: string;
+}) => {
+  const token = await getServerToken();
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.estatusValidacion && params.estatusValidacion !== "TODOS") {
+    queryParams.append("estatusValidacion", params.estatusValidacion);
+  }
+  if (params.rif) queryParams.append("rif", params.rif);
+  if (params.nombre) queryParams.append("nombre", params.nombre);
+
+  const response = await fetch(`${API_URL}/proveedores?${queryParams.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener el listado de proveedores");
+  }
+
+  return response.json();
+};
+
 export const registrarProveedor = async (formData: FormData): Promise<{ message: string }> => {
   const token = await getServerToken();
 
@@ -45,3 +82,28 @@ export const registrarProveedor = async (formData: FormData): Promise<{ message:
 
   return response.json();
 };
+
+/**
+ * Cambia el estatus de validación de un proveedor.
+ * PATCH /proveedores/{id}/estatus
+ */
+export async function cambiarEstatusProveedor(id: string, estatus: string) {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/${id}/estatus`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ estatusValidacion: estatus }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error("Error API cambiardEstatusProveedor:", errorData);
+    throw new Error(errorData?.message ?? "Error al cambiar el estatus del proveedor");
+  }
+
+  return response.json();
+}
