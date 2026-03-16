@@ -65,6 +65,9 @@
   --color-dropzone-border: var(--dropzone-border);
   --color-dropzone-bg: var(--dropzone-bg);
   --color-section-docs: var(--section-docs);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-text: var(--success-text);
 }
 
 :root {
@@ -130,6 +133,9 @@
   --dropzone-border: #aab7b8;
   --dropzone-bg: oklch(0.76 0.01 230 / 0.1);
   --section-docs: #0ea5e9;
+  --success: #22c55e;
+  --success-bg: #f0fdf4;
+  --success-text: #15803d;
 }
 
 @layer base {

@@ -76,11 +76,11 @@ export function RegistroProveedoresDashboard() {
   };
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500 bg-white min-h-[calc(100vh-80px)] rounded-xl">
+    <div className="w-full max-w-5xl mx-auto p-6 md:p-8 space-y-6 animate-in fade-in duration-500 bg-white min-h-[calc(100vh-64px)] rounded-xl">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight mb-1">
+          <h1 className="text-2xl font-bold text-[#1e293b] tracking-tight mb-1">
             Estadisticas generales
           </h1>
           <p className="text-slate-500 font-medium">
@@ -99,37 +99,37 @@ export function RegistroProveedoresDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-[#1e293b]">Total registrados</h3>
-              <BsFillPeopleFill className="w-7 h-7 text-[#1e293b]" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-[#1e293b]">Total registrados</h3>
+              <BsFillPeopleFill className="w-6 h-6 text-[#1e293b]" />
             </div>
-            <div className="text-4xl font-extrabold text-[#1e293b] mb-2">1,250</div>
-            <p className="text-sm font-semibold text-[#84cc16]">5% este mes</p>
+            <div className="text-3xl font-extrabold text-[#1e293b] mb-1">1,250</div>
+            <p className="text-xs font-semibold text-[#84cc16]">5% este mes</p>
           </CardContent>
         </Card>
 
         {/* Card 2 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-[#1e293b]">Total activos</h3>
-              <BsFillCheckSquareFill className="w-6 h-6 text-[#1e3a5f]" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-[#1e293b]">Total activos</h3>
+              <BsFillCheckSquareFill className="w-5 h-5 text-[#1e3a5f]" />
             </div>
-            <div className="text-4xl font-extrabold text-[#1e3a5f] mb-2">1,180</div>
-            <p className="text-sm font-semibold text-[#84cc16]">3% este mes</p>
+            <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">1,180</div>
+            <p className="text-xs font-semibold text-[#84cc16]">3% este mes</p>
           </CardContent>
         </Card>
 
         {/* Card 3 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-[#1e293b]">Total vencidos</h3>
-              <IoAlertCircleOutline className="w-7 h-7 text-[#334155]" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-[#1e293b]">Total vencidos</h3>
+              <IoAlertCircleOutline className="w-6 h-6 text-[#334155]" />
             </div>
-            <div className="text-4xl font-extrabold text-[#334155] mb-2">70</div>
-            <p className="text-sm font-semibold text-[#ef4444]">2% este mes</p>
+            <div className="text-3xl font-extrabold text-[#334155] mb-1">70</div>
+            <p className="text-xs font-semibold text-[#ef4444]">2% este mes</p>
           </CardContent>
         </Card>
       </div>
@@ -137,31 +137,31 @@ export function RegistroProveedoresDashboard() {
       {/* Secondary Category Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-[#6366f1] border shadow-sm rounded-xl hover:shadow-md transition-shadow">
-          <CardContent className="p-3 pl-8 flex items-center gap-4">
-            <IoIosPrint className="w-5 h-5 text-[#1e3a5f]" />
+          <CardContent className="p-2 pl-6 flex items-center gap-4">
+            <IoIosPrint className="w-4 h-4 text-[#1e3a5f]" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-base font-bold text-[#1e293b] leading-tight">Bienes</h4>
-              <span className="text-sm font-medium text-slate-500 leading-tight">450</span>
+              <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Bienes</h4>
+              <span className="text-xs font-medium text-slate-500 leading-tight">450</span>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-[#ef4444] border shadow-sm rounded-xl hover:shadow-md transition-shadow">
-          <CardContent className="p-3 pl-8 flex items-center gap-4">
-            <IoIosHammer className="w-5 h-5 text-[#1e3a5f]" />
+          <CardContent className="p-2 pl-6 flex items-center gap-4">
+            <IoIosHammer className="w-4 h-4 text-[#1e3a5f]" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-base font-bold text-[#1e293b] leading-tight">Obras</h4>
-              <span className="text-sm font-medium text-slate-500 leading-tight">320</span>
+              <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Obras</h4>
+              <span className="text-xs font-medium text-slate-500 leading-tight">320</span>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-slate-400 border shadow-sm rounded-xl hover:shadow-md transition-shadow">
-          <CardContent className="p-3 pl-8 flex items-center gap-4">
-            <IoIosBriefcase className="w-5 h-5 text-[#1e3a5f]" />
+          <CardContent className="p-2 pl-6 flex items-center gap-4">
+            <IoIosBriefcase className="w-4 h-4 text-[#1e3a5f]" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-base font-bold text-[#1e293b] leading-tight">Servicios</h4>
-              <span className="text-sm font-medium text-slate-500 leading-tight">444</span>
+              <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Servicios</h4>
+              <span className="text-xs font-medium text-slate-500 leading-tight">444</span>
             </div>
           </CardContent>
         </Card>
@@ -174,29 +174,29 @@ export function RegistroProveedoresDashboard() {
         </h2>
 
         <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-[13px] text-left">
             <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
               <tr>
-                <th className="p-4 w-12 text-center">
+                <th className="px-2 py-3 w-10 text-center">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
+                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
                   />
                 </th>
-                <th className="p-4 font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-[#1e3a5f]">
-                    Nombre del proveedor
-                    <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                <th className="px-2 py-3 font-semibold whitespace-nowrap">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
+                    Proveedor
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">
-                  Representante Legal
+                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
+                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">
+                  Representante
                 </th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">tipo</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Estatus</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Aprobación</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Acción</th>
+                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
+                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
+                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Aprobar</th>
+                <th className="px-2 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -207,26 +207,26 @@ export function RegistroProveedoresDashboard() {
                     index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
                   }`}
                 >
-                  <td className="p-4 text-center">
+                  <td className="px-2 py-3 text-center">
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
                     />
                   </td>
-                  <td className="p-4 font-semibold text-slate-700 whitespace-nowrap">
+                  <td className="px-2 py-3 font-semibold text-slate-700 whitespace-nowrap max-w-[150px] truncate">
                     {provider.name}
                   </td>
-                  <td className="p-4 text-slate-600 text-center whitespace-nowrap">
+                  <td className="px-2 py-3 text-slate-600 text-center whitespace-nowrap">
                     {provider.rif}
                   </td>
-                  <td className="p-4 text-slate-600 text-center font-medium whitespace-nowrap">
+                  <td className="px-2 py-3 text-slate-600 text-center font-medium whitespace-nowrap max-w-[120px] truncate">
                     {provider.representative}
                   </td>
 
                   {/* Tipo Pill */}
-                  <td className="p-4 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span
-                      className={`inline-flex px-4 py-1.5 rounded-full text-xs font-bold border ${
+                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                         provider.type === "Obras"
                           ? "bg-[#fecaca] text-[#dc2626] border-[#f87171]"
                           : provider.type === "Bienes"
@@ -239,9 +239,9 @@ export function RegistroProveedoresDashboard() {
                   </td>
 
                   {/* Estatus Pill */}
-                  <td className="p-4 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span
-                      className={`inline-flex px-4 py-1.5 rounded-full text-xs font-bold border ${
+                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                         provider.status === "Activo"
                           ? "bg-[#bbf7d0] text-[#16a34a] border-[#4ade80]"
                           : provider.status === "Por vencer"
@@ -254,33 +254,33 @@ export function RegistroProveedoresDashboard() {
                   </td>
 
                   {/* Aprobación Switch */}
-                  <td className="p-4 text-center">
+                  <td className="px-2 py-3 text-center">
                     <button
                       onClick={() => toggleApproval(provider.id)}
-                      className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
+                      className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
                         provider.isApproved ? "bg-[#84cc16]" : "bg-[#ef4444]"
                       }`}
                     >
                       <span className="sr-only">Toggle approval</span>
                       <span
-                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          provider.isApproved ? "translate-x-5" : "translate-x-0"
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          provider.isApproved ? "translate-x-4" : "translate-x-0"
                         }`}
                       />
                     </button>
                   </td>
 
                   {/* Acciones */}
-                  <td className="p-4">
-                    <div className="flex items-center justify-center gap-3">
+                  <td className="px-2 py-3">
+                    <div className="flex items-center justify-center gap-2">
                       <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsEye className="w-5 h-5" />
+                        <BsEye className="w-4 h-4" />
                       </button>
                       <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsPencilSquare className="w-5 h-5" />
+                        <BsPencilSquare className="w-4 h-4" />
                       </button>
                       <button className="text-red-500 hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-5 h-5" />
+                        <FaRegTrashAlt className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

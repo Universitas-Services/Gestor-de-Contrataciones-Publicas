@@ -103,8 +103,8 @@ export default async function RepositorioLegalPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] rounded-xl bg-[#EFF2F5] p-6 md:p-10 flex flex-col">
-      <div className="w-full max-w-6xl mx-auto">
+    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-[#EFF2F5] p-6 md:p-10 flex flex-col">
+      <div className="w-full max-w-full mx-auto">
         <h1 className="text-3xl font-bold text-center text-[#1B456F] mb-10">Repositorio legal</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {legalServices.map((service, index) => (

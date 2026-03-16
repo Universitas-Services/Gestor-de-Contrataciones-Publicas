@@ -7,7 +7,7 @@ export default async function ProveedorPerfilPage({ params }: { params: Promise<
   const resolvedParams = await params;
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto animate-in fade-in duration-500 rounded-xl space-y-6">
+    <div className="w-full max-w-full mx-auto animate-in fade-in duration-500 rounded-xl space-y-6">
       {/* removed double breadcrumbs */}
 
       <Card className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-border flex flex-col gap-6">

@@ -5,9 +5,25 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Trash2, ImageIcon, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Globe,
+  MapPin,
+  Building2,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  MinusIcon,
+  ImageIcon,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { BsCloudUploadFill } from "react-icons/bs";
 import { registrarProveedor } from "@/services/proveedores.service";
+import { cn } from "@/lib/utils";
 
 import {
   nuevoProveedorSchema,
@@ -32,7 +48,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Card } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CalendarIcon, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Mocks de data
 const ESTADOS = ["Distrito Capital", "Miranda", "Carabobo", "Lara"];
@@ -60,10 +93,13 @@ export function NuevoProveedorForm() {
 
   // Estados visuales duales (RIF y Cedula)
   const [rifTipo, setRifTipo] = useState("J");
-  const [rifNumero, setRifNumero] = useState("");
-  const [rifDigito, setRifDigito] = useState("");
+  const [rifCuerpo, setRifCuerpo] = useState(""); // Contendrá los 9 dígitos seguientes (8 cuerpo + 1 verificador)
   const [cedulaTipo, setCedulaTipo] = useState("V");
   const [cedulaNumero, setCedulaNumero] = useState("");
+
+  // Estado para Teléfono
+  const [phonePrefix, setPhonePrefix] = useState("0414");
+  const [phoneBody, setPhoneBody] = useState("");
 
   // Estado Local para Documentos
   const [tipoDocActual, setTipoDocActual] = useState("doc_rif");
@@ -113,12 +149,14 @@ export function NuevoProveedorForm() {
 
   // Efecto para concatenar RIF
   useEffect(() => {
-    if (rifTipo && rifNumero.length >= 8 && rifDigito.length === 1) {
-      form.setValue("rif", `${rifTipo}-${rifNumero}-${rifDigito}`, { shouldValidate: true });
+    if (rifTipo && rifCuerpo.length === 9) {
+      form.setValue("rif", `${rifTipo}-${rifCuerpo.slice(0, 8)}-${rifCuerpo.slice(8)}`, {
+        shouldValidate: true,
+      });
     } else {
       form.setValue("rif", ""); // Invalida hasta que se complete
     }
-  }, [rifTipo, rifNumero, rifDigito, form]);
+  }, [rifTipo, rifCuerpo, form]);
 
   // Efecto para concatenar Cédula Representante
   useEffect(() => {
@@ -130,6 +168,17 @@ export function NuevoProveedorForm() {
       form.setValue("representanteCedula", "");
     }
   }, [cedulaTipo, cedulaNumero, form]);
+
+  // Efecto para concatenar Teléfono
+  useEffect(() => {
+    if (phonePrefix && phoneBody.length === 7) {
+      form.setValue("telefono", `${phonePrefix}${phoneBody}`, {
+        shouldValidate: true,
+      });
+    } else {
+      form.setValue("telefono", "");
+    }
+  }, [phonePrefix, phoneBody, form]);
 
   // Validaciones de Transición
   const handleNextStep = async () => {
@@ -345,20 +394,31 @@ export function NuevoProveedorForm() {
                           <SelectItem value="J">J</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Input
-                        placeholder="00000000"
-                        maxLength={8}
-                        value={rifNumero}
-                        onChange={(e) => setRifNumero(e.target.value.replace(/\D/g, ""))}
-                        className="flex-1 max-w-[140px] h-11 border border-border focus-visible:ring-color-boton-2 bg-white"
-                      />
-                      <Input
-                        placeholder="0"
-                        maxLength={1}
-                        value={rifDigito}
-                        onChange={(e) => setRifDigito(e.target.value.replace(/\D/g, ""))}
-                        className="w-[50px] h-11 text-center border border-border focus-visible:ring-color-boton-2 bg-white"
-                      />
+
+                      <InputOTP
+                        maxLength={9}
+                        value={rifCuerpo}
+                        onChange={(val) => setRifCuerpo(val)}
+                        disabled={isSubmitting}
+                        pattern={REGEXP_ONLY_DIGITS}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={1} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={2} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={3} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={4} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={5} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={6} className="border-r-0 shadow-none" />
+                          <InputOTPSlot index={7} className="rounded-r-md border-r shadow-none" />
+                        </InputOTPGroup>
+                        <div className="text-slate-400 font-bold px-1 flex items-center">
+                          <MinusIcon className="h-4 w-4" />
+                        </div>
+                        <InputOTPGroup>
+                          <InputOTPSlot index={8} className="rounded-md border-l shadow-none" />
+                        </InputOTPGroup>
+                      </InputOTP>
                     </div>
                     {form.formState.errors.rif && (
                       <p className="text-sm font-medium text-destructive">
@@ -403,12 +463,10 @@ export function NuevoProveedorForm() {
                     control={form.control}
                     name="tipoPersona"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
+                      <FormItem className="flex flex-col justify-end">
+                        <FormLabel className="font-bold text-color-subtitulos mb-2">
                           Tipo de Persona
                         </FormLabel>
-                        <p className="text-xs text-transparent mb-2 h-4"></p>{" "}
-                        {/* Margen visual para cuadrar con la otra columna si la otra tiene hint */}
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
@@ -581,12 +639,7 @@ export function NuevoProveedorForm() {
                         maxLength={8}
                         value={cedulaNumero}
                         onChange={(e) => setCedulaNumero(e.target.value.replace(/\D/g, ""))}
-                        className="flex-1 max-w-[140px] h-11 border-border focus-visible:ring-color-boton-2 bg-white shadow-sm"
-                      />
-                      <Input
-                        placeholder="0"
-                        maxLength={1}
-                        className="w-[50px] h-11 text-center border-border focus-visible:ring-color-boton-2 bg-white shadow-sm"
+                        className="flex-1 max-w-[200px] h-11 border border-slate-300 focus-visible:ring-1 focus-visible:ring-color-boton-2 bg-white"
                       />
                     </div>
                     {form.formState.errors.representanteCedula && (
@@ -597,28 +650,47 @@ export function NuevoProveedorForm() {
                   </div>
 
                   {/* Telefono */}
-                  <FormField
-                    control={form.control}
-                    name="telefono"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Teléfono de contacto
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: 0412-5555555
-                        </p>
-                        <FormControl>
-                          <Input
-                            placeholder="0000-0000000"
-                            className="h-11 border-border focus-visible:ring-color-boton-2"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  <div className="space-y-2">
+                    <FormLabel className="font-bold text-color-subtitulos">
+                      Teléfono de contacto
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground italic mb-2">
+                      Ejemplo: 0412-5555555
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="h-11 w-[90px] border border-slate-300 font-inter text-slate-500 justify-between bg-white"
+                          >
+                            {phonePrefix}
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-[90px]">
+                          {["0414", "0424", "0412", "0422", "0416", "0426"].map((p) => (
+                            <DropdownMenuItem key={p} onClick={() => setPhonePrefix(p)}>
+                              {p}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Input
+                        type="text"
+                        maxLength={7}
+                        value={phoneBody}
+                        onChange={(e) => setPhoneBody(e.target.value.replace(/\D/g, ""))}
+                        placeholder="7894561"
+                        className="h-11 border border-slate-300 flex-1 focus-visible:ring-1 focus-visible:ring-color-boton-2"
+                      />
+                    </div>
+                    {form.formState.errors.telefono && (
+                      <p className="text-sm font-medium text-destructive">
+                        {form.formState.errors.telefono.message}
+                      </p>
                     )}
-                  />
+                  </div>
 
                   {/* Dirección Fiscal (Más pequeña) */}
                   <FormField
@@ -727,8 +799,8 @@ export function NuevoProveedorForm() {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-[800px]">
-                  {/* Actividad Comercial */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8 max-w-[800px]">
+                  {/* Row 1: Actividad Comercial (Now at the top) */}
                   <FormField
                     control={form.control}
                     name="actividadPrincipal"
@@ -739,7 +811,7 @@ export function NuevoProveedorForm() {
                         </FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: El objeto principal es la prestación de servicios de consultoría
-                          y asesoría en el área de tecnología de información, lo que incluye el
+                          y asesoría en el área de tecnología de la información, lo que incluye el
                           desarrollo de software, diseño de páginas web, y manejo de redes sociales.
                         </p>
                         <div className="flex gap-2 mt-2">
@@ -749,7 +821,7 @@ export function NuevoProveedorForm() {
                             className={`rounded w-14 h-10 transition-colors ${
                               field.value === "Si"
                                 ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
                             }`}
                             onClick={() => field.onChange("Si")}
                           >
@@ -761,7 +833,7 @@ export function NuevoProveedorForm() {
                             className={`rounded w-14 h-10 transition-colors ${
                               field.value === "No"
                                 ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
                             }`}
                             onClick={() => field.onChange("No")}
                           >
@@ -772,7 +844,8 @@ export function NuevoProveedorForm() {
                       </FormItem>
                     )}
                   />
-                  {/* Area Especialidad */}
+
+                  {/* Row 2: Area Especialidad (Left) */}
                   <FormField
                     control={form.control}
                     name="areaEspecialidad"
@@ -781,16 +854,16 @@ export function NuevoProveedorForm() {
                         <FormLabel className="font-bold text-color-subtitulos block mb-2">
                           Área de especialidad
                         </FormLabel>
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <div className="flex flex-row items-center gap-2 mt-2">
                           {["BIENES", "OBRAS", "SERVICIOS", "CONSULTORIA"].map((area) => (
                             <Button
                               key={area}
                               type="button"
                               variant="outline"
-                              className={`rounded px-6 h-10 transition-colors ${
+                              className={`rounded px-3 h-9 text-[10px] transition-colors ${
                                 field.value === area
                                   ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
                               }`}
                               onClick={() => field.onChange(area)}
                             >
@@ -802,8 +875,9 @@ export function NuevoProveedorForm() {
                       </FormItem>
                     )}
                   />
-                  <div className="hidden md:block"></div> {/* Espaciador */}
-                  {/* Años de experiencia */}
+                  <div className="hidden md:block"></div>
+
+                  {/* Row 3: Años de experiencia (Left) | Patrimonio (Right) */}
                   <FormField
                     control={form.control}
                     name="anosExperiencia"
@@ -824,7 +898,6 @@ export function NuevoProveedorForm() {
                       </FormItem>
                     )}
                   />
-                  {/* Patrimonio */}
                   <FormField
                     control={form.control}
                     name="patrimonioNeto"
@@ -835,38 +908,63 @@ export function NuevoProveedorForm() {
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Ej: 10,000.00"
+                            placeholder="Ej: 10000"
+                            type="text"
                             className="h-11 border-border focus-visible:ring-color-boton-2"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  {/* Fecha ultimo Estado */}
+
+                  {/* Row 4: Fecha (Left) | Nivel (Right) */}
                   <FormField
                     control={form.control}
                     name="fechaEstadoFinanciero"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="font-bold text-color-subtitulos mb-2">
                           Fecha del último estado financiero
                         </FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type="date"
-                              className="h-11 border-border focus-visible:ring-color-boton-2 pl-4 pr-10"
-                              {...field}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full h-11 pl-3 text-left font-normal border-border bg-white",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(new Date(field.value), "PPP")
+                                ) : (
+                                  <span>Seleccionar fecha</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => field.onChange(date?.toISOString())}
+                              disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                              }
+                              initialFocus
                             />
-                          </div>
-                        </FormControl>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  {/* Nivel Contratacion */}
                   <FormField
                     control={form.control}
                     name="nivelContratacion"
@@ -875,16 +973,16 @@ export function NuevoProveedorForm() {
                         <FormLabel className="font-bold text-color-subtitulos block mb-2">
                           Nivel de contratación
                         </FormLabel>
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <div className="flex flex-row items-center gap-2 mt-2">
                           {["EXPERTO", "AVANZADO", "INTERMEDIO", "BASICO"].map((nivel) => (
                             <Button
                               key={nivel}
                               type="button"
                               variant="outline"
-                              className={`rounded px-6 h-10 transition-colors min-w-[80px] ${
+                              className={`rounded px-3 h-9 text-[10px] transition-colors ${
                                 field.value === nivel
                                   ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
                               }`}
                               onClick={() => field.onChange(nivel)}
                             >
@@ -931,16 +1029,36 @@ export function NuevoProveedorForm() {
                     </p>
                     <Select value={tipoDocActual} onValueChange={setTipoDocActual}>
                       <FormControl>
-                        <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
+                        <SelectTrigger
+                          className={cn(
+                            "h-11 border-border focus-visible:ring-color-boton-2 transition-all",
+                            documentos.some((d) => d.tipoDoc === tipoDocActual) &&
+                              "border-success bg-success-bg/50"
+                          )}
+                        >
                           <SelectValue placeholder="Selecciona el tipo de documento" />
+                          {documentos.some((d) => d.tipoDoc === tipoDocActual) && (
+                            <CheckCircle2 className="h-4 w-4 text-success-text ml-2" />
+                          )}
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {TIPOS_DOCUMENTO.map((tipo) => (
-                          <SelectItem key={tipo.value} value={tipo.value}>
-                            {tipo.label}
-                          </SelectItem>
-                        ))}
+                        {TIPOS_DOCUMENTO.map((tipo) => {
+                          const isUploaded = documentos.some((d) => d.tipoDoc === tipo.value);
+                          return (
+                            <SelectItem key={tipo.value} value={tipo.value}>
+                              <div className="flex items-center justify-between w-full min-w-[300px]">
+                                <span>{tipo.label}</span>
+                                {isUploaded && (
+                                  <div className="flex items-center gap-1.5 text-success-text font-bold text-[10px] bg-success-bg px-2 py-0.5 rounded-full">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    <span>CARGADO</span>
+                                  </div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </FormItem>

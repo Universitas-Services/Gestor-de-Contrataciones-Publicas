@@ -23,7 +23,7 @@ export default function CambiarContrasenaPage() {
       </div>
 
       {/* Panel derecho - Fondo Celeste */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-[#DFEAF1] p-4 sm:p-8">
+      <div className="flex w-full lg:w-1/2 items-center justify-center bg-[#DFEAF1] p-4 sm:p-6">
         <div className="w-full max-w-md">
           <ChangePasswordForm />
         </div>

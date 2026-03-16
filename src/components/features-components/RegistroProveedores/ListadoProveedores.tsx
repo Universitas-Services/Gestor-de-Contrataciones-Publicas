@@ -110,9 +110,9 @@ export function ListadoProveedores() {
   };
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
+    <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
       {/* Main Container White */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
         {/* Header Area Inside Card */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-100 mb-6 pb-6">
           <div>
@@ -179,23 +179,23 @@ export function ListadoProveedores() {
           <Table>
             <TableHeader className="bg-white">
               <TableRow className="border-b border-slate-200 hover:bg-transparent [&_th]:text-[#1e293b] [&_th]:font-bold border-t-0 border-x-0">
-                <TableHead className="w-12 text-center p-4">
-                  <Checkbox className="border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
+                <TableHead className="w-10 text-center px-2 py-3">
+                  <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
                 </TableHead>
-                <TableHead className="p-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-[#1e3a5f]">
-                    Nombre del proveedor
-                    <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                <TableHead className="px-2 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
+                    Proveedor
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </TableHead>
-                <TableHead className="p-4 text-center whitespace-nowrap">Rif</TableHead>
-                <TableHead className="p-4 text-center whitespace-nowrap">
-                  Representante Legal
+                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Rif</TableHead>
+                <TableHead className="px-2 py-3 text-center whitespace-nowrap">
+                  Representante
                 </TableHead>
-                <TableHead className="p-4 text-center whitespace-nowrap">Tipo</TableHead>
-                <TableHead className="p-4 text-center whitespace-nowrap">Estatus</TableHead>
-                <TableHead className="p-4 text-center whitespace-nowrap">Aprobación</TableHead>
-                <TableHead className="p-4 text-center whitespace-nowrap">Acción</TableHead>
+                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Tipo</TableHead>
+                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Estatus</TableHead>
+                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Aprobar</TableHead>
+                <TableHead className="px-2 py-3 text-center whitespace-nowrap">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -204,25 +204,25 @@ export function ListadoProveedores() {
                   key={provider.id + index}
                   className={`border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 border-t-0 border-x-0 ${
                     index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
-                  }`}
+                  } text-[13px]`}
                 >
-                  <TableCell className="p-4 text-center">
-                    <Checkbox className="border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
+                  <TableCell className="px-2 py-3 text-center">
+                    <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
                   </TableCell>
-                  <TableCell className="p-4 font-semibold text-[#1e293b] whitespace-nowrap">
+                  <TableCell className="px-2 py-3 font-semibold text-[#1e293b] whitespace-nowrap max-w-[150px] truncate">
                     {provider.name}
                   </TableCell>
-                  <TableCell className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
+                  <TableCell className="px-2 py-3 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
                     {provider.rif}
                   </TableCell>
-                  <TableCell className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
+                  <TableCell className="px-2 py-3 text-[#1e3a5f] font-medium text-center whitespace-nowrap max-w-[120px] truncate">
                     {provider.representative}
                   </TableCell>
 
                   {/* Tipo Pill */}
-                  <TableCell className="p-4 text-center">
+                  <TableCell className="px-2 py-3 text-center">
                     <span
-                      className={`inline-flex px-6 py-1 rounded-full text-xs font-bold border ${
+                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                         provider.type === "Obras"
                           ? "bg-[#fecaca] text-[#dc2626] border-[#fca5a5]"
                           : provider.type === "Bienes"
@@ -235,9 +235,9 @@ export function ListadoProveedores() {
                   </TableCell>
 
                   {/* Estatus Pill */}
-                  <TableCell className="p-4 text-center">
+                  <TableCell className="px-2 py-3 text-center">
                     <span
-                      className={`inline-flex px-6 py-1 rounded-full text-xs font-bold border ${
+                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                         provider.status === "Activo"
                           ? "bg-[#bbf7d0] text-[#16a34a] border-[#86efac]"
                           : provider.status === "Por vencer"
@@ -250,38 +250,38 @@ export function ListadoProveedores() {
                   </TableCell>
 
                   {/* Aprobación Switch */}
-                  <TableCell className="p-4 text-center">
+                  <TableCell className="px-2 py-3 text-center">
                     <button
                       onClick={() => toggleApproval(provider.id)}
-                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
                         provider.isApproved ? "bg-[#84cc16]" : "bg-[#ef4444]"
                       }`}
                     >
                       <span className="sr-only">Toggle approval</span>
                       <span
-                        className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          provider.isApproved ? "translate-x-6" : "translate-x-0"
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          provider.isApproved ? "translate-x-5" : "translate-x-0"
                         }`}
                       />
                     </button>
                   </TableCell>
 
                   {/* Acciones */}
-                  <TableCell className="p-4">
-                    <div className="flex items-center justify-center gap-3">
+                  <TableCell className="px-2 py-3">
+                    <div className="flex items-center justify-center gap-2">
                       <Link href={`/registro-proveedores/${provider.id}`}>
                         <button
                           className="text-slate-600 hover:text-slate-900 transition-colors"
                           title="Ver perfil"
                         >
-                          <BsEye className="w-5 h-5" />
+                          <BsEye className="w-4 h-4" />
                         </button>
                       </Link>
                       <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsPencilSquare className="w-5 h-5" />
+                        <BsPencilSquare className="w-4 h-4" />
                       </button>
                       <button className="text-red-500 hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-5 h-5" />
+                        <FaRegTrashAlt className="w-4 h-4" />
                       </button>
                     </div>
                   </TableCell>
@@ -336,35 +336,35 @@ export function ListadoProveedores() {
         {/* Footer KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
           <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-[#1e293b]">Total Proveedores</h3>
-                <BsFillPeopleFill className="w-6 h-6 text-[#475569]" />
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-1">
+                <h3 className="text-base font-bold text-[#1e293b]">Total Proveedores</h3>
+                <BsFillPeopleFill className="w-5 h-5 text-[#475569]" />
               </div>
-              <div className="text-3xl font-extrabold text-[#1e293b] mb-1">124</div>
-              <p className="text-xs font-semibold text-[#84cc16]">+12 este mes</p>
+              <div className="text-2xl font-extrabold text-[#1e293b] mb-0.5">124</div>
+              <p className="text-[11px] font-semibold text-[#84cc16]">+12 este mes</p>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-[#1e293b]">Documentación vencida</h3>
-                <BsFillCheckSquareFill className="w-6 h-6 text-[#1e3a5f]" />
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-1">
+                <h3 className="text-base font-bold text-[#1e293b]">Documentación vencida</h3>
+                <BsFillCheckSquareFill className="w-5 h-5 text-[#1e3a5f]" />
               </div>
-              <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">18</div>
-              <p className="text-xs font-semibold text-[#ef4444]">Requiere atención</p>
+              <div className="text-2xl font-extrabold text-[#1e3a5f] mb-0.5">18</div>
+              <p className="text-[11px] font-semibold text-[#ef4444]">Requiere atención</p>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-slate-300 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-[#1e293b]">Proceso de aprobación</h3>
-                <IoAlertCircleOutline className="w-7 h-7 text-[#334155]" />
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-1">
+                <h3 className="text-base font-bold text-[#1e293b]">Proceso de aprobación</h3>
+                <IoAlertCircleOutline className="w-6 h-6 text-[#334155]" />
               </div>
-              <div className="text-3xl font-extrabold text-[#334155] mb-1">15</div>
-              <p className="text-xs font-semibold text-[#ef4444]">Pendiente revisión</p>
+              <div className="text-2xl font-extrabold text-[#334155] mb-0.5">15</div>
+              <p className="text-[11px] font-semibold text-[#ef4444]">Pendiente revisión</p>
             </CardContent>
           </Card>
         </div>

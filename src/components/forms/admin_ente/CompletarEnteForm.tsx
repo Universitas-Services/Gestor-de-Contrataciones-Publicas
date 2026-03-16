@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, ImageIcon, Loader2, MinusIcon } from "lucide-react";
 import {
   completarEnteSchema,
   type CompletarEnteFormValues,
@@ -30,6 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 // --- Datos manuales para los Selects ---
 
@@ -64,7 +71,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
   // Estados visuales para el RIF
   const [rifTipo, setRifTipo] = useState("G");
-  const [rifNumero, setRifNumero] = useState("");
+  const [rifNumero, setRifNumero] = useState(""); // Contendrá los 9 dígitos seguientes (8 cuerpo + 1 verificador)
 
   const form = useForm<CompletarEnteFormValues>({
     resolver: zodResolver(completarEnteSchema),
@@ -86,9 +93,11 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
   // Sincronizar estados locales de RIF con react-hook-form
   useEffect(() => {
-    if (rifTipo && rifNumero) {
-      const formattedRif = `${rifTipo}-${rifNumero}`;
+    if (rifTipo && rifNumero.length === 9) {
+      const formattedRif = `${rifTipo}-${rifNumero.slice(0, 8)}-${rifNumero.slice(8)}`;
       form.setValue("rif", formattedRif, { shouldValidate: true });
+    } else {
+      form.setValue("rif", "");
     }
   }, [rifTipo, rifNumero, form]);
 
@@ -115,12 +124,20 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
         // Cargar RIF dividido si existe
         if (ente.rif) {
           const parts = ente.rif.split("-");
-          if (parts.length >= 2) {
-            setRifTipo(parts[0] || "G");
-            const numeroCrudo = parts.slice(1).join("-");
-            setRifNumero(numeroCrudo);
+          if (parts.length === 3) {
+            setRifTipo(parts[0]);
+            setRifNumero(parts[1] + parts[2]);
+          } else if (parts.length === 2) {
+            setRifTipo(parts[0]);
+            // Si viene G-XXXXXXXXX (sin el segundo guión)
+            setRifNumero(parts[1].replace(/-/g, "").slice(0, 9));
           } else {
-            setRifNumero(ente.rif); // fallback
+            // fallback
+            const numericPart = ente.rif.replace(/[^\d]/g, "").slice(0, 9);
+            setRifNumero(numericPart);
+            if (/^[GJ]/.test(ente.rif)) {
+              setRifTipo(ente.rif[0]);
+            }
           }
         }
 
@@ -260,7 +277,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   // Loading state inicial
   if (isLoadingData) {
     return (
-      <div className="mx-auto w-full max-w-4xl bg-white shadow-sm pb-16">
+      <div className="mx-auto w-full max-w-6xl bg-white shadow-sm pb-16">
         <div className="flex items-center justify-center py-24">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -272,7 +289,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-4xl shadow-sm border-0 mb-16">
+    <Card className="mx-auto w-full max-w-6xl shadow-sm border-0 mb-16">
       <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
         <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
           {step === 1 ? "Datos generales" : "Ubicación y estructura"}
@@ -379,17 +396,30 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
-                              <Input
+                              <InputOTP
+                                maxLength={9}
                                 value={rifNumero}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^\d-]/g, "");
-                                  setRifNumero(val);
-                                }}
+                                onChange={(val) => setRifNumero(val)}
                                 disabled={isSubmitting}
-                                placeholder="00000000-0"
-                                className="w-[140px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 placeholder:text-slate-300 font-inter text-center"
-                                maxLength={10}
-                              />
+                                pattern={REGEXP_ONLY_DIGITS}
+                              >
+                                <InputOTPGroup>
+                                  <InputOTPSlot index={0} className="border-r-0" />
+                                  <InputOTPSlot index={1} className="border-r-0" />
+                                  <InputOTPSlot index={2} className="border-r-0" />
+                                  <InputOTPSlot index={3} className="border-r-0" />
+                                  <InputOTPSlot index={4} className="border-r-0" />
+                                  <InputOTPSlot index={5} className="border-r-0" />
+                                  <InputOTPSlot index={6} className="border-r-0" />
+                                  <InputOTPSlot index={7} className="rounded-r-md border-r" />
+                                </InputOTPGroup>
+                                <div className="text-slate-400 font-bold px-1">
+                                  <MinusIcon className="h-4 w-4" />
+                                </div>
+                                <InputOTPGroup>
+                                  <InputOTPSlot index={8} className="rounded-md border-l" />
+                                </InputOTPGroup>
+                              </InputOTP>
                             </div>
                           </FormControl>
                           <FormMessage />

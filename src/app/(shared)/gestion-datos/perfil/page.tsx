@@ -23,16 +23,9 @@ export default async function PerfilEntePage() {
   const enteInfo = await obtenerEnte(user.enteId);
 
   return (
-    <div className="min-h-[calc(100vh-80px)] rounded-xl bg-[#DFEAF1] p-6 md:p-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 relative flex items-center">
-          <Image
-            src="/img_app/icono_sin_relleno.png"
-            alt="Logo Sistema Integrado"
-            width={85}
-            height={85}
-            className="absolute -left-12 md:-left-28 object-contain"
-          />
+    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-[#DFEAF1] p-6 md:p-10">
+      <div className="mx-auto max-w-full">
+        <div className="mb-6 flex items-center">
           <h1 className="w-full text-center text-2xl font-bold text-[#1B456F]">
             Información general del Ente
           </h1>
