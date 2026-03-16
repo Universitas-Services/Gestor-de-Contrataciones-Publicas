@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, Filter, ArrowUpDown, ChevronLeft, Loader2 } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
-import { IoAlertCircleOutline } from "react-icons/io5";
+import { IoAlertCircleOutline, IoFilterOutline } from "react-icons/io5";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getProveedores, cambiarEstatusProveedor } from "@/services/proveedores.service";
+import {
+  getProveedores,
+  cambiarEstatusProveedor,
+  getEstadisticasProveedores,
+} from "@/services/proveedores.service";
 import { toast } from "sonner";
 
 interface Provider {
@@ -44,10 +40,12 @@ export function ListadoProveedores() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState<any>(null);
 
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("TODOS");
+  const [areaFilter, setAreaFilter] = useState("TODOS");
   const [limit] = useState(10);
 
   const fetchProviders = useCallback(async () => {
@@ -59,6 +57,7 @@ export function ListadoProveedores() {
         page,
         limit,
         estatusValidacion: statusFilter,
+        areaEspecialidad: areaFilter !== "TODOS" ? areaFilter : undefined,
         rif: isRif ? search : undefined,
         nombre: !isRif ? search : undefined,
       });
@@ -94,6 +93,10 @@ export function ListadoProveedores() {
     return () => clearTimeout(timer);
   }, [fetchProviders]);
 
+  useEffect(() => {
+    getEstadisticasProveedores().then(setStats).catch(console.error);
+  }, []);
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
       {/* Main Container White */}
@@ -128,86 +131,95 @@ export function ListadoProveedores() {
             />
           </div>
           <div className="flex items-center gap-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44 h-[42px] border-slate-300 focus:ring-navy bg-white">
-                <SelectValue placeholder="Estatus: Todos" />
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger className="w-40 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Tipo: Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Estatus: Todos</SelectItem>
-                <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
-                <SelectItem value="APROBADO">APROBADO</SelectItem>
-                <SelectItem value="RECHAZADO">RECHAZADO</SelectItem>
-                <SelectItem value="EN_REVISION">EN REVISIÓN</SelectItem>
+                <SelectItem value="TODOS">Tipo: Todos</SelectItem>
+                <SelectItem value="BIENES">Bienes</SelectItem>
+                <SelectItem value="OBRAS">Obras</SelectItem>
+                <SelectItem value="SERVICIOS">Servicios</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Status: Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Status: Todos</SelectItem>
+                <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+                <SelectItem value="APROBADO">Aprobado</SelectItem>
+                <SelectItem value="RECHAZADO">Rechazado</SelectItem>
               </SelectContent>
             </Select>
 
             <Button
               variant="outline"
-              className="h-[42px] px-4 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
+              className="h-[42px] px-4 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 focus:ring-navy"
               onClick={() => fetchProviders()}
             >
-              <Filter className="w-5 h-5" />
+              <IoFilterOutline className="w-5 h-5" />
             </Button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white min-h-[400px] relative">
+        {/* Table Container */}
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 relative min-h-[200px]">
           {loading && (
             <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
               <Loader2 className="w-8 h-8 text-navy animate-spin" />
             </div>
           )}
-          <Table>
-            <TableHeader className="bg-white">
-              <TableRow className="border-b border-slate-200 hover:bg-transparent [&_th]:text-[#1e293b] [&_th]:font-bold border-t-0 border-x-0">
-                <TableHead className="w-10 text-center px-4 py-3">
+          <table className="w-full text-[13px] text-left">
+            <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 w-10 text-center">
                   <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
-                </TableHead>
-                <TableHead className="px-4 py-3 whitespace-nowrap">
+                </th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
                     Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
-                </TableHead>
-                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Rif</TableHead>
-                <TableHead className="px-4 py-3 text-center whitespace-nowrap">
-                  Representante legal
-                </TableHead>
-                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Tipo</TableHead>
-                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Estatus</TableHead>
-                <TableHead className="px-4 py-3 text-center whitespace-nowrap">
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Representante Legal
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">tipo</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
                   Aprobación
-                </TableHead>
-                <TableHead className="px-4 py-3 text-center whitespace-nowrap">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
               {providers.length > 0
                 ? providers.map((provider, index) => (
-                    <TableRow
+                    <tr
                       key={provider.id}
-                      className={`border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 border-t-0 border-x-0 ${
-                        index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
-                      } text-[13px]`}
+                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
+                        index % 2 !== 0 ? "bg-slate-50/30" : "bg-white"
+                      }`}
                     >
-                      <TableCell className="px-4 py-4 text-center">
+                      <td className="px-4 py-3 text-center">
                         <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
-                      </TableCell>
-                      <TableCell className="px-4 py-4 font-semibold text-[#1e293b] whitespace-nowrap max-w-[200px] truncate">
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-700 max-w-[200px] truncate">
                         {provider.nombre}
-                      </TableCell>
-                      <TableCell className="px-4 py-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
-                        {provider.rif}
-                      </TableCell>
-                      <TableCell className="px-4 py-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap max-w-[150px] truncate">
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
+                      <td className="px-4 py-3 text-slate-600 text-center font-medium max-w-[150px] truncate">
                         {provider.nombreRepLegal}
-                      </TableCell>
+                      </td>
 
                       {/* Tipo Pill */}
-                      <TableCell className="px-4 py-4 text-center">
+                      <td className="px-4 py-3 text-center">
                         <span
-                          className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold border ${
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                             provider.areaEspecialidad === "OBRAS"
                               ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
                               : provider.areaEspecialidad === "BIENES"
@@ -217,12 +229,12 @@ export function ListadoProveedores() {
                         >
                           {provider.areaEspecialidad}
                         </span>
-                      </TableCell>
+                      </td>
 
                       {/* Estatus Pill */}
-                      <TableCell className="px-4 py-4 text-center">
+                      <td className="px-4 py-3 text-center">
                         <span
-                          className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold border ${
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                             provider.estatusValidacion === "APROBADO"
                               ? "bg-success-bg text-success-text border-success/30"
                               : provider.estatusValidacion === "PENDIENTE"
@@ -237,20 +249,20 @@ export function ListadoProveedores() {
                             : provider.estatusValidacion === "PENDIENTE"
                               ? "por vencer"
                               : provider.estatusValidacion === "RECHAZADO"
-                                ? "rechazado"
+                                ? "vencido"
                                 : "en revisión"}
                         </span>
-                      </TableCell>
+                      </td>
 
                       {/* Aprobación Switch */}
-                      <TableCell className="px-4 py-4 text-center">
+                      <td className="px-4 py-3 text-center">
                         <button
                           onClick={() =>
                             handleToggleApproval(provider.id, provider.estatusValidacion)
                           }
                           className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 ${
                             provider.estatusValidacion === "APROBADO"
-                              ? "bg-[#84cc16]"
+                              ? "bg-success"
                               : "bg-[#ef4444]"
                           }`}
                         >
@@ -263,49 +275,39 @@ export function ListadoProveedores() {
                             }`}
                           />
                         </button>
-                      </TableCell>
+                      </td>
 
                       {/* Acciones */}
-                      <TableCell className="px-4 py-4">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-3">
                           <Link href={`/registro-proveedores/${provider.id}`}>
-                            <button
-                              className="text-slate-500 hover:text-navy transition-colors p-1 hover:bg-slate-100 rounded"
-                              title="Ver perfil"
-                            >
+                            <button className="text-slate-500 hover:text-navy transition-colors">
                               <BsEye className="w-4.5 h-4.5" />
                             </button>
                           </Link>
-                          <button className="text-slate-500 hover:text-navy transition-colors p-1 hover:bg-slate-100 rounded">
+                          <button className="text-slate-500 hover:text-navy transition-colors">
                             <BsPencilSquare className="w-4.5 h-4.5" />
                           </button>
-                          <button className="text-red-400 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded">
+                          <button className="text-red-400 hover:text-red-600 transition-colors">
                             <FaRegTrashAlt className="w-4 h-4" />
                           </button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))
                 : !loading && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="h-32 text-center text-slate-500 font-medium font-inter"
-                      >
+                    <tr>
+                      <td colSpan={8} className="px-4 py-10 text-center text-slate-500 italic">
                         No se encontraron proveedores
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-between items-center mt-6">
-          <p className="text-sm text-slate-500 font-medium">
-            Mostrando <span className="text-navy font-bold">{providers.length}</span> de{" "}
-            <span className="text-navy font-bold">{totalCount}</span> proveedores
-          </p>
+        <div className="flex justify-end items-center mt-6">
           <div className="flex justify-end items-center gap-2">
             <Button
               variant="outline"
@@ -349,56 +351,56 @@ export function ListadoProveedores() {
         {/* Footer KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
           <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-5">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-sm font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+            <CardContent className="p-2.5">
+              <div className="flex justify-between items-start mb-0">
+                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
                   Total Proveedores
                 </h3>
-                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-navy/10 transition-colors">
-                  <BsFillPeopleFill className="w-5 h-5 text-slate-500 group-hover:text-navy" />
+                <div className="transition-colors">
+                  <BsFillPeopleFill className="w-4 h-4 text-navy" />
                 </div>
               </div>
-              <div className="text-3xl font-extrabold text-navy mb-1">{totalCount}</div>
-              <p className="text-[11px] font-bold text-success-text flex items-center gap-1">
-                <span className="px-1.5 py-0.5 bg-success-bg rounded-md">+12%</span>
-                <span className="text-slate-400 font-medium italic">respecto al mes anterior</span>
+              <div className="text-xl font-extrabold text-navy leading-tight">
+                {stats?.resumen?.totalRegistrados || totalCount}
+              </div>
+              <p className="text-[9px] font-bold text-success-text">
+                {stats?.crecimientoMensual?.registradosEsteMes >= 0 ? "+" : ""}
+                {stats?.crecimientoMensual?.registradosEsteMes || 0} este mes
               </p>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-5">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-sm font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Aprobados
+            <CardContent className="p-2.5">
+              <div className="flex justify-between items-start mb-0">
+                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Documentación vencida
                 </h3>
-                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-navy/10 transition-colors">
-                  <BsFillCheckSquareFill className="w-5 h-5 text-slate-500 group-hover:text-navy" />
+                <div className="transition-colors">
+                  <BsFillCheckSquareFill className="w-4 h-4 text-navy" />
                 </div>
               </div>
-              <div className="text-3xl font-extrabold text-navy mb-1">
-                {providers.filter((p) => p.estatusValidacion === "APROBADO").length}
+              <div className="text-xl font-extrabold text-[#ef4444] leading-tight">
+                {stats?.resumen?.totalRechazados || 0}
               </div>
-              <p className="text-[11px] font-bold text-success-text italic">Validación activa</p>
+              <p className="text-[9px] font-bold text-[#ef4444]">Requiere atención</p>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-5">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-sm font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Por aprobar
+            <CardContent className="p-2.5">
+              <div className="flex justify-between items-start mb-0">
+                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Proceso de aprobación
                 </h3>
-                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-navy/10 transition-colors">
-                  <IoAlertCircleOutline className="w-6 h-6 text-slate-500 group-hover:text-navy" />
+                <div className="transition-colors">
+                  <IoAlertCircleOutline className="w-5 h-5 text-navy" />
                 </div>
               </div>
-              <div className="text-3xl font-extrabold text-navy mb-1">
-                {providers.filter((p) => p.estatusValidacion === "PENDIENTE").length}
+              <div className="text-xl font-extrabold text-navy leading-tight">
+                {stats?.resumen?.totalPendientes || 0}
               </div>
-              <p className="text-[11px] font-bold text-red-500 flex items-center gap-1 italic">
-                Requiere revisión inmediata
-              </p>
+              <p className="text-[9px] font-bold text-[#92400e]">Pendiente revisión</p>
             </CardContent>
           </Card>
         </div>

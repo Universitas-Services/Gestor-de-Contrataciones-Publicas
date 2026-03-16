@@ -27,6 +27,7 @@ export const getProveedores = async (params: {
   estatusValidacion?: string;
   rif?: string;
   nombre?: string;
+  areaEspecialidad?: string;
 }) => {
   const token = await getServerToken();
   const queryParams = new URLSearchParams();
@@ -38,6 +39,9 @@ export const getProveedores = async (params: {
   }
   if (params.rif) queryParams.append("rif", params.rif);
   if (params.nombre) queryParams.append("nombre", params.nombre);
+  if (params.areaEspecialidad && params.areaEspecialidad !== "TODOS") {
+    queryParams.append("areaEspecialidad", params.areaEspecialidad);
+  }
 
   const response = await fetch(`${API_URL}/proveedores?${queryParams.toString()}`, {
     method: "GET",
@@ -103,6 +107,28 @@ export async function cambiarEstatusProveedor(id: string, estatus: string) {
     const errorData = await response.json().catch(() => ({}));
     console.error("Error API cambiardEstatusProveedor:", errorData);
     throw new Error(errorData?.message ?? "Error al cambiar el estatus del proveedor");
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtiene estadísticas consolidadas de proveedores.
+ * GET /proveedores/estadisticas
+ */
+export async function getEstadisticasProveedores() {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/estadisticas`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener estadísticas de proveedores");
   }
 
   return response.json();

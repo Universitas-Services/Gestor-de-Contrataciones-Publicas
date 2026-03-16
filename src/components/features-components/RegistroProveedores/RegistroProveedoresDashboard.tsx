@@ -9,7 +9,11 @@ import { IoIosBriefcase, IoIosHammer, IoIosPrint } from "react-icons/io";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getProveedores, cambiarEstatusProveedor } from "@/services/proveedores.service";
+import {
+  getProveedores,
+  cambiarEstatusProveedor,
+  getEstadisticasProveedores,
+} from "@/services/proveedores.service";
 import { toast } from "sonner";
 
 interface Provider {
@@ -27,27 +31,30 @@ export function RegistroProveedoresDashboard() {
   const [totalCount, setTotalCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [approvedCount, setApprovedCount] = useState(0);
+  const [stats, setStats] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 5;
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch all to filter locally or make multiple calls
-      // For the "for approval" list, we fetch without status filter but will show PENDIENTE, RECHAZADO, EN_REVISION
-      // Alternatively, we fetch multiple and combine if API is strict
-      const [pendingRes, rejectedRes, allRes, approvedRes] = await Promise.all([
-        getProveedores({ estatusValidacion: "PENDIENTE", limit: 10 }),
-        getProveedores({ estatusValidacion: "RECHAZADO", limit: 10 }),
-        getProveedores({ limit: 1 }),
-        getProveedores({ estatusValidacion: "APROBADO", limit: 1 }),
+      const [pendingRes, rejectedRes, statsRes] = await Promise.all([
+        getProveedores({ estatusValidacion: "PENDIENTE", page, limit }),
+        getProveedores({ estatusValidacion: "RECHAZADO", page, limit }),
+        getEstadisticasProveedores(),
       ]);
 
-      // Combine PENDIENTE and RECHAZADO for the "for approval" list
       const combinedPending = [...(pendingRes.data || []), ...(rejectedRes.data || [])];
-      setProviders(combinedPending.slice(0, 5)); // Show top 5
+      setProviders(combinedPending.slice(0, limit));
 
-      setPendingCount((pendingRes.meta?.totalItems || 0) + (rejectedRes.meta?.totalItems || 0));
-      setTotalCount(allRes.meta?.totalItems || 0);
-      setApprovedCount(approvedRes.meta?.totalItems || 0);
+      const maxPendingTotal = Math.max(pendingRes.total || 0, rejectedRes.total || 0);
+      setTotalPages(Math.ceil(maxPendingTotal / limit) || 1);
+
+      setStats(statsRes);
+      setPendingCount(statsRes.resumen.totalPendientes + statsRes.resumen.totalRechazados);
+      setTotalCount(statsRes.resumen.totalRegistrados);
+      setApprovedCount(statsRes.resumen.totalAprobados);
     } catch (error) {
       toast.error("Error al cargar datos del dashboard");
     } finally {
@@ -72,7 +79,7 @@ export function RegistroProveedoresDashboard() {
 
   React.useEffect(() => {
     fetchData();
-  }, []);
+  }, [page]);
 
   return (
     <div className="w-full max-w-5xl mx-auto p-6 md:p-8 space-y-6 animate-in fade-in duration-500 bg-white min-h-[calc(100vh-64px)] rounded-xl">
@@ -103,7 +110,10 @@ export function RegistroProveedoresDashboard() {
               <BsFillPeopleFill className="w-6 h-6 text-[#1e293b]" />
             </div>
             <div className="text-3xl font-extrabold text-[#1e293b] mb-1">{totalCount}</div>
-            <p className="text-xs font-semibold text-[#84cc16]">Sincronizado</p>
+            <p className="text-xs font-semibold text-[#84cc16] flex items-center gap-1">
+              {stats?.crecimientoMensual?.porcentajeRegistrados >= 0 ? "+" : ""}
+              {stats?.crecimientoMensual?.porcentajeRegistrados || 0}% este mes
+            </p>
           </CardContent>
         </Card>
 
@@ -111,11 +121,14 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total aprobados</h3>
+              <h3 className="text-lg font-bold text-[#1e293b]">Total activos</h3>
               <BsFillCheckSquareFill className="w-5 h-5 text-[#1e3a5f]" />
             </div>
             <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">{approvedCount}</div>
-            <p className="text-xs font-semibold text-[#84cc16]">Validados</p>
+            <p className="text-xs font-semibold text-[#84cc16] flex items-center gap-1">
+              {stats?.crecimientoMensual?.porcentajeAprobados >= 0 ? "+" : ""}
+              {stats?.crecimientoMensual?.porcentajeAprobados || 0}% este mes
+            </p>
           </CardContent>
         </Card>
 
@@ -123,11 +136,16 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Pendientes</h3>
+              <h3 className="text-lg font-bold text-[#1e293b]">Total vencidos</h3>
               <IoAlertCircleOutline className="w-6 h-6 text-[#ef4444]" />
             </div>
-            <div className="text-3xl font-extrabold text-[#ef4444] mb-1">{pendingCount}</div>
-            <p className="text-xs font-semibold text-[#ef4444]">Requieren revisión</p>
+            <div className="text-3xl font-extrabold text-[#ef4444] mb-1">
+              {stats?.resumen?.totalRechazados || 0}
+            </div>
+            <p className="text-xs font-semibold text-[#ef4444] flex items-center gap-1">
+              {stats?.crecimientoMensual?.porcentajeRechazados >= 0 ? "+" : ""}
+              {stats?.crecimientoMensual?.porcentajeRechazados || 0}% este mes
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -139,7 +157,9 @@ export function RegistroProveedoresDashboard() {
             <IoIosPrint className="w-4 h-4 text-[#1e3a5f]" />
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Bienes</h4>
-              <span className="text-xs font-medium text-slate-500 leading-tight">450</span>
+              <span className="text-xs font-medium text-slate-500 leading-tight">
+                {stats?.distribucionPorArea?.BIENES || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -149,7 +169,9 @@ export function RegistroProveedoresDashboard() {
             <IoIosHammer className="w-4 h-4 text-[#1e3a5f]" />
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Obras</h4>
-              <span className="text-xs font-medium text-slate-500 leading-tight">320</span>
+              <span className="text-xs font-medium text-slate-500 leading-tight">
+                {stats?.distribucionPorArea?.OBRAS || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -159,7 +181,9 @@ export function RegistroProveedoresDashboard() {
             <IoIosBriefcase className="w-4 h-4 text-[#1e3a5f]" />
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Servicios</h4>
-              <span className="text-xs font-medium text-slate-500 leading-tight">444</span>
+              <span className="text-xs font-medium text-slate-500 leading-tight">
+                {stats?.distribucionPorArea?.SERVICIOS || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -307,42 +331,40 @@ export function RegistroProveedoresDashboard() {
           </table>
         </div>
 
-        {/* Pagination Dummy */}
+        {/* Dynamic Pagination */}
         <div className="flex justify-end items-center mt-6 gap-2">
           <Button
             variant="outline"
             size="icon"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
             className="w-8 h-8 rounded text-slate-500 hover:text-slate-700"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button
-            variant="default"
-            className="w-8 h-8 rounded bg-[#1e3a5f] hover:bg-[#152c4a] text-white p-0"
-          >
-            1
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded text-slate-600 hover:bg-slate-100 p-0"
-          >
-            2
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded text-slate-600 hover:bg-slate-100 p-0"
-          >
-            3
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded text-slate-600 hover:bg-slate-100 p-0"
-          >
-            4
-          </Button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <Button
+                key={p}
+                onClick={() => setPage(p)}
+                variant={page === p ? "default" : "outline"}
+                className={`w-8 h-8 rounded p-0 ${
+                  page === p
+                    ? "bg-[#1e3a5f] hover:bg-[#152c4a] text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {p}
+              </Button>
+            ))}
+          </div>
+
           <Button
             variant="outline"
             size="icon"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
             className="w-8 h-8 rounded text-slate-500 hover:text-slate-700"
           >
             <ChevronRight className="w-4 h-4" />
