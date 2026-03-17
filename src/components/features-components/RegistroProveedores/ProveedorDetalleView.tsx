@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Download,
   Edit,
@@ -194,10 +195,12 @@ export function ProveedorDetalleView({ id }: { id: string }) {
             <Download className="w-4 h-4 mr-2" />
             Descargar
           </Button>
-          <Button className="bg-navy hover:bg-navy-hover text-white h-11 px-6 font-semibold w-full md:w-auto">
-            <Edit className="w-4 h-4 mr-2" />
-            Editar
-          </Button>
+          <Link href={`/registro-proveedores/editar/${provider.id}`} className="w-full md:w-auto">
+            <Button className="bg-navy hover:bg-navy-hover text-white h-11 px-6 font-semibold w-full">
+              <Edit className="w-4 h-4 mr-2" />
+              Editar
+            </Button>
+          </Link>
         </div>
       </Card>
 

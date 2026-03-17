@@ -155,3 +155,26 @@ export async function getProveedorById(id: string) {
 
   return response.json();
 }
+
+/**
+ * PATCH /proveedores/{id}
+ * Actualiza los datos de un proveedor y sus documentos.
+ */
+export async function editarProveedor(id: string, formData: FormData) {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar el proveedor");
+  }
+
+  return response.json();
+}

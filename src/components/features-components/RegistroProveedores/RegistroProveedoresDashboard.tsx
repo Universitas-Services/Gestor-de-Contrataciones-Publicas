@@ -182,7 +182,7 @@ export function RegistroProveedoresDashboard() {
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Servicios</h4>
               <span className="text-xs font-medium text-slate-500 leading-tight">
-                {stats?.distribucionPorArea?.SERVICIOS || 0}
+                {stats?.distribucionPorArea?.SERVICIOS || stats?.distribucionPorArea?.SERVICIO || 0}
               </span>
             </div>
           </CardContent>
@@ -298,9 +298,11 @@ export function RegistroProveedoresDashboard() {
                               <BsEye className="w-4.5 h-4.5" />
                             </button>
                           </Link>
-                          <button className="text-slate-500 hover:text-navy transition-colors">
-                            <BsPencilSquare className="w-4.5 h-4.5" />
-                          </button>
+                          <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsPencilSquare className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
                           <button className="text-red-400 hover:text-red-600 transition-colors">
                             <FaRegTrashAlt className="w-4 h-4" />
                           </button>

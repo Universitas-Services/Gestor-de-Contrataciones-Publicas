@@ -276,9 +276,11 @@ export function ListadoProveedores() {
                               <BsEye className="w-4.5 h-4.5" />
                             </button>
                           </Link>
-                          <button className="text-slate-500 hover:text-navy transition-colors">
-                            <BsPencilSquare className="w-4.5 h-4.5" />
-                          </button>
+                          <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsPencilSquare className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
                           <button className="text-red-400 hover:text-red-600 transition-colors">
                             <FaRegTrashAlt className="w-4 h-4" />
                           </button>

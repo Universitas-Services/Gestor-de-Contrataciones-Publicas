@@ -22,7 +22,11 @@ import {
   Loader2,
 } from "lucide-react";
 import { BsCloudUploadFill } from "react-icons/bs";
-import { registrarProveedor } from "@/services/proveedores.service";
+import {
+  registrarProveedor,
+  getProveedorById,
+  editarProveedor,
+} from "@/services/proveedores.service";
 import { cn } from "@/lib/utils";
 
 import {
@@ -84,12 +88,17 @@ const TIPOS_DOCUMENTO = [
   { value: "doc_otro", label: "Otro" },
 ] as const;
 
-export function NuevoProveedorForm() {
+interface NuevoProveedorFormProps {
+  providerId?: string;
+}
+
+export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(!!providerId);
 
   // Estados visuales duales (RIF y Cedula)
   const [rifTipo, setRifTipo] = useState("J");
@@ -147,38 +156,131 @@ export function NuevoProveedorForm() {
     mode: "onChange",
   });
 
+  // Cargar datos si estamos en modo edición
+  useEffect(() => {
+    if (!providerId) return;
+
+    const cargarDatos = async () => {
+      try {
+        const response = await getProveedorById(providerId);
+        const data = response.data || response;
+
+        const normalizeFormaJuridica = (val: string) => {
+          if (!val) return "";
+          const v = val.toUpperCase();
+          if (v === "COOPERATIVA" || v === "COOPERATIVAS") return "Cooperativas";
+          if (v === "PYME" || v === "PYMES") return "Pymes";
+          if (v === "COMPANIA_ANONIMA" || v === "C.A." || v === "C.A" || v.includes("ANONIMA"))
+            return "Compañía Anónima";
+          if (v === "ASOCIACION_CIVIL") return "Asociación Civil";
+          if (v === "SRL" || v.includes("LIMITADA"))
+            return "Sociedades de Responsabilidad Limitada (S.R.L.)";
+          if (v === "FUNDACION" || v === "FUNDACIONES") return "Fundaciones";
+          return val;
+        };
+
+        // Mapear datos al formulario
+        form.reset({
+          correo: data.correo || "",
+          nombre: data.nombre || "",
+          rif: data.rif || "",
+          formaJuridica: normalizeFormaJuridica(data.tipoEntidadJuridica),
+          tipoPersona: data.tipoPersona || "",
+          datosRegistroMercantil: data.datosRegistroMercantil || "",
+          estado: data.estado || "",
+          municipio: data.municipio || "",
+          parroquia: data.parroquia || "",
+          direccionFiscal: data.direccionFiscal || "",
+          telefono: data.telefono || "",
+          representanteNombre: data.nombreRepLegal || "",
+          representanteCedula: data.cedulaRepLegal || "",
+          rnc: data.registroRnc ? "Si" : "No",
+          solvenciaLaboral: data.solvenciaLaboral ? "Si" : "No",
+          licenciaMunicipal: data.licenciaFuncionamientoMunicipal ? "Si" : "No",
+          actividadPrincipal: data.actividadComercial === "Si" ? "Si" : "No",
+          areaEspecialidad:
+            data.areaEspecialidad === "SERVICIO" || data.areaEspecialidad === "SERVICIOS"
+              ? "SERVICIOS"
+              : data.areaEspecialidad || "",
+          anosExperiencia: data.anosExperiencia?.toString() || "",
+          patrimonioNeto: data.patrimonioReportado?.toString() || "",
+          fechaEstadoFinanciero: data.fechaEstadoFinanciero || "",
+          nivelContratacion: data.nivelContratacion || "",
+        });
+
+        // Fragmentar RIF
+        if (data.rif) {
+          const rifParts = data.rif.split("-");
+          if (rifParts.length === 3) {
+            setRifTipo(rifParts[0]);
+            setRifCuerpo(rifParts[1] + rifParts[2]);
+          }
+        }
+
+        // Fragmentar Cédula
+        if (data.cedulaRepLegal) {
+          const cidParts = data.cedulaRepLegal.split("-");
+          if (cidParts.length === 2) {
+            setCedulaTipo(cidParts[0]);
+            setCedulaNumero(cidParts[1]);
+          }
+        }
+
+        // Fragmentar Teléfono
+        if (data.telefono) {
+          setPhonePrefix(data.telefono.slice(0, 4));
+          setPhoneBody(data.telefono.slice(4));
+        }
+
+        // Manejar documentos existentes (opcional: mostrar historial)
+        // Por ahora nos enfocamos en permitir cargar nuevos
+      } catch (error) {
+        toast.error("Error al cargar los datos del proveedor");
+        console.error(error);
+      } finally {
+        setIsLoadingInitialData(false);
+      }
+    };
+
+    cargarDatos();
+  }, [providerId, form]);
+
   // Efecto para concatenar RIF
   useEffect(() => {
+    if (isLoadingInitialData) return;
     if (rifTipo && rifCuerpo.length === 9) {
       form.setValue("rif", `${rifTipo}-${rifCuerpo.slice(0, 8)}-${rifCuerpo.slice(8)}`, {
         shouldValidate: true,
       });
-    } else {
-      form.setValue("rif", ""); // Invalida hasta que se complete
+    } else if (rifCuerpo.length > 0) {
+      // Solo limpiar si el usuario realmente está interactuando (cuerpo no vacío)
+      form.setValue("rif", "");
     }
-  }, [rifTipo, rifCuerpo, form]);
+  }, [rifTipo, rifCuerpo, form, isLoadingInitialData]);
 
   // Efecto para concatenar Cédula Representante
   useEffect(() => {
+    if (isLoadingInitialData) return;
     if (cedulaTipo && cedulaNumero.length >= 6) {
       form.setValue("representanteCedula", `${cedulaTipo}-${cedulaNumero}`, {
         shouldValidate: true,
       });
-    } else {
+    } else if (cedulaNumero.length > 0) {
       form.setValue("representanteCedula", "");
     }
-  }, [cedulaTipo, cedulaNumero, form]);
+  }, [cedulaTipo, cedulaNumero, form, isLoadingInitialData]);
 
   // Efecto para concatenar Teléfono
   useEffect(() => {
+    if (isLoadingInitialData) return;
     if (phonePrefix && phoneBody.length === 7) {
       form.setValue("telefono", `${phonePrefix}${phoneBody}`, {
         shouldValidate: true,
       });
-    } else {
+    } else if (phoneBody.length > 0) {
       form.setValue("telefono", "");
     }
-  }, [phonePrefix, phoneBody, form]);
+  }, [phonePrefix, phoneBody, form, isLoadingInitialData]);
 
   // Validaciones de Transición
   const handleNextStep = async () => {
@@ -225,6 +327,8 @@ export function NuevoProveedorForm() {
       formData.append("rif", data.rif);
       formData.append("tipoPersona", data.tipoPersona);
       if (data.formaJuridica) formData.append("tipoEntidadJuridica", data.formaJuridica);
+      if (data.datosRegistroMercantil)
+        formData.append("datosRegistroMercantil", data.datosRegistroMercantil);
       formData.append("estado", data.estado);
       formData.append("municipio", data.municipio);
       formData.append("parroquia", data.parroquia);
@@ -256,13 +360,18 @@ export function NuevoProveedorForm() {
         }
       });
 
-      await registrarProveedor(formData);
+      if (providerId) {
+        await editarProveedor(providerId, formData);
+        toast.success("Proveedor actualizado exitosamente");
+      } else {
+        await registrarProveedor(formData);
+        toast.success("Proveedor registrado exitosamente");
+      }
 
-      toast.success("Proveedor registrado exitosamente");
       router.push("/registro-proveedores/listado");
     } catch (error: unknown) {
-      console.error("Error en registrarProveedor:", error);
-      const msg = error instanceof Error ? error.message : "Error al registrar el proveedor";
+      console.error("Error en registrar/editar Proveedor:", error);
+      const msg = error instanceof Error ? error.message : "Error al procesar el proveedor";
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -299,17 +408,34 @@ export function NuevoProveedorForm() {
     setDocumentos((prev) => prev.filter((d) => d.id !== id));
   };
 
+  if (isLoadingInitialData) {
+    return (
+      <div className="w-full py-20 flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-navy" />
+        <p className="text-muted-foreground font-medium animate-pulse">
+          Cargando datos del proveedor...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full pb-10">
       {/* Dynamic Header */}
       <div className="mb-10">
         <h1 className="text-[28px] font-extrabold text-color-titulos tracking-tight">
-          {step === 1 ? "Identificación y validación" : "Carga de documentos"}
+          {providerId
+            ? "Editar proveedor"
+            : step === 1
+              ? "Identificación y validación"
+              : "Carga de documentos"}
         </h1>
         <p className="text-muted-foreground italic mt-1 text-sm">
-          {step === 1
-            ? "Complete los datos iniciales para el registro formal del proveedor en el sistema centralizado"
-            : "Por favor cargar los documentos legales del proveedor que valide los datos suministrados."}
+          {providerId
+            ? "Actualice la información del proveedor y sus documentos legales"
+            : step === 1
+              ? "Complete los datos iniciales para el registro formal del proveedor en el sistema centralizado"
+              : "Por favor cargar los documentos legales del proveedor que valide los datos suministrados."}
         </p>
         <hr className="mt-8 border-border" />
       </div>
@@ -439,7 +565,7 @@ export function NuevoProveedorForm() {
                         <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: C.A., S.A., S.R.L.
                         </p>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Seleccionar opciones" />
@@ -470,7 +596,7 @@ export function NuevoProveedorForm() {
                         <FormLabel className="font-bold text-color-subtitulos mb-2">
                           Tipo de Persona
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona tipo" />
@@ -519,7 +645,7 @@ export function NuevoProveedorForm() {
                       <FormItem>
                         <FormLabel className="font-bold text-color-subtitulos">Estado</FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">Ejemplo: Lara</p>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona estado" />
@@ -548,7 +674,7 @@ export function NuevoProveedorForm() {
                         <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: Concepción
                         </p>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona parroquia" />
@@ -600,7 +726,7 @@ export function NuevoProveedorForm() {
                         <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: Iribarren
                         </p>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
                               <SelectValue placeholder="Selecciona municipio" />
@@ -1169,7 +1295,7 @@ export function NuevoProveedorForm() {
                     className="bg-navy hover:bg-navy-hover h-12 px-8 text-white font-semibold rounded-md shadow"
                   >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Guardar
+                    {providerId ? "Guardar cambios" : "Registrar"}
                   </Button>
                 </div>
               </div>
