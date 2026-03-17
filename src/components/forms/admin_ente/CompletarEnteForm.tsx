@@ -62,10 +62,9 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   const [logoUploaded, setLogoUploaded] = useState(false);
   const [step, setStep] = useState(1);
 
-  // Estados visuales para el RIF dividido
+  // Estados visuales para el RIF
   const [rifTipo, setRifTipo] = useState("G");
   const [rifNumero, setRifNumero] = useState("");
-  const [rifDigito, setRifDigito] = useState("");
 
   const form = useForm<CompletarEnteFormValues>({
     resolver: zodResolver(completarEnteSchema),
@@ -88,10 +87,10 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   // Sincronizar estados locales de RIF con react-hook-form
   useEffect(() => {
     if (rifTipo && rifNumero) {
-      const formattedRif = `${rifTipo}-${rifNumero}${rifDigito ? `-${rifDigito}` : ""}`;
+      const formattedRif = `${rifTipo}-${rifNumero}`;
       form.setValue("rif", formattedRif, { shouldValidate: true });
     }
-  }, [rifTipo, rifNumero, rifDigito, form]);
+  }, [rifTipo, rifNumero, form]);
 
   // Cargar datos del ente al montar
   useEffect(() => {
@@ -118,8 +117,8 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
           const parts = ente.rif.split("-");
           if (parts.length >= 2) {
             setRifTipo(parts[0] || "G");
-            setRifNumero(parts[1] || "");
-            if (parts[2]) setRifDigito(parts[2]);
+            const numeroCrudo = parts.slice(1).join("-");
+            setRifNumero(numeroCrudo);
           } else {
             setRifNumero(ente.rif); // fallback
           }
@@ -275,7 +274,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   return (
     <Card className="mx-auto w-full max-w-4xl shadow-sm border-0 mb-16">
       <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
-        <CardTitle className="text-[28px] font-bold text-[#34495e] font-inter">
+        <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
           {step === 1 ? "Datos generales" : "Ubicación y estructura"}
         </CardTitle>
         <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
@@ -302,7 +301,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="nombre"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el nombre del Órgano o Ente Contratante.
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -329,7 +328,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="siglas"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el acrónimo y/o siglas del Órgano o Ente Contratante
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -355,7 +354,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="rif"
                       render={() => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el RIF del Órgano o Ente Contratante.
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -382,19 +381,14 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               </Select>
                               <Input
                                 value={rifNumero}
-                                onChange={(e) => setRifNumero(e.target.value.replace(/\D/g, ""))}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^\d-]/g, "");
+                                  setRifNumero(val);
+                                }}
                                 disabled={isSubmitting}
-                                placeholder="00000000"
-                                className="w-[120px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 placeholder:text-slate-300 font-inter text-center"
-                                maxLength={8}
-                              />
-                              <Input
-                                value={rifDigito}
-                                onChange={(e) => setRifDigito(e.target.value.replace(/\D/g, ""))}
-                                disabled={isSubmitting}
-                                placeholder="0"
-                                className="w-[50px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 placeholder:text-slate-300 font-inter text-center px-1"
-                                maxLength={1}
+                                placeholder="00000000-0"
+                                className="w-[140px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 placeholder:text-slate-300 font-inter text-center"
+                                maxLength={10}
                               />
                             </div>
                           </FormControl>
@@ -406,7 +400,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
                   {/* Logo / Imagen */}
                   <div className="mb-8 space-y-6">
-                    <h3 className="text-[#34495e] font-bold font-inter text-base leading-none block">
+                    <h3 className="text-[slate-700] font-bold font-inter text-base leading-none block">
                       Inserte el logo del Órgano o Ente Contratante.
                     </h3>
                     <hr className="border-slate-200" />
@@ -440,7 +434,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                           <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
                             <ImageIcon className="h-6 w-6 text-slate-500" />
                           </div>
-                          <p className="text-base font-semibold text-[#34495e] font-inter">
+                          <p className="text-base font-semibold text-[slate-700] font-inter">
                             Haz clic para seleccionar una imagen
                           </p>
                           <p className="text-sm text-slate-400 mt-1 font-inter">
@@ -454,7 +448,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       <Button
                         type="button"
                         variant="secondary"
-                        className="bg-[#f1f5f9] hover:bg-slate-200 text-slate-600 font-inter border border-slate-200 px-6 h-10"
+                        className="bg-[slate-100] hover:bg-slate-200 text-slate-600 font-inter border border-slate-200 px-6 h-10"
                         disabled={!logoFile || isUploadingLogo || logoUploaded}
                         onClick={handleUploadLogo}
                       >
@@ -484,7 +478,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="organoAdscripcion"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el nombre del órgano de adscripción al que pertenece el Órgano o
                             Ente Contratante (si aplica)
                           </FormLabel>
@@ -517,7 +511,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="estado"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Seleccione el Estado donde se ubica el Órgano o Ente Contratante.
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -553,7 +547,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="municipio"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Seleccione el Municipio donde se ubica el Órgano o Ente Contratante.
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -593,7 +587,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="ciudad"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Seleccione la ciudad donde se ubica el Órgano o Ente Contratante.
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -629,7 +623,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="parroquia"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Seleccione la parroquia donde se ubica el Órgano o Ente Contratante.
                           </FormLabel>
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
@@ -669,7 +663,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="direccionFiscal"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique la dirección fiscal completa (calle, edificio, etc.) del Órgano
                             o Ente Contratante.
                           </FormLabel>
@@ -696,7 +690,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="nombreUnidadContratante"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el nombre de la Unidad / Gerencia que cumple funciones de Unidad
                             Contratante
                           </FormLabel>
@@ -723,7 +717,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="nombreUnidadAdminFinanciera"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el nombre de la Unidad / Gerencia responsable de la Gestión
                             Administrativa y Financiera.
                           </FormLabel>
@@ -750,7 +744,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                       name="nombreUnidadTecnologia"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#34495e] font-bold font-inter text-base">
+                          <FormLabel className="text-[slate-700] font-bold font-inter text-base">
                             Indique el nombre de la Unidad / Gerencia responsable del Área de
                             Sistema y Tecnología.
                           </FormLabel>
