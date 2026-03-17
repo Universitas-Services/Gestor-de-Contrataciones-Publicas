@@ -204,13 +204,7 @@ export function RegistroProveedoresDashboard() {
           <table className="w-full text-[13px] text-left">
             <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                  />
-                </th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                <th className="px-6 py-3 font-semibold whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
                     Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
@@ -237,13 +231,7 @@ export function RegistroProveedoresDashboard() {
                         index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
                       }`}
                     >
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                        />
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700 whitespace-nowrap max-w-[200px] truncate">
+                      <td className="px-6 py-3 font-semibold text-slate-700 whitespace-nowrap max-w-[200px] truncate">
                         {provider.nombre}
                       </td>
                       <td className="px-4 py-3 text-slate-600 text-center whitespace-nowrap">
@@ -284,9 +272,9 @@ export function RegistroProveedoresDashboard() {
                           {provider.estatusValidacion === "APROBADO"
                             ? "activo"
                             : provider.estatusValidacion === "PENDIENTE"
-                              ? "por vencer"
+                              ? "por aprobar"
                               : provider.estatusValidacion === "RECHAZADO"
-                                ? "rechazado"
+                                ? "vencido"
                                 : "en revisión"}
                         </span>
                       </td>

@@ -446,11 +446,14 @@ export function NuevoProveedorForm() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="EMPRESA_PRIVADA">EMPRESA_PRIVADA</SelectItem>
-                            <SelectItem value="COOPERATIVA">COOPERATIVA</SelectItem>
-                            <SelectItem value="FUNDACION">FUNDACION</SelectItem>
-                            <SelectItem value="ASOCIACION_CIVIL">ASOCIACION_CIVIL</SelectItem>
-                            <SelectItem value="CONSORCIO">CONSORCIO</SelectItem>
+                            <SelectItem value="Compañía Anónima">Compañía Anónima (C.A)</SelectItem>
+                            <SelectItem value="Asociación Civil">Asociación Civil</SelectItem>
+                            <SelectItem value="Sociedades de Responsabilidad Limitada (S.R.L.)">
+                              Sociedades de Responsabilidad Limitada (S.R.L.)
+                            </SelectItem>
+                            <SelectItem value="Fundaciones">Fundaciones</SelectItem>
+                            <SelectItem value="Cooperativas">Cooperativas</SelectItem>
+                            <SelectItem value="Pymes">Pymes</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -855,7 +858,7 @@ export function NuevoProveedorForm() {
                           Área de especialidad
                         </FormLabel>
                         <div className="flex flex-row items-center gap-2 mt-2">
-                          {["BIENES", "OBRAS", "SERVICIOS", "CONSULTORIA"].map((area) => (
+                          {["BIENES", "OBRAS", "SERVICIOS"].map((area) => (
                             <Button
                               key={area}
                               type="button"
@@ -974,7 +977,7 @@ export function NuevoProveedorForm() {
                           Nivel de contratación
                         </FormLabel>
                         <div className="flex flex-row items-center gap-2 mt-2">
-                          {["EXPERTO", "AVANZADO", "INTERMEDIO", "BASICO"].map((nivel) => (
+                          {["ALTA", "MEDIA", "BAJA"].map((nivel) => (
                             <Button
                               key={nivel}
                               type="button"

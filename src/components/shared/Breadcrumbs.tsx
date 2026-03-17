@@ -32,6 +32,13 @@ export function Breadcrumbs() {
 
   // Función para formatear nombres de ruta
   const formatSegment = (segment: string): string => {
+    // Si el segmento es un UUID o un ID largo de proveedor, mostrar "Perfil del proveedor"
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // También chequear si es el segmento después de registro-proveedores
+    if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
+      return "Perfil del proveedor";
+    }
+
     return segment
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

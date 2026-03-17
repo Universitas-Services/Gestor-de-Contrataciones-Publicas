@@ -56,7 +56,14 @@ export function ListadoProveedores() {
       const data = await getProveedores({
         page,
         limit,
-        estatusValidacion: statusFilter,
+        estatusValidacion:
+          statusFilter === "ACTIVO" || statusFilter === "POR_VENCER"
+            ? "APROBADO"
+            : statusFilter === "VENCIDO"
+              ? "RECHAZADO"
+              : statusFilter === "POR_APROBAR"
+                ? "PENDIENTE"
+                : undefined,
         areaEspecialidad: areaFilter !== "TODOS" ? areaFilter : undefined,
         rif: isRif ? search : undefined,
         nombre: !isRif ? search : undefined,
@@ -144,24 +151,18 @@ export function ListadoProveedores() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 h-[42px] border-slate-300 focus:ring-navy bg-white">
-                <SelectValue placeholder="Status: Todos" />
+              <SelectTrigger className="w-44 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Estatus: Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Status: Todos</SelectItem>
+                <SelectItem value="TODOS">Estatus: Todos</SelectItem>
+                <SelectItem value="ACTIVO">Activo</SelectItem>
+                <SelectItem value="POR_VENCER">Por vencer</SelectItem>
+                <SelectItem value="VENCIDO">Vencido</SelectItem>
+                <SelectItem value="POR_APROBAR">Por aprobar</SelectItem>
                 <SelectItem value="PENDIENTE">Pendiente</SelectItem>
-                <SelectItem value="APROBADO">Aprobado</SelectItem>
-                <SelectItem value="RECHAZADO">Rechazado</SelectItem>
               </SelectContent>
             </Select>
-
-            <Button
-              variant="outline"
-              className="h-[42px] px-4 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 focus:ring-navy"
-              onClick={() => fetchProviders()}
-            >
-              <IoFilterOutline className="w-5 h-5" />
-            </Button>
           </div>
         </div>
 
@@ -175,10 +176,7 @@ export function ListadoProveedores() {
           <table className="w-full text-[13px] text-left">
             <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 w-10 text-center">
-                  <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
-                </th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                <th className="px-6 py-3 font-semibold whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
                     Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
@@ -205,10 +203,7 @@ export function ListadoProveedores() {
                         index % 2 !== 0 ? "bg-slate-50/30" : "bg-white"
                       }`}
                     >
-                      <td className="px-4 py-3 text-center">
-                        <Checkbox className="w-3.5 h-3.5 border-slate-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f] rounded" />
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700 max-w-[200px] truncate">
+                      <td className="px-6 py-3 font-semibold text-slate-700 max-w-[200px] truncate">
                         {provider.nombre}
                       </td>
                       <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
@@ -239,18 +234,14 @@ export function ListadoProveedores() {
                               ? "bg-success-bg text-success-text border-success/30"
                               : provider.estatusValidacion === "PENDIENTE"
                                 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                : provider.estatusValidacion === "RECHAZADO"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-red-50 text-red-700 border-red-200"
                           }`}
                         >
                           {provider.estatusValidacion === "APROBADO"
                             ? "activo"
                             : provider.estatusValidacion === "PENDIENTE"
-                              ? "por vencer"
-                              : provider.estatusValidacion === "RECHAZADO"
-                                ? "vencido"
-                                : "en revisión"}
+                              ? "por aprobar"
+                              : "vencido"}
                         </span>
                       </td>
 

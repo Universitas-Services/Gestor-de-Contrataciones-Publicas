@@ -79,6 +79,19 @@
   --color-tipo-servicios: var(--tipo-servicios);
   --color-tipo-servicios-bg: var(--tipo-servicios-bg);
   --color-tipo-servicios-border: var(--tipo-servicios-border);
+  --color-vigente: var(--vigente);
+  --color-vigente-bg: var(--vigente-bg);
+  --color-vigente-border: var(--vigente-border);
+  --color-vencido: var(--vencido);
+  --color-vencido-bg: var(--vencido-bg);
+  --color-vencido-border: var(--vencido-border);
+  --color-pendiente: var(--pendiente);
+  --color-pendiente-bg: var(--pendiente-bg);
+  --color-pendiente-border: var(--pendiente-border);
+  --color-rechazado: var(--rechazado);
+  --color-rechazado-bg: var(--rechazado-bg);
+  --color-rechazado-border: var(--rechazado-border);
+  --color-patrimonio: var(--patrimonio);
 }
 
 :root {
@@ -158,6 +171,19 @@
   --tipo-servicios: #475569;
   --tipo-servicios-bg: #e2e8f0;
   --tipo-servicios-border: #94a3b8;
+  --vigente: #15803d;
+  --vigente-bg: #86efac;
+  --vigente-border: #16a34a;
+  --vencido: #9a3412;
+  --vencido-bg: #ffedd5;
+  --vencido-border: #f97316;
+  --pendiente: #a16207;
+  --pendiente-bg: #fefce8;
+  --pendiente-border: #fef08a;
+  --rechazado: #b91c1c;
+  --rechazado-bg: #fef2f2;
+  --rechazado-border: #fecaca;
+  --patrimonio: #16a34a;
 }
 
 @layer base {

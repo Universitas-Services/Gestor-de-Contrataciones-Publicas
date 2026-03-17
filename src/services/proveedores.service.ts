@@ -133,3 +133,25 @@ export async function getEstadisticasProveedores() {
 
   return response.json();
 }
+
+/**
+ * Obtiene los detalles de un proveedor específico.
+ * GET /proveedores/{id}
+ */
+export async function getProveedorById(id: string) {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/${id}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener detalles del proveedor");
+  }
+
+  return response.json();
+}
