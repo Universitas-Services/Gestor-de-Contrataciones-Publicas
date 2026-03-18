@@ -21,8 +21,20 @@ import {
   getProveedores,
   cambiarEstatusProveedor,
   getEstadisticasProveedores,
+  eliminarProveedor,
 } from "@/services/proveedores.service";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Provider {
   id: string;
@@ -39,6 +51,8 @@ export function ListadoProveedores() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState<any>(null);
 
@@ -90,6 +104,20 @@ export function ListadoProveedores() {
       toast.error(
         error instanceof Error ? error.message : "Error al cambiar el estatus del proveedor"
       );
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await eliminarProveedor(id);
+      toast.success("Proveedor eliminado exitosamente");
+      fetchProviders();
+    } catch (error) {
+      toast.error("Error al eliminar el proveedor");
+    } finally {
+      setIsDeleting(false);
+      setProviderToDelete(null);
     }
   };
 
@@ -281,9 +309,37 @@ export function ListadoProveedores() {
                               <BsPencilSquare className="w-4.5 h-4.5" />
                             </button>
                           </Link>
-                          <button className="text-red-400 hover:text-red-600 transition-colors">
-                            <FaRegTrashAlt className="w-4 h-4" />
-                          </button>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button className="text-red-400 hover:text-red-600 transition-colors">
+                                <FaRegTrashAlt className="w-4 h-4" />
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción eliminará al proveedor{" "}
+                                  <strong>{provider.nombre}</strong> de forma lógica. Podrás seguir
+                                  viendo su historial si es necesario, pero ya no aparecerá en las
+                                  listas activas.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(provider.id)}
+                                  className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
+                                  disabled={isDeleting}
+                                >
+                                  {isDeleting ? "Eliminando..." : "Eliminar"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </td>
                     </tr>

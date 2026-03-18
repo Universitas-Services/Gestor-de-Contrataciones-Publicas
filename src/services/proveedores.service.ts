@@ -178,3 +178,25 @@ export async function editarProveedor(id: string, formData: FormData) {
 
   return response.json();
 }
+
+/**
+ * DELETE /proveedores/{id}
+ * Elimina un proveedor (soft delete).
+ */
+export async function eliminarProveedor(id: string) {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al eliminar el proveedor");
+  }
+
+  return response.json();
+}

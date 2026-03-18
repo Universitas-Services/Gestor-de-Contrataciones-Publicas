@@ -1081,6 +1081,9 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
+                              captionLayout="dropdown"
+                              fromYear={1900}
+                              toYear={new Date().getFullYear()}
                               selected={field.value ? new Date(field.value) : undefined}
                               onSelect={(date) => field.onChange(date?.toISOString())}
                               disabled={(date) =>
