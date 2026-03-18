@@ -15,7 +15,7 @@ import type { UserRole } from "@/types/role.types";
 export function enforceRoleAccess(user: SessionPayload | null, allowedRole: UserRole): void {
   // First barrier: No authentication
   if (!user) {
-    redirect("/login");
+    return redirect("/login");
   }
 
   // Second barrier: Wrong role
@@ -29,7 +29,7 @@ export function enforceRoleAccess(user: SessionPayload | null, allowedRole: User
 
     // Redirect to user's correct dashboard
     const correctDashboard = getDashboardRoute(user.role);
-    redirect(correctDashboard);
+    return redirect(correctDashboard);
   }
 
   // Access granted - user has correct role
