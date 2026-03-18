@@ -2,7 +2,6 @@ import type { UserRole } from "@/types/role.types";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
 import {
-  LayoutDashboard,
   Gavel,
   FileCheck,
   Award,
@@ -25,6 +24,7 @@ import { IconType } from "react-icons";
 import { LiaRobotSolid } from "react-icons/lia";
 import { IoEarthOutline } from "react-icons/io5";
 import { AiOutlineBook } from "react-icons/ai";
+import { HiMiniHome } from "react-icons/hi2";
 
 export interface SidebarItem {
   label: string;
@@ -44,9 +44,9 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
   admin_ente: {
     items: [
       {
-        label: "Dashboard",
+        label: "Inicio",
         href: ROLE_ROUTES.admin_ente.dashboard,
-        icon: LayoutDashboard,
+        icon: HiMiniHome,
       },
       {
         label: "Gestión de datos",
@@ -56,6 +56,10 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
           {
             label: "Perfil del Ente",
             href: "/gestion-datos/perfil",
+          },
+          {
+            label: "Estructura organizativa",
+            href: "/gestion-datos/estructura-organizativa",
           },
         ],
       },
@@ -94,9 +98,9 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
   supervisor: {
     items: [
       {
-        label: "Dashboard",
+        label: "Inicio",
         href: ROLE_ROUTES.supervisor.dashboard,
-        icon: LayoutDashboard,
+        icon: HiMiniHome,
       },
       {
         label: "Registro de proveedores",
@@ -128,9 +132,9 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
   visualizador: {
     items: [
       {
-        label: "Dashboard",
+        label: "Inicio",
         href: ROLE_ROUTES.visualizador.dashboard,
-        icon: LayoutDashboard,
+        icon: HiMiniHome,
       },
       {
         label: "Registro de proveedores",
@@ -157,9 +161,9 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
   ejecutor: {
     items: [
       {
-        label: "Dashboard",
+        label: "Inicio",
         href: ROLE_ROUTES.ejecutor.dashboard,
-        icon: LayoutDashboard,
+        icon: HiMiniHome,
       },
       {
         label: "Registro de proveedores",
