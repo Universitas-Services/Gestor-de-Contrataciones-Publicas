@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import { Building2 } from "lucide-react";
 import Image from "next/image";
-import { ManualActions } from "./ManualActions";
+import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons";
 
 export default async function PerfilEntePage() {
   const user = await getCurrentUser();
@@ -192,7 +192,7 @@ export default async function PerfilEntePage() {
               </section>
 
               {/* Botones Manuales */}
-              <ManualActions />
+              <ManualButtons orientation="vertical" />
             </div>
           </div>
         </div>
