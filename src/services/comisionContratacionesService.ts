@@ -136,6 +136,34 @@ export const eliminarMiembroComision = async (miembroId: string | number): Promi
 };
 
 /**
+ * PATCH /comision-contrataciones/miembros/{miembroId}
+ * Actualiza los datos de un miembro específico de la comisión.
+ */
+export const actualizarMiembroComision = async (
+  miembroId: string | number,
+  payload: Partial<MiembroFormValues>
+): Promise<MiembroResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/comision-contrataciones/miembros/${miembroId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar el miembro");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+  return response.json() as Promise<MiembroResponse>;
+};
+
+/**
  * PATCH /comision-contrataciones/{id}
  * Actualiza la comisión. Puede usarse para editar un miembro en la tabla final o sincronizar data.
  */

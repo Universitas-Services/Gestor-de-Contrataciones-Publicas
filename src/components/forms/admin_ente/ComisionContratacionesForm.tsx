@@ -24,6 +24,7 @@ import {
   registrarMiembroComision,
   eliminarMiembroComision,
   actualizarComisionContrataciones,
+  actualizarMiembroComision,
 } from "@/services/comisionContratacionesService";
 
 import {
@@ -191,13 +192,14 @@ export function ComisionContratacionesForm() {
 
     try {
       if (memberToEditIndex !== null) {
-        // Editando localmente un miembro y enviando PATCH general para guardarlo según el flujo.
-        // Opcional: Se asume que el backend actualizará todo el array si enviamos PATCH
-        const updatedMiembros = [...miembros];
-        updatedMiembros[memberToEditIndex] = values;
-
-        await actualizarComisionContrataciones(comisionId, { miembros: updatedMiembros });
-        toast.success("Miembro actualizado.");
+        // Editando un miembro usando su ID real mediante el endpoint PATCH
+        const miembroAEditar = miembros[memberToEditIndex];
+        if (miembroAEditar.id) {
+          await actualizarMiembroComision(miembroAEditar.id, values);
+          toast.success("Miembro actualizado.");
+        } else {
+          toast.error("El miembro no tiene un ID válido para editar.");
+        }
         setMemberToEditIndex(null);
       } else {
         // Creando uno nuevo vía POST específico
@@ -262,35 +264,15 @@ export function ComisionContratacionesForm() {
     window.scrollTo({ top: 300, behavior: "smooth" });
   };
 
-  // ---- FINALIZAR (PATCH GENERAL) ----
-  const handleGuardarCambios = async () => {
-    if (!comisionId) return;
+  // ---- FINALIZAR ----
+  const handleFinalizar = () => {
     setIsLoading(true);
-    try {
-      // Patch global para afirmar que todo se guardó correctamente.
-      const formValues = form.getValues();
-      await actualizarComisionContrataciones(comisionId, {
-        denominacionComision: formValues.denominacionComision,
-        datosDesignacionComision: formValues.datosDesignacionComision,
-        comisionCertificada: formValues.comisionCertificada,
-        miembros: miembros,
-      });
-      toast.success(
-        editId
-          ? "Todos los cambios de la Comisión han sido actualizados."
-          : "Todos los cambios de la Comisión han sido guardados."
-      );
-
-      router.refresh();
-      // Redireccionar al panel
-      setTimeout(() => {
-        router.push("/gestion-datos/estructura-organizativa");
-      }, 500);
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Error al guardar los cambios finales");
-    } finally {
-      setIsLoading(false);
-    }
+    // Los cambios ya se guardaron incrementalmente. Solo redirigimos.
+    toast.success("Configuración de la Comisión finalizada.");
+    router.refresh();
+    setTimeout(() => {
+      router.push("/gestion-datos/estructura-organizativa");
+    }, 500);
   };
 
   return (
@@ -681,19 +663,31 @@ export function ComisionContratacionesForm() {
               </Table>
             </div>
 
-            <div className="flex justify-end pt-8 border-t border-slate-200 mt-8">
+            <div className="flex justify-between pt-8 border-t border-slate-200 mt-8">
               <Button
                 type="button"
-                onClick={handleGuardarCambios}
+                variant="outline"
+                onClick={() => {
+                  setStep(1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="text-slate-500 font-inter px-8 h-11"
+                disabled={isLoading}
+              >
+                Atrás
+              </Button>
+              <Button
+                type="button"
+                onClick={handleFinalizar}
                 disabled={isLoading}
                 className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11 min-w-[140px]"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Finalizando...
                   </>
                 ) : (
-                  "Guardar"
+                  "Finalizar"
                 )}
               </Button>
             </div>

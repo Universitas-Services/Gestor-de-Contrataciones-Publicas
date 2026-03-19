@@ -355,7 +355,7 @@ export function ListadoUsuarios() {
 
       {/* Sheet Overlay for User Details */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl bg-white p-0 border-l overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-md md:max-w-[450px] bg-white p-0 border-l overflow-y-auto">
           {selectedUser && (
             <div className="flex flex-col h-full">
               <SheetHeader className="p-8 pb-4">
@@ -378,46 +378,87 @@ export function ListadoUsuarios() {
                     {selectedUser.tipo === "MAXIMA_AUTORIDAD" && (
                       <>
                         <div className="space-y-4">
-                          <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2">
-                            Datos de la autoridad
+                          <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2 flex items-center gap-2">
+                            <span>Datos de la autoridad</span>
                           </h3>
                           <div className="space-y-4">
-                            <div className="space-y-1.5">
-                              <Label className="text-[#1B456F] font-bold text-xs">
-                                Nombre Completo
-                              </Label>
-                              <Input
-                                readOnly
-                                value={selectedUserDetails.nombreCompletoAutoridad || ""}
-                                className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
-                              />
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                  Nombres
+                                </Label>
+                                <Input
+                                  readOnly
+                                  value={
+                                    (() => {
+                                      const parts = (
+                                        selectedUserDetails.nombreCompletoAutoridad || ""
+                                      )
+                                        .trim()
+                                        .split(/\s+/);
+                                      if (parts.length <= 1)
+                                        return selectedUserDetails.nombreCompletoAutoridad || "";
+                                      if (parts.length === 2) return parts[0];
+                                      if (parts.length === 3) return parts[0];
+                                      return `${parts[0]} ${parts[1]}`;
+                                    })() || ""
+                                  }
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                  Apellidos
+                                </Label>
+                                <Input
+                                  readOnly
+                                  value={
+                                    (() => {
+                                      const parts = (
+                                        selectedUserDetails.nombreCompletoAutoridad || ""
+                                      )
+                                        .trim()
+                                        .split(/\s+/);
+                                      if (parts.length <= 1) return "";
+                                      if (parts.length === 2) return parts[1];
+                                      if (parts.length === 3) return `${parts[1]} ${parts[2]}`;
+                                      return parts.slice(2).join(" ");
+                                    })() || ""
+                                  }
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
+                                />
+                              </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1.5">
-                                <Label className="text-[#1B456F] font-bold text-xs">Cédula</Label>
-                                <Input
-                                  readOnly
-                                  value={selectedUserDetails.cedulaAutoridad || ""}
-                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                                <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                  Cargo
+                                </Label>
                                 <Input
                                   readOnly
                                   value={selectedUserDetails.cargoOficialAutoridad || ""}
-                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                  Cédula
+                                </Label>
+                                <Input
+                                  readOnly
+                                  value={selectedUserDetails.cedulaAutoridad || ""}
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                                 />
                               </div>
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-[#1B456F] font-bold text-xs">
+                              <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
                                 Resolución / Designación
                               </Label>
                               <Input
                                 readOnly
                                 value={selectedUserDetails.datosDesignacionAutoridad || ""}
-                                className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 w-full"
+                                className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 w-full focus:border-[#1B456F] transition-all"
                               />
                             </div>
                           </div>
@@ -425,35 +466,39 @@ export function ListadoUsuarios() {
 
                         {selectedUserDetails.esDelegado && (
                           <div className="space-y-4 pt-2">
-                            <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2">
-                              Datos del delegado
+                            <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2 flex items-center gap-2">
+                              <span>Datos del delegado</span>
                             </h3>
                             <div className="space-y-4">
                               <div className="space-y-1.5">
-                                <Label className="text-[#1B456F] font-bold text-xs">
-                                  Nombre Completo
+                                <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                  Nombre Completo del delegado
                                 </Label>
                                 <Input
                                   readOnly
                                   value={selectedUserDetails.nombreCompletoDelegado || ""}
-                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                                 />
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                  <Label className="text-[#1B456F] font-bold text-xs">Cédula</Label>
+                                  <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                    Cédula del delegado
+                                  </Label>
                                   <Input
                                     readOnly
                                     value={selectedUserDetails.cedulaDelegado || ""}
-                                    className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                    className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                                   />
                                 </div>
                                 <div className="space-y-1.5">
-                                  <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                                  <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                                    Cargo del delegado
+                                  </Label>
                                   <Input
                                     readOnly
                                     value={selectedUserDetails.cargoOficialDelegado || ""}
-                                    className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                    className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                                   />
                                 </div>
                               </div>
@@ -466,32 +511,71 @@ export function ListadoUsuarios() {
                     {selectedUser.tipo === "UNIDAD_USUARIA" && (
                       <div className="space-y-4">
                         <div className="space-y-1.5">
-                          <Label className="text-[#1B456F] font-bold text-xs">
+                          <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
                             Nombre de la Unidad
                           </Label>
                           <Input
                             readOnly
                             value={selectedUserDetails.nombreUnidadUsuaria || ""}
-                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label className="text-[#1B456F] font-bold text-xs">Responsable</Label>
+                            <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                              Nombres del Responsable
+                            </Label>
                             <Input
                               readOnly
-                              value={selectedUserDetails.nombreResponsableUnidadUsuaria || ""}
-                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                              value={
+                                (() => {
+                                  const parts = (
+                                    selectedUserDetails.nombreResponsableUnidadUsuaria || ""
+                                  )
+                                    .trim()
+                                    .split(/\s+/);
+                                  if (parts.length <= 1)
+                                    return selectedUserDetails.nombreResponsableUnidadUsuaria || "";
+                                  if (parts.length === 2) return parts[0];
+                                  if (parts.length === 3) return parts[0];
+                                  return `${parts[0]} ${parts[1]}`;
+                                })() || ""
+                              }
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                            <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                              Apellidos del Responsable
+                            </Label>
                             <Input
                               readOnly
-                              value={selectedUserDetails.cargoResponsableUnidadUsuaria || ""}
-                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                              value={
+                                (() => {
+                                  const parts = (
+                                    selectedUserDetails.nombreResponsableUnidadUsuaria || ""
+                                  )
+                                    .trim()
+                                    .split(/\s+/);
+                                  if (parts.length <= 1) return "";
+                                  if (parts.length === 2) return parts[1];
+                                  if (parts.length === 3) return `${parts[1]} ${parts[2]}`;
+                                  return parts.slice(2).join(" ");
+                                })() || ""
+                              }
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                             />
                           </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                            Cargo del Responsable
+                          </Label>
+                          <Input
+                            readOnly
+                            value={selectedUserDetails.cargoResponsableUnidadUsuaria || ""}
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
+                          />
                         </div>
                       </div>
                     )}
@@ -499,58 +583,101 @@ export function ListadoUsuarios() {
                     {selectedUser.tipo === "UNIDAD_CONTRATANTE" && (
                       <div className="space-y-4">
                         <div className="space-y-1.5">
-                          <Label className="text-[#1B456F] font-bold text-xs">
+                          <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
                             Nombre de la Unidad
                           </Label>
                           <Input
                             readOnly
                             value={selectedUserDetails.nombreUnidadContratante || ""}
-                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label className="text-[#1B456F] font-bold text-xs">Responsable</Label>
+                            <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                              Nombres del Responsable
+                            </Label>
                             <Input
                               readOnly
-                              value={selectedUserDetails.nombreResponsableUnidad || ""}
-                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                              value={
+                                (() => {
+                                  const parts = (selectedUserDetails.nombreResponsableUnidad || "")
+                                    .trim()
+                                    .split(/\s+/);
+                                  if (parts.length <= 1)
+                                    return selectedUserDetails.nombreResponsableUnidad || "";
+                                  if (parts.length === 2) return parts[0];
+                                  if (parts.length === 3) return parts[0];
+                                  return `${parts[0]} ${parts[1]}`;
+                                })() || ""
+                              }
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                            <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                              Apellidos del Responsable
+                            </Label>
                             <Input
                               readOnly
-                              value={selectedUserDetails.cargoResponsable || ""}
-                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                              value={
+                                (() => {
+                                  const parts = (selectedUserDetails.nombreResponsableUnidad || "")
+                                    .trim()
+                                    .split(/\s+/);
+                                  if (parts.length <= 1) return "";
+                                  if (parts.length === 2) return parts[1];
+                                  if (parts.length === 3) return `${parts[1]} ${parts[2]}`;
+                                  return parts.slice(2).join(" ");
+                                })() || ""
+                              }
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                             />
                           </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                            Cargo del Responsable
+                          </Label>
+                          <Input
+                            readOnly
+                            value={selectedUserDetails.cargoResponsable || ""}
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
+                          />
                         </div>
                       </div>
                     )}
 
                     {selectedUser.tipo === "COMISION_CONTRATACIONES" && (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div className="space-y-1.5">
-                          <Label className="text-[#1B456F] font-bold text-xs">Denominación</Label>
+                          <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                            Denominación de la Comisión
+                          </Label>
                           <Input
                             readOnly
                             value={selectedUserDetails.denominacionComision || ""}
-                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[#1B456F] font-bold text-xs">Designación</Label>
+                          <Label className="text-[#1B456F] font-bold text-xs uppercase tracking-wider">
+                            Datos de Designación
+                          </Label>
                           <Input
                             readOnly
                             value={selectedUserDetails.datosDesignacionComision || ""}
-                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 focus:border-[#1B456F] transition-all"
                           />
                         </div>
-                        <p className="text-sm font-medium pt-2">
-                          <span className="font-bold text-[#1B456F]">Miembros registrados:</span>{" "}
-                          {selectedUserDetails.miembros?.length || 0}
-                        </p>
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
+                          <span className="font-bold text-[#1B456F] text-sm">
+                            Miembros registrados:
+                          </span>
+                          <span className="bg-[#1B456F] text-white px-3 py-1 rounded-full text-xs font-bold">
+                            {selectedUserDetails.miembros?.length || 0}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -562,16 +689,17 @@ export function ListadoUsuarios() {
               </div>
 
               {/* Action Buttons */}
-              <div className="p-8 pt-4 flex justify-end gap-3 pb-10">
+              <div className="p-8 pt-6 flex justify-end gap-3 pb-12 mt-auto border-t border-slate-100 bg-slate-50/50">
                 <Button
                   onClick={() => handleEditRedirect(selectedUser)}
-                  className="bg-[#1B456F] hover:bg-[#123050] text-white font-semibold px-8 py-2 h-10 w-32 shadow-sm rounded-md"
+                  className="bg-[#1B456F] hover:bg-[#123050] text-white font-bold px-6 py-2 h-11 flex-1 shadow-md rounded-md transition-all active:scale-95"
                 >
                   Editar
                 </Button>
                 <Button
                   onClick={() => setIsSheetOpen(false)}
-                  className="bg-[#1B456F] hover:bg-[#123050] text-white font-semibold px-8 py-2 h-10 w-32 shadow-sm rounded-md"
+                  variant="outline"
+                  className="border-[#1B456F] text-[#1B456F] hover:bg-[#1B456F]/5 font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all active:scale-95"
                 >
                   Cancelar
                 </Button>
