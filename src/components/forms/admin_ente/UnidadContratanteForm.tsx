@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import {
   unidadContratanteSchema,
   type UnidadContratanteFormValues,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function UnidadContratanteForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +31,6 @@ export function UnidadContratanteForm() {
       nombreUnidadContratante: "",
       nombreResponsableUnidad: "",
       cargoResponsable: "",
-      activa: false,
     },
     mode: "onChange",
   });
@@ -38,7 +39,7 @@ export function UnidadContratanteForm() {
     setIsLoading(true);
     try {
       await registrarUnidadContratante(values);
-      toast.success("Unidad creada exitosamente.");
+      toast.success("Unidad Contratante creada exitosamente.");
       form.reset();
     } catch (error: unknown) {
       const message =
@@ -50,82 +51,124 @@ export function UnidadContratanteForm() {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="nombreUnidadContratante"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre de la Unidad Contratante</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej. Comisión de Contrataciones" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <Card className="mx-auto w-full max-w-6xl shadow-sm border-0 mb-16">
+      <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
+        <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
+          Registra los datos de la Unidad Contratante
+        </CardTitle>
+        <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
+          Artículos 6.2 LCP; 18.4 LOPA; 15 y 24 NORMAS DE CONTROL INTERNO SUNAI.
+        </CardDescription>
+      </CardHeader>
 
-        <FormField
-          control={form.control}
-          name="nombreResponsableUnidad"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre del Responsable de la Unidad</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej. Ana Gómez" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="cargoResponsable"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cargo del Responsable</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej. Presidenta de la Comisión" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="activa"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center gap-3 rounded-lg border p-4">
-              <FormControl>
-                <input
-                  type="checkbox"
-                  id="activa"
-                  className="h-4 w-4 accent-primary cursor-pointer"
-                  checked={field.value}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-              <FormLabel htmlFor="activa" className="cursor-pointer font-normal mb-0">
-                Activa
-              </FormLabel>
-            </FormItem>
-          )}
-        />
-
-        {/* ── Botón de Submit ── */}
-        <div className="flex justify-end pt-2">
-          <Button
-            type="submit"
-            disabled={!form.formState.isValid || isLoading}
-            className="min-w-[220px]"
+      <CardContent className="px-10 pt-8 pb-10">
+        <Form {...form}>
+          <form
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault();
+            }}
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6"
           >
-            {isLoading ? "Registrando..." : "Registrar Unidad Contratante"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+            <div className="space-y-0">
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="nombreUnidadContratante"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique el nombre de la Unidad, Gerencia u Oficina que funge como Unidad
+                        Contratante.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: División de Compras, Gerencia de Contrataciones.
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="nombreResponsableUnidad"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique el nombre y apellido del Responsable de la Unidad Contratante.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Luis Alberto Leal Gómez
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="cargoResponsable"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique el cargo del Responsable de la Unidad Contratante.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Administrador
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end pt-4 mt-8 border-t border-slate-200">
+                <Button
+                  type="submit"
+                  disabled={!form.formState.isValid || isLoading}
+                  className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                    </>
+                  ) : (
+                    "Agregar Unidad Contratante"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 }

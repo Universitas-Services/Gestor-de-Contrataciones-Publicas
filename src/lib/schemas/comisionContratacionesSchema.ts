@@ -3,22 +3,28 @@ import { z } from "zod";
 /**
  * Valores permitidos por el backend para tipoMiembro y areaRepresentacion
  */
-export const TIPO_MIEMBRO_OPTIONS = ["TITULAR", "SUPLENTE", "COORDINADOR", "SECRETARIO"] as const;
+export const TIPO_MIEMBRO_OPTIONS = ["Miembro principal", "Miembro suplente"] as const;
 
 export const AREA_REPRESENTACION_OPTIONS = [
-  "JURIDICA",
-  "TECNICA",
-  "FINANCIERA",
-  "ADMINISTRATIVA",
+  "Area juridica",
+  "Area economica-financiera",
+  "Area Tecnica",
+  "Secretario(a)",
 ] as const;
 
 /**
  * Schema de validación para cada miembro de la comisión
- * Se usa tanto en el Sheet de agregar miembro como en el schema principal
  */
 export const miembroSchema = z.object({
-  nombreCompletoMiembro: z.string().min(1, "El nombre completo del miembro es requerido"),
-  cedulaMiembro: z.string().min(1, "La cédula del miembro es requerida"),
+  id: z.number().optional(), // El backend seguramente devolverá un ID
+  nombreCompletoMiembro: z
+    .string()
+    .min(1, "El nombre completo del miembro es requerido")
+    .max(255, "Máximo 255 caracteres"),
+  cedulaMiembro: z
+    .string()
+    .min(1, "La cédula del miembro es requerida")
+    .regex(/^[VE]-\d{6,8}$/, "Formato de cédula inválido (ej. V-12345678)"),
   tipoMiembro: z.enum(TIPO_MIEMBRO_OPTIONS, {
     message: "Seleccione un tipo de miembro",
   }),
@@ -28,13 +34,20 @@ export const miembroSchema = z.object({
 });
 
 /**
- * Schema de validación para el formulario de Comisión de Contrataciones
+ * Schema de validación para el formulario base de Comisión de Contrataciones
  */
 export const comisionContratacionesSchema = z.object({
-  denominacionComision: z.string().min(1, "La denominación de la comisión es requerida"),
-  datosDesignacionComision: z.string().min(1, "Los datos de designación son requeridos"),
+  id: z.number().optional(),
+  denominacionComision: z
+    .string()
+    .min(1, "La denominación de la comisión es requerida")
+    .max(255, "Máximo 255 caracteres"),
+  datosDesignacionComision: z
+    .string()
+    .min(1, "Los datos de designación son requeridos")
+    .max(255, "Máximo 255 caracteres"),
   comisionCertificada: z.boolean(),
-  miembros: z.array(miembroSchema).min(1, "Debe agregar al menos un miembro"),
+  miembros: z.array(miembroSchema).optional(),
 });
 
 export type MiembroFormValues = z.infer<typeof miembroSchema>;

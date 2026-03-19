@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import {
   unidadUsuariaSchema,
   type UnidadUsuariaFormValues,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function UnidadUsuariaForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +39,7 @@ export function UnidadUsuariaForm() {
     setIsLoading(true);
     try {
       await registrarUnidadUsuaria(values);
-      toast.success("Unidad creada exitosamente.");
+      toast.success("Unidad Usuaria creada exitosamente.");
       form.reset();
     } catch (error: unknown) {
       const message =
@@ -49,61 +51,123 @@ export function UnidadUsuariaForm() {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="nombreUnidadUsuaria"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre de la Unidad Usuaria</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej. Dirección de Tecnología" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <Card className="mx-auto w-full max-w-6xl shadow-sm border-0 mb-16">
+      <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
+        <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
+          Registra los datos de la Unidad Usuaria
+        </CardTitle>
+        <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
+          Artículo 18.4 LOPA.
+        </CardDescription>
+      </CardHeader>
 
-        <FormField
-          control={form.control}
-          name="nombreResponsableUnidadUsuaria"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre del Responsable</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej. Juan Pérez" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="cargoResponsableUnidadUsuaria"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cargo del Responsable</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej. Director" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* ── Botón de Submit ── */}
-        <div className="flex justify-end pt-2">
-          <Button
-            type="submit"
-            disabled={!form.formState.isValid || isLoading}
-            className="min-w-[220px]"
+      <CardContent className="px-10 pt-8 pb-10">
+        <Form {...form}>
+          <form
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault();
+            }}
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6"
           >
-            {isLoading ? "Registrando..." : "Registrar Unidad Usuaria"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+            <div className="space-y-0">
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="nombreUnidadUsuaria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique el nombre de la Unidad, Gerencia u Oficina Usuaria
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Dirección de Infraestructura, Gerencia de Tecnología.
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="nombreResponsableUnidadUsuaria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique el nombre y apellido del responsable de la Unidad Usuaria.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Hernán Perez González
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="cargoResponsableUnidadUsuaria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique el cargo del Responsable de la Unidad Usuaria.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Gerente, Coordinador, Supervisor
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end pt-4 mt-8 border-t border-slate-200">
+                <Button
+                  type="submit"
+                  disabled={!form.formState.isValid || isLoading}
+                  className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                    </>
+                  ) : (
+                    "Agregar Unidad Usuaria"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 }

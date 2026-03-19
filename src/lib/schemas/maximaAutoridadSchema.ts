@@ -7,26 +7,37 @@ import { z } from "zod";
 export const maximaAutoridadSchema = z
   .object({
     // Datos de la Autoridad
-    nombreCompletoAutoridad: z.string().min(1, "El nombre completo de la autoridad es requerido"),
-    cedulaAutoridad: z.string().min(1, "La cédula de la autoridad es requerida"),
-    cargoOficialAutoridad: z.string().min(1, "El cargo oficial de la autoridad es requerido"),
+    nombreCompletoAutoridad: z
+      .string()
+      .min(1, "El nombre completo de la autoridad es requerido")
+      .max(255, "Máximo 255 caracteres"),
+    cedulaAutoridad: z
+      .string()
+      .min(1, "La cédula de la autoridad es requerida")
+      .regex(/^[VE]-\d{6,8}$/, "Formato de cédula inválido (ej. V-12345678)"),
+    cargoOficialAutoridad: z
+      .string()
+      .min(1, "El cargo oficial de la autoridad es requerido")
+      .max(255, "Máximo 255 caracteres"),
     datosDesignacionAutoridad: z
       .string()
-      .min(1, "Los datos de designación de la autoridad son requeridos"),
+      .min(1, "Los datos de designación de la autoridad son requeridos")
+      .max(255, "Máximo 255 caracteres"),
     leyesAtribucionesSuscribirAutoridad: z
       .string()
-      .min(1, "Las leyes y atribuciones de la autoridad son requeridas"),
+      .min(1, "Las leyes y atribuciones de la autoridad son requeridas")
+      .max(600, "Máximo 600 caracteres"),
 
     // Campos de estado
     esDelegado: z.boolean(),
     vigente: z.boolean(),
 
-    // Datos del Delegado (opcionales, condicionales a esDelegado === true)
-    nombreCompletoDelegado: z.string().optional(),
+    // Datos del Delegado (opcionales, se validan en superRefine si esDelegado es true)
+    nombreCompletoDelegado: z.string().max(255, "Máximo 255 caracteres").optional(),
     cedulaDelegado: z.string().optional(),
-    cargoOficialDelegado: z.string().optional(),
-    datosDesignacionDelegado: z.string().optional(),
-    leyesAtribucionesSuscribirDelegado: z.string().optional(),
+    cargoOficialDelegado: z.string().max(255, "Máximo 255 caracteres").optional(),
+    datosDesignacionDelegado: z.string().max(255, "Máximo 255 caracteres").optional(),
+    leyesAtribucionesSuscribirDelegado: z.string().max(600, "Máximo 600 caracteres").optional(),
   })
   .superRefine((data, ctx) => {
     // Si esDelegado es true, los campos del delegado se vuelven obligatorios
@@ -42,6 +53,12 @@ export const maximaAutoridadSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "La cédula del delegado es requerida",
+          path: ["cedulaDelegado"],
+        });
+      } else if (!/^[VE]-\d{6,8}$/.test(data.cedulaDelegado)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Formato de cédula inválido (ej. V-12345678)",
           path: ["cedulaDelegado"],
         });
       }

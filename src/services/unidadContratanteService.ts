@@ -16,7 +16,6 @@ export interface UnidadContratantePayload {
   nombreUnidadContratante: string;
   nombreResponsableUnidad: string;
   cargoResponsable: string;
-  activa: boolean;
 }
 
 export interface UnidadContratanteResponse {
