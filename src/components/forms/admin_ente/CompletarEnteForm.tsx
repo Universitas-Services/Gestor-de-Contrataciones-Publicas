@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -215,6 +216,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
         form.clearErrors();
       }, 50);
     } else {
+      console.log("Validacion fallida paso 1:", form.formState.errors);
       toast.error("Por favor completa los campos requeridos marcados en rojo.");
     }
   };
@@ -413,9 +415,11 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                     >
                       {logoPreview ? (
                         <div className="relative inline-block">
-                          <img
+                          <Image
                             src={logoPreview}
                             alt="Preview del logo"
+                            width={128}
+                            height={128}
                             className="max-h-32 w-auto object-contain rounded-md"
                           />
                           <button
