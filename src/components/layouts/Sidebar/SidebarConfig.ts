@@ -15,7 +15,6 @@ import {
   Bell,
   Search,
   Download,
-  Settings,
   Newspaper,
   Globe,
 } from "lucide-react";
@@ -87,11 +86,6 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Fiscalización",
         href: ROLE_ROUTES.admin_ente.fiscalizacion,
         icon: Shield,
-      },
-      {
-        label: "Configuración",
-        href: ROLE_ROUTES.admin_ente.configuracion,
-        icon: Settings,
       },
     ],
   },

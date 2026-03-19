@@ -25,6 +25,26 @@ import { ChevronDown, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-re
 import { getDirectorioActores } from "@/services/directorioService";
 import type { Actor, ActorTipo } from "@/types/directorio.types";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { eliminarMaximaAutoridad, obtenerMaximaAutoridad } from "@/services/maximaAutoridadService";
+import { eliminarUnidadUsuaria, obtenerUnidadUsuaria } from "@/services/unidadUsuariaService";
+import {
+  eliminarUnidadContratante,
+  obtenerUnidadContratante,
+} from "@/services/unidadContratanteService";
+import {
+  eliminarComisionContrataciones,
+  obtenerComisionContrataciones,
+} from "@/services/comisionContratacionesService";
 
 const TIPO_MAP: Record<ActorTipo, string> = {
   COMISION_CONTRATACIONES: "Comisión de contrataciones",
@@ -41,6 +61,12 @@ export function ListadoUsuarios() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [actorToDelete, setActorToDelete] = useState<Actor | null>(null);
+
+  // Sheet states
+  const [selectedUserDetails, setSelectedUserDetails] = useState<any>(null);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+
   const limit = 10;
   const router = useRouter();
 
@@ -62,15 +88,82 @@ export function ListadoUsuarios() {
     fetchActores();
   }, [fetchActores]);
 
-  const handleViewClick = (usuario: Actor) => {
+  const handleViewClick = async (usuario: Actor) => {
     setSelectedUser(usuario);
     setIsSheetOpen(true);
+    setIsFetchingDetails(true);
+    setSelectedUserDetails(null);
+    try {
+      let data;
+      switch (usuario.tipo) {
+        case "MAXIMA_AUTORIDAD":
+          data = await obtenerMaximaAutoridad(usuario.id);
+          break;
+        case "UNIDAD_USUARIA":
+          data = await obtenerUnidadUsuaria(usuario.id);
+          break;
+        case "UNIDAD_CONTRATANTE":
+          data = await obtenerUnidadContratante(usuario.id);
+          break;
+        case "COMISION_CONTRATACIONES":
+          data = await obtenerComisionContrataciones(usuario.id);
+          break;
+      }
+      setSelectedUserDetails(data);
+    } catch (error) {
+      toast.error("Error al cargar detalles del actor");
+    } finally {
+      setIsFetchingDetails(false);
+    }
   };
 
   const handleEditRedirect = (usuario: Actor) => {
-    // Redireccionar al formulario de edición segun la estructura.
-    // Usamos el id por ahora de forma general, se puede expandir según requerimiento real.
-    router.push(`/gestion-datos/estructura-organizativa/editar/${usuario.id}`);
+    switch (usuario.tipo) {
+      case "MAXIMA_AUTORIDAD":
+        router.push(`/admin_ente/configuracion/maxima-autoridad?id=${usuario.id}`);
+        break;
+      case "UNIDAD_USUARIA":
+        router.push(`/admin_ente/configuracion/unidad-usuaria?id=${usuario.id}`);
+        break;
+      case "UNIDAD_CONTRATANTE":
+        router.push(`/admin_ente/configuracion/unidad-contratante?id=${usuario.id}`);
+        break;
+      case "COMISION_CONTRATACIONES":
+        router.push(`/admin_ente/configuracion/comision-contrataciones?id=${usuario.id}`);
+        break;
+      default:
+        toast.error("Tipo de actor desconocido para edición");
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!actorToDelete) return;
+    try {
+      setLoading(true);
+      switch (actorToDelete.tipo) {
+        case "MAXIMA_AUTORIDAD":
+          await eliminarMaximaAutoridad(actorToDelete.id);
+          break;
+        case "UNIDAD_USUARIA":
+          await eliminarUnidadUsuaria(actorToDelete.id);
+          break;
+        case "UNIDAD_CONTRATANTE":
+          await eliminarUnidadContratante(actorToDelete.id);
+          break;
+        case "COMISION_CONTRATACIONES":
+          await eliminarComisionContrataciones(actorToDelete.id);
+          break;
+        default:
+          throw new Error("Tipo de actor desconocido");
+      }
+      toast.success("Registro eliminado exitosamente");
+      await fetchActores();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al eliminar");
+    } finally {
+      setActorToDelete(null);
+      setLoading(false);
+    }
   };
 
   return (
@@ -185,18 +278,21 @@ export function ListadoUsuarios() {
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-4">
                           <button
-                            className="text-slate-700 hover:text-navy transition-colors"
+                            className="text-slate-700 hover:text-navy transition-colors title='Ver detalles'"
                             onClick={() => handleViewClick(usuario)}
                           >
                             <BsEye className="w-[18px] h-[18px]" />
                           </button>
                           <button
-                            className="text-slate-700 hover:text-navy transition-colors"
+                            className="text-slate-700 hover:text-navy transition-colors title='Editar'"
                             onClick={() => handleEditRedirect(usuario)}
                           >
                             <BsPencilSquare className="w-[18px] h-[18px]" />
                           </button>
-                          <button className="text-rechazado hover:text-red-700 transition-colors">
+                          <button
+                            className="text-rechazado hover:text-red-700 transition-colors title='Eliminar'"
+                            onClick={() => setActorToDelete(usuario)}
+                          >
                             <FaRegTrashAlt className="w-4 h-4" />
                           </button>
                         </div>
@@ -272,97 +368,197 @@ export function ListadoUsuarios() {
               </SheetHeader>
 
               <div className="flex-1 px-8 py-4 space-y-8">
-                {/* Datos de la autoridad */}
-                <div className="space-y-4">
-                  <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2">
-                    Datos de la autoridad
-                  </h3>
-
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">Nombres</Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.autoridad.nombres || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">Apellidos</Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.autoridad.apellidos || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.autoridad.cargo || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">Cedula</Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.autoridad.cedula || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
-                      />
-                    </div>
+                {isFetchingDetails ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                    <Loader2 className="h-8 w-8 animate-spin mb-4 text-[#1B456F]" />
+                    <p>Cargando detalles...</p>
                   </div>
+                ) : selectedUserDetails ? (
+                  <div className="space-y-6">
+                    {selectedUser.tipo === "MAXIMA_AUTORIDAD" && (
+                      <>
+                        <div className="space-y-4">
+                          <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2">
+                            Datos de la autoridad
+                          </h3>
+                          <div className="space-y-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-[#1B456F] font-bold text-xs">
+                                Nombre Completo
+                              </Label>
+                              <Input
+                                readOnly
+                                value={selectedUserDetails.nombreCompletoAutoridad || ""}
+                                className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <Label className="text-[#1B456F] font-bold text-xs">Cédula</Label>
+                                <Input
+                                  readOnly
+                                  value={selectedUserDetails.cedulaAutoridad || ""}
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                                <Input
+                                  readOnly
+                                  value={selectedUserDetails.cargoOficialAutoridad || ""}
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[#1B456F] font-bold text-xs">
+                                Resolución / Designación
+                              </Label>
+                              <Input
+                                readOnly
+                                value={selectedUserDetails.datosDesignacionAutoridad || ""}
+                                className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 w-full"
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className="space-y-1.5 mt-2">
-                    <Label className="text-[#1B456F] font-bold text-xs">Resolución</Label>
-                    <Input
-                      readOnly
-                      value={selectedUser.detalles?.autoridad.resolucion || ""}
-                      className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 w-full"
-                    />
+                        {selectedUserDetails.esDelegado && (
+                          <div className="space-y-4 pt-2">
+                            <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2">
+                              Datos del delegado
+                            </h3>
+                            <div className="space-y-4">
+                              <div className="space-y-1.5">
+                                <Label className="text-[#1B456F] font-bold text-xs">
+                                  Nombre Completo
+                                </Label>
+                                <Input
+                                  readOnly
+                                  value={selectedUserDetails.nombreCompletoDelegado || ""}
+                                  className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <Label className="text-[#1B456F] font-bold text-xs">Cédula</Label>
+                                  <Input
+                                    readOnly
+                                    value={selectedUserDetails.cedulaDelegado || ""}
+                                    className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                                  <Input
+                                    readOnly
+                                    value={selectedUserDetails.cargoOficialDelegado || ""}
+                                    className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {selectedUser.tipo === "UNIDAD_USUARIA" && (
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-[#1B456F] font-bold text-xs">
+                            Nombre de la Unidad
+                          </Label>
+                          <Input
+                            readOnly
+                            value={selectedUserDetails.nombreUnidadUsuaria || ""}
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[#1B456F] font-bold text-xs">Responsable</Label>
+                            <Input
+                              readOnly
+                              value={selectedUserDetails.nombreResponsableUnidadUsuaria || ""}
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                            <Input
+                              readOnly
+                              value={selectedUserDetails.cargoResponsableUnidadUsuaria || ""}
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedUser.tipo === "UNIDAD_CONTRATANTE" && (
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-[#1B456F] font-bold text-xs">
+                            Nombre de la Unidad
+                          </Label>
+                          <Input
+                            readOnly
+                            value={selectedUserDetails.nombreUnidadContratante || ""}
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[#1B456F] font-bold text-xs">Responsable</Label>
+                            <Input
+                              readOnly
+                              value={selectedUserDetails.nombreResponsableUnidad || ""}
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
+                            <Input
+                              readOnly
+                              value={selectedUserDetails.cargoResponsable || ""}
+                              className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedUser.tipo === "COMISION_CONTRATACIONES" && (
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-[#1B456F] font-bold text-xs">Denominación</Label>
+                          <Input
+                            readOnly
+                            value={selectedUserDetails.denominacionComision || ""}
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[#1B456F] font-bold text-xs">Designación</Label>
+                          <Input
+                            readOnly
+                            value={selectedUserDetails.datosDesignacionComision || ""}
+                            className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
+                          />
+                        </div>
+                        <p className="text-sm font-medium pt-2">
+                          <span className="font-bold text-[#1B456F]">Miembros registrados:</span>{" "}
+                          {selectedUserDetails.miembros?.length || 0}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Datos del delegado */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="text-[#1B456F] font-bold text-lg border-b border-slate-200 pb-2">
-                    Datos del delegado
-                  </h3>
-
-                  <div className="space-y-5">
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">
-                        Nombre del delegado
-                      </Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.delegado.nombre || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 lg:w-3/4"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">
-                        Cedula del delegado
-                      </Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.delegado.cedula || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 lg:w-3/4"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">Cargo del delegado</Label>
-                      <Input
-                        readOnly
-                        value={selectedUser.detalles?.delegado.cargo || ""}
-                        className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 lg:w-3/4"
-                      />
-                    </div>
+                ) : (
+                  <div className="text-center py-10 text-slate-500 italic">
+                    Sin detalles que mostrar.
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -384,6 +580,30 @@ export function ListadoUsuarios() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* AlertDialog for Delete Confirmation */}
+      <AlertDialog open={!!actorToDelete} onOpenChange={(open) => !open && setActorToDelete(null)}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1B456F] font-bold">
+              ¿Estás seguro de eliminar este registro?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600">
+              Esta acción borrará lógicamente a {actorToDelete?.nombre} del sistema. ¿Deseas
+              continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-semibold text-slate-600">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-rechazado hover:bg-red-700 text-white font-semibold"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

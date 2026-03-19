@@ -5,12 +5,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   maximaAutoridadSchema,
   type MaximaAutoridadFormValues,
 } from "@/lib/schemas/maximaAutoridadSchema";
-import { registrarMaximaAutoridad } from "@/services/maximaAutoridadService";
+import {
+  registrarMaximaAutoridad,
+  obtenerMaximaAutoridad,
+  actualizarMaximaAutoridad,
+} from "@/services/maximaAutoridadService";
+
 import {
   Form,
   FormControl,
@@ -32,6 +37,9 @@ import {
 
 export function MaximaAutoridadForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
+
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
 
@@ -86,6 +94,54 @@ export function MaximaAutoridadForm() {
     }
   }, [cedulaDelTipo, cedulaDelNumero, form]);
 
+  useEffect(() => {
+    if (editId) {
+      setIsLoading(true);
+      obtenerMaximaAutoridad(editId)
+        .then((data) => {
+          if (data) {
+            form.reset({
+              nombreCompletoAutoridad: data.nombreCompletoAutoridad || "",
+              cedulaAutoridad: data.cedulaAutoridad || "",
+              cargoOficialAutoridad: data.cargoOficialAutoridad || "",
+              datosDesignacionAutoridad: data.datosDesignacionAutoridad || "",
+              leyesAtribucionesSuscribirAutoridad: data.leyesAtribucionesSuscribirAutoridad || "",
+              esDelegado: data.esDelegado ?? false,
+              vigente: data.vigente ?? true,
+              nombreCompletoDelegado: data.nombreCompletoDelegado || "",
+              cedulaDelegado: data.cedulaDelegado || "",
+              cargoOficialDelegado: data.cargoOficialDelegado || "",
+              datosDesignacionDelegado: data.datosDesignacionDelegado || "",
+              leyesAtribucionesSuscribirDelegado: data.leyesAtribucionesSuscribirDelegado || "",
+            });
+
+            if (data.cedulaAutoridad) {
+              const parts = data.cedulaAutoridad.split("-");
+              if (parts.length === 2) {
+                setCedulaAuthTipo(parts[0]);
+                setCedulaAuthNumero(parts[1]);
+              }
+            }
+
+            if (data.cedulaDelegado) {
+              const parts = data.cedulaDelegado.split("-");
+              if (parts.length === 2) {
+                setCedulaDelTipo(parts[0]);
+                setCedulaDelNumero(parts[1]);
+              }
+            }
+          }
+        })
+        .catch((err) => {
+          toast.error("Error al cargar los datos para edición");
+          console.error(err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [editId, form]);
+
   const handleNextStep = async () => {
     // Validamos solo campos de paso 1
     const isValid = await form.trigger([
@@ -123,14 +179,25 @@ export function MaximaAutoridadForm() {
             vigente: values.vigente,
           };
 
-      await registrarMaximaAutoridad(payload);
-      toast.success("Autoridad creada exitosamente.");
+      if (editId) {
+        await actualizarMaximaAutoridad(editId, payload);
+        toast.success("Autoridad actualizada exitosamente.");
+      } else {
+        await registrarMaximaAutoridad(payload);
+        toast.success("Autoridad creada exitosamente.");
+      }
+
+      router.refresh();
       setTimeout(() => {
         router.push("/gestion-datos/estructura-organizativa");
-      }, 1500);
+      }, 500);
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Error al registrar la Máxima Autoridad";
+        error instanceof Error
+          ? error.message
+          : editId
+            ? "Error al actualizar la Máxima Autoridad"
+            : "Error al registrar la Máxima Autoridad";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -142,7 +209,9 @@ export function MaximaAutoridadForm() {
       <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
         <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
           {step === 1
-            ? "Registra los datos de la Máxima Autoridad"
+            ? editId
+              ? "Editar datos de la Máxima Autoridad"
+              : "Registra los datos de la Máxima Autoridad"
             : "Delegación de firma (Opcional)"}
         </CardTitle>
         <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
@@ -374,6 +443,8 @@ export function MaximaAutoridadForm() {
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                           </>
+                        ) : editId ? (
+                          "Actualizar"
                         ) : (
                           "Agregar"
                         )}
@@ -561,6 +632,8 @@ export function MaximaAutoridadForm() {
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                         </>
+                      ) : editId ? (
+                        "Actualizar"
                       ) : (
                         "Agregar"
                       )}

@@ -2,15 +2,19 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   unidadContratanteSchema,
   type UnidadContratanteFormValues,
 } from "@/lib/schemas/unidadContratanteSchema";
-import { registrarUnidadContratante } from "@/services/unidadContratanteService";
+import {
+  registrarUnidadContratante,
+  obtenerUnidadContratante,
+  actualizarUnidadContratante,
+} from "@/services/unidadContratanteService";
 import {
   Form,
   FormControl,
@@ -25,6 +29,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export function UnidadContratanteForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UnidadContratanteFormValues>({
@@ -37,17 +43,51 @@ export function UnidadContratanteForm() {
     mode: "onChange",
   });
 
+  useEffect(() => {
+    if (editId) {
+      setIsLoading(true);
+      obtenerUnidadContratante(editId)
+        .then((data) => {
+          if (data) {
+            form.reset({
+              nombreUnidadContratante: data.nombreUnidadContratante || "",
+              nombreResponsableUnidad: data.nombreResponsableUnidad || "",
+              cargoResponsable: data.cargoResponsable || "",
+            });
+          }
+        })
+        .catch((err) => {
+          toast.error("Error al cargar los datos para edición");
+          console.error(err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [editId, form]);
+
   const onSubmit = async (values: UnidadContratanteFormValues) => {
     setIsLoading(true);
     try {
-      await registrarUnidadContratante(values);
-      toast.success("Unidad Contratante creada exitosamente.");
+      if (editId) {
+        await actualizarUnidadContratante(editId, values);
+        toast.success("Unidad Contratante actualizada exitosamente.");
+      } else {
+        await registrarUnidadContratante(values);
+        toast.success("Unidad Contratante creada exitosamente.");
+      }
+
+      router.refresh();
       setTimeout(() => {
         router.push("/gestion-datos/estructura-organizativa");
-      }, 1500);
+      }, 500);
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Error al registrar la Unidad Contratante";
+        error instanceof Error
+          ? error.message
+          : editId
+            ? "Error al actualizar la Unidad Contratante"
+            : "Error al registrar la Unidad Contratante";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -58,7 +98,9 @@ export function UnidadContratanteForm() {
     <Card className="mx-auto w-full max-w-6xl shadow-sm border-0 mb-16">
       <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
         <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
-          Registra los datos de la Unidad Contratante
+          {editId
+            ? "Editar datos de la Unidad Contratante"
+            : "Registra los datos de la Unidad Contratante"}
         </CardTitle>
         <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
           Artículos 6.2 LCP; 18.4 LOPA; 15 y 24 NORMAS DE CONTROL INTERNO SUNAI.
@@ -164,6 +206,8 @@ export function UnidadContratanteForm() {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                     </>
+                  ) : editId ? (
+                    "Actualizar Unidad Contratante"
                   ) : (
                     "Agregar Unidad Contratante"
                   )}

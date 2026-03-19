@@ -2,15 +2,20 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   unidadUsuariaSchema,
   type UnidadUsuariaFormValues,
 } from "@/lib/schemas/unidadUsuariaSchema";
-import { registrarUnidadUsuaria } from "@/services/unidadUsuariaService";
+import {
+  registrarUnidadUsuaria,
+  obtenerUnidadUsuaria,
+  actualizarUnidadUsuaria,
+} from "@/services/unidadUsuariaService";
+
 import {
   Form,
   FormControl,
@@ -25,6 +30,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export function UnidadUsuariaForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UnidadUsuariaFormValues>({
@@ -37,17 +44,51 @@ export function UnidadUsuariaForm() {
     mode: "onChange",
   });
 
+  useEffect(() => {
+    if (editId) {
+      setIsLoading(true);
+      obtenerUnidadUsuaria(editId)
+        .then((data) => {
+          if (data) {
+            form.reset({
+              nombreUnidadUsuaria: data.nombreUnidadUsuaria || "",
+              nombreResponsableUnidadUsuaria: data.nombreResponsableUnidadUsuaria || "",
+              cargoResponsableUnidadUsuaria: data.cargoResponsableUnidadUsuaria || "",
+            });
+          }
+        })
+        .catch((err) => {
+          toast.error("Error al cargar los datos para edición");
+          console.error(err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [editId, form]);
+
   const onSubmit = async (values: UnidadUsuariaFormValues) => {
     setIsLoading(true);
     try {
-      await registrarUnidadUsuaria(values);
-      toast.success("Unidad Usuaria creada exitosamente.");
+      if (editId) {
+        await actualizarUnidadUsuaria(editId, values);
+        toast.success("Unidad Usuaria actualizada exitosamente.");
+      } else {
+        await registrarUnidadUsuaria(values);
+        toast.success("Unidad Usuaria creada exitosamente.");
+      }
+
+      router.refresh();
       setTimeout(() => {
         router.push("/gestion-datos/estructura-organizativa");
-      }, 1500);
+      }, 500);
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Error al registrar la Unidad Usuaria";
+        error instanceof Error
+          ? error.message
+          : editId
+            ? "Error al actualizar la Unidad Usuaria"
+            : "Error al registrar la Unidad Usuaria";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -58,8 +99,9 @@ export function UnidadUsuariaForm() {
     <Card className="mx-auto w-full max-w-6xl shadow-sm border-0 mb-16">
       <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
         <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
-          Registra los datos de la Unidad Usuaria
+          {editId ? "Editar datos de la Unidad Usuaria" : "Registra los datos de la Unidad Usuaria"}
         </CardTitle>
+
         <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
           Artículo 18.4 LOPA.
         </CardDescription>
@@ -163,6 +205,8 @@ export function UnidadUsuariaForm() {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                     </>
+                  ) : editId ? (
+                    "Actualizar Unidad Usuaria"
                   ) : (
                     "Agregar Unidad Usuaria"
                   )}

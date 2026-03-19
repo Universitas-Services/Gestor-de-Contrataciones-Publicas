@@ -5,6 +5,7 @@ import {
   ComisionContratacionesFormValues,
   MiembroFormValues,
 } from "@/lib/schemas/comisionContratacionesSchema";
+import { revalidatePath } from "next/cache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -52,6 +53,7 @@ export const registrarComisionContrataciones = async (
     throw new Error(errorData?.message ?? "Error al crear la Comisión de Contrataciones");
   }
 
+  revalidatePath("/gestion-datos/estructura-organizativa");
   return response.json() as Promise<ComisionContratacionesResponse>;
 };
 
@@ -70,6 +72,7 @@ export const obtenerComisionContrataciones = async (
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -103,6 +106,7 @@ export const registrarMiembroComision = async (
     throw new Error(errorData?.message ?? "Error al agregar el miembro");
   }
 
+  revalidatePath("/gestion-datos/estructura-organizativa");
   return response.json() as Promise<MiembroResponse>;
 };
 
@@ -127,6 +131,8 @@ export const eliminarMiembroComision = async (miembroId: string | number): Promi
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData?.message ?? "Error al eliminar el miembro");
   }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
 };
 
 /**
@@ -153,5 +159,28 @@ export const actualizarComisionContrataciones = async (
     throw new Error(errorData?.message ?? "Error al actualizar la Comisión");
   }
 
+  revalidatePath("/gestion-datos/estructura-organizativa");
   return response.json() as Promise<ComisionContratacionesResponse>;
+};
+
+/**
+ * DELETE /comision-contrataciones/{id}
+ * Elimina (borrado lógico) la Comisión de Contrataciones.
+ */
+export const eliminarComisionContrataciones = async (id: string | number): Promise<void> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/comision-contrataciones/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al eliminar la Comisión");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
 };

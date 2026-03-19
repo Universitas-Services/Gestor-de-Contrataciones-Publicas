@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerToken } from "@/lib/auth/session";
+import { revalidatePath } from "next/cache";
 
 /**
  * Servicio para el módulo de Unidad Contratante
@@ -50,5 +51,76 @@ export const registrarUnidadContratante = async (
     throw new Error(errorData?.message ?? "Error al registrar la Unidad Contratante");
   }
 
+  revalidatePath("/gestion-datos/estructura-organizativa");
   return response.json() as Promise<UnidadContratanteResponse>;
+};
+
+/**
+ * GET /unidad-contratante/{id}
+ * Obtiene los detalles de la Unidad Contratante.
+ */
+export const obtenerUnidadContratante = async (id: string | number): Promise<any> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/unidad-contratante/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener la Unidad Contratante");
+  }
+  return response.json();
+};
+
+/**
+ * PATCH /unidad-contratante/{id}
+ * Actualiza los datos de la Unidad Contratante.
+ */
+export const actualizarUnidadContratante = async (
+  id: string | number,
+  payload: Partial<UnidadContratantePayload>
+): Promise<UnidadContratanteResponse> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/unidad-contratante/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar la Unidad Contratante");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+  return response.json() as Promise<UnidadContratanteResponse>;
+};
+
+/**
+ * DELETE /unidad-contratante/{id}
+ * Elimina (borrado lógico) la Unidad Contratante.
+ */
+export const eliminarUnidadContratante = async (id: string | number): Promise<void> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/unidad-contratante/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al eliminar la Unidad Contratante");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
 };

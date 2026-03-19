@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, MoreVertical, Trash2, Edit2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   comisionContratacionesSchema,
@@ -61,6 +61,8 @@ import {
 
 export function ComisionContratacionesForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [comisionId, setComisionId] = useState<number | string | null>(null);
@@ -108,6 +110,33 @@ export function ComisionContratacionesForm() {
     }
   }, [cedulaMiembroTipo, cedulaMiembroNumero, memberForm]);
 
+  useEffect(() => {
+    if (editId) {
+      setIsLoading(true);
+      obtenerComisionContrataciones(editId)
+        .then((data) => {
+          if (data) {
+            form.reset({
+              denominacionComision: data.denominacionComision || "",
+              datosDesignacionComision: data.datosDesignacionComision || "",
+              comisionCertificada: data.comisionCertificada ?? false,
+            });
+            setComisionId(editId);
+            if (data.miembros) {
+              setMiembros(data.miembros);
+            }
+          }
+        })
+        .catch((err) => {
+          toast.error("Error al cargar los datos para edición");
+          console.error(err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [editId, form]);
+
   // Cargar tabla de miembros desde el servidor
   const refreshMiembros = useCallback(async () => {
     if (!comisionId) return;
@@ -134,14 +163,19 @@ export function ComisionContratacionesForm() {
     setIsLoading(true);
     try {
       const formValues = form.getValues();
-      const response = await registrarComisionContrataciones(formValues);
-
-      if (response.id) {
-        setComisionId(response.id);
+      if (editId && comisionId) {
+        await actualizarComisionContrataciones(comisionId, formValues);
         setStep(2);
-        toast.success("Comisión creada exitosamente. Ahora puede agregar miembros.");
+        toast.success("Datos base actualizados. Ahora puede revisar los miembros.");
       } else {
-        toast.error("El servidor no retornó un ID válido para la comisión.");
+        const response = await registrarComisionContrataciones(formValues);
+        if (response.id) {
+          setComisionId(response.id);
+          setStep(2);
+          toast.success("Comisión creada exitosamente. Ahora puede agregar miembros.");
+        } else {
+          toast.error("El servidor no retornó un ID válido para la comisión.");
+        }
       }
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Error al crear la Comisión");
@@ -241,12 +275,17 @@ export function ComisionContratacionesForm() {
         comisionCertificada: formValues.comisionCertificada,
         miembros: miembros,
       });
-      toast.success("Todos los cambios de la Comisión han sido guardados.");
+      toast.success(
+        editId
+          ? "Todos los cambios de la Comisión han sido actualizados."
+          : "Todos los cambios de la Comisión han sido guardados."
+      );
 
+      router.refresh();
       // Redireccionar al panel
       setTimeout(() => {
         router.push("/gestion-datos/estructura-organizativa");
-      }, 1500);
+      }, 500);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Error al guardar los cambios finales");
     } finally {
@@ -382,8 +421,11 @@ export function ComisionContratacionesForm() {
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creando...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                        {editId ? "Actualizando..." : "Creando..."}
                       </>
+                    ) : editId ? (
+                      "Siguiente"
                     ) : (
                       "Crear comisión"
                     )}

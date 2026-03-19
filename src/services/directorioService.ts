@@ -25,6 +25,7 @@ export const getDirectorioActores = async (params: {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    cache: "no-store",
   });
 
   if (!response.ok) {
