@@ -5,12 +5,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, MoreVertical, Trash2, Edit2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import {
   comisionContratacionesSchema,
   miembroSchema,
   TIPO_MIEMBRO_OPTIONS,
   AREA_REPRESENTACION_OPTIONS,
+  TIPO_MIEMBRO_LABELS,
+  AREA_REPRESENTACION_LABELS,
   type ComisionContratacionesFormValues,
   type MiembroFormValues,
 } from "@/lib/schemas/comisionContratacionesSchema";
@@ -57,6 +60,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ComisionContratacionesForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [comisionId, setComisionId] = useState<number | string | null>(null);
@@ -239,9 +243,9 @@ export function ComisionContratacionesForm() {
       });
       toast.success("Todos los cambios de la Comisión han sido guardados.");
 
-      // Reset completo si se requiere flujo para crear otra
+      // Redireccionar al panel
       setTimeout(() => {
-        window.location.reload();
+        router.push("/gestion-datos/estructura-organizativa");
       }, 1500);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Error al guardar los cambios finales");
@@ -493,7 +497,7 @@ export function ComisionContratacionesForm() {
                             <SelectContent>
                               {TIPO_MIEMBRO_OPTIONS.map((option) => (
                                 <SelectItem key={option} value={option}>
-                                  {option}
+                                  {TIPO_MIEMBRO_LABELS[option]}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -529,7 +533,7 @@ export function ComisionContratacionesForm() {
                             <SelectContent>
                               {AREA_REPRESENTACION_OPTIONS.map((option) => (
                                 <SelectItem key={option} value={option}>
-                                  {option}
+                                  {AREA_REPRESENTACION_LABELS[option]}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -591,9 +595,15 @@ export function ComisionContratacionesForm() {
                           {miembro.nombreCompletoMiembro}
                         </TableCell>
                         <TableCell className="text-slate-600">{miembro.cedulaMiembro}</TableCell>
-                        <TableCell className="text-slate-600">{miembro.tipoMiembro}</TableCell>
                         <TableCell className="text-slate-600">
-                          {miembro.areaRepresentacion}
+                          {TIPO_MIEMBRO_LABELS[
+                            miembro.tipoMiembro as keyof typeof TIPO_MIEMBRO_LABELS
+                          ] || miembro.tipoMiembro}
+                        </TableCell>
+                        <TableCell className="text-slate-600">
+                          {AREA_REPRESENTACION_LABELS[
+                            miembro.areaRepresentacion as keyof typeof AREA_REPRESENTACION_LABELS
+                          ] || miembro.areaRepresentacion}
                         </TableCell>
                         <TableCell className="text-center">
                           <DropdownMenu>

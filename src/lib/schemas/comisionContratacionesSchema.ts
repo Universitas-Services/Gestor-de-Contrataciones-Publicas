@@ -3,14 +3,35 @@ import { z } from "zod";
 /**
  * Valores permitidos por el backend para tipoMiembro y areaRepresentacion
  */
-export const TIPO_MIEMBRO_OPTIONS = ["Miembro principal", "Miembro suplente"] as const;
+/**
+ * Valores permitidos por el backend para tipoMiembro y areaRepresentacion
+ */
+export const TIPO_MIEMBRO_OPTIONS = ["MIEMBRO_PRINCIPAL", "MIEMBRO_SUPLENTE"] as const;
 
 export const AREA_REPRESENTACION_OPTIONS = [
-  "Area juridica",
-  "Area economica-financiera",
-  "Area Tecnica",
-  "Secretario(a)",
+  "AREA_JURIDICA",
+  "AREA_TECNICA",
+  "AREA_ECONOMICA_FINANCIERA",
+  "SECRETARIO_A",
 ] as const;
+
+/**
+ * Mapeo de valores de backend a etiquetas legibles para el usuario
+ */
+export const TIPO_MIEMBRO_LABELS: Record<(typeof TIPO_MIEMBRO_OPTIONS)[number], string> = {
+  MIEMBRO_PRINCIPAL: "Miembro principal",
+  MIEMBRO_SUPLENTE: "Miembro suplente",
+};
+
+export const AREA_REPRESENTACION_LABELS: Record<
+  (typeof AREA_REPRESENTACION_OPTIONS)[number],
+  string
+> = {
+  AREA_JURIDICA: "Área jurídica",
+  AREA_TECNICA: "Área técnica",
+  AREA_ECONOMICA_FINANCIERA: "Área económica-financiera",
+  SECRETARIO_A: "Secretario(a)",
+};
 
 /**
  * Schema de validación para cada miembro de la comisión

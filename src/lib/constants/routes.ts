@@ -41,6 +41,8 @@ export const ROLE_ROUTES = {
     conocenos: "/conocenos",
     repositorioLegal: "/repositorio-legal",
     registroProveedores: "/registro-proveedores",
+    perfilEnte: "/gestion-datos/perfil",
+    estructuraOrganizativa: "/gestion-datos/estructura-organizativa",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",

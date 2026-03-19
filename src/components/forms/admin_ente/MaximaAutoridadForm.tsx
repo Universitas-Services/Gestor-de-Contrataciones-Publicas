@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   maximaAutoridadSchema,
   type MaximaAutoridadFormValues,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/select";
 
 export function MaximaAutoridadForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
 
@@ -123,10 +125,9 @@ export function MaximaAutoridadForm() {
 
       await registrarMaximaAutoridad(payload);
       toast.success("Autoridad creada exitosamente.");
-      form.reset();
-      setStep(1);
-      setCedulaAuthNumero("");
-      setCedulaDelNumero("");
+      setTimeout(() => {
+        router.push("/gestion-datos/estructura-organizativa");
+      }, 1500);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error al registrar la Máxima Autoridad";

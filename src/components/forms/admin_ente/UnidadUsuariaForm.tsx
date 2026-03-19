@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   unidadUsuariaSchema,
   type UnidadUsuariaFormValues,
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function UnidadUsuariaForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UnidadUsuariaFormValues>({
@@ -40,7 +42,9 @@ export function UnidadUsuariaForm() {
     try {
       await registrarUnidadUsuaria(values);
       toast.success("Unidad Usuaria creada exitosamente.");
-      form.reset();
+      setTimeout(() => {
+        router.push("/gestion-datos/estructura-organizativa");
+      }, 1500);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error al registrar la Unidad Usuaria";

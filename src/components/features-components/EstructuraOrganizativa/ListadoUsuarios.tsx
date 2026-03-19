@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import {
   Sheet,
@@ -20,133 +21,53 @@ import {
 } from "@/components/ui/sheet";
 import { BsEye, BsPencilSquare } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { getDirectorioActores } from "@/services/directorioService";
+import type { Actor, ActorTipo } from "@/types/directorio.types";
+import { toast } from "sonner";
 
-interface UsuarioEstructura {
-  id: string;
-  nombre: string;
-  estructura: string;
-  status: "Activo" | "Vencido";
-  fechaRegistro: string;
-  detalles: {
-    autoridad: {
-      nombres: string;
-      apellidos: string;
-      cargo: string;
-      cedula: string;
-      resolucion: string;
-    };
-    delegado: {
-      nombre: string;
-      cedula: string;
-      cargo: string;
-    };
-  };
-}
-
-const defaultDetalles = {
-  autoridad: {
-    nombres: "Pedro José",
-    apellidos: "Lopez Hernadez",
-    cargo: "Máxima autoridad",
-    cedula: "V 000000001",
-    resolucion:
-      "Resolución N° 000/00 de fecha 00-00-0000 publicada en Gaceta N° 0000 de fecha 00-00-0000",
-  },
-  delegado: {
-    nombre: "Luisa Maria Campos González",
-    cedula: "V-00000000",
-    cargo: "Vicepresidente, Gerente General",
-  },
+const TIPO_MAP: Record<ActorTipo, string> = {
+  COMISION_CONTRATACIONES: "Comisión de contrataciones",
+  UNIDAD_CONTRATANTE: "Unidad contratante",
+  UNIDAD_USUARIA: "Unidad usuaria",
+  MAXIMA_AUTORIDAD: "Máxima autoridad",
 };
 
-const mockUsuarios: UsuarioEstructura[] = [
-  {
-    id: "1",
-    nombre: "Pedro de los Palotes",
-    estructura: "Máxima autoridad",
-    status: "Activo",
-    fechaRegistro: "22/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "2",
-    nombre: "Comisión de Contrataciones Permanente 2026",
-    estructura: "Comisión de contrataciones",
-    status: "Vencido",
-    fechaRegistro: "25/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "3",
-    nombre: "Dirección de Infraestructura, Gerencia de Tecnología.",
-    estructura: "Unidad usuaria",
-    status: "Activo",
-    fechaRegistro: "28/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "4",
-    nombre: "Departamento de Compras (o nombre del responsable)",
-    estructura: "Unidad contratante",
-    status: "Vencido",
-    fechaRegistro: "29/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "5",
-    nombre: "Pedro perez",
-    estructura: "Máxima autoridad",
-    status: "Activo",
-    fechaRegistro: "22/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "6",
-    nombre: "Departamento de Compras (o nombre del responsable)",
-    estructura: "Unidad contratante",
-    status: "Vencido",
-    fechaRegistro: "29/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "7",
-    nombre: "Dirección de Infraestructura, Gerencia de Tecnología.",
-    estructura: "Unidad usuaria",
-    status: "Activo",
-    fechaRegistro: "28/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "8",
-    nombre: "Lana del Rey",
-    estructura: "Máxima autoridad",
-    status: "Activo",
-    fechaRegistro: "22/12/2026",
-    detalles: defaultDetalles,
-  },
-  {
-    id: "9",
-    nombre: "Dirección de Infraestructura, Gerencia de Tecnología.",
-    estructura: "Unidad usuaria",
-    status: "Activo",
-    fechaRegistro: "28/12/2026",
-    detalles: defaultDetalles,
-  },
-];
-
 export function ListadoUsuarios() {
-  const [usuarios, setUsuarios] = useState<UsuarioEstructura[]>(mockUsuarios);
-  const [selectedUser, setSelectedUser] = useState<UsuarioEstructura | null>(null);
+  const [usuarios, setUsuarios] = useState<Actor[]>([]);
+  const [selectedUser, setSelectedUser] = useState<Actor | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
   const router = useRouter();
 
-  const handleViewClick = (usuario: UsuarioEstructura) => {
+  const fetchActores = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getDirectorioActores({ page, limit });
+      setUsuarios(response.data || []);
+      setTotalPages(response.meta?.lastPage || 1);
+      setTotalCount(response.meta?.total || 0);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al cargar el directorio");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit]);
+
+  useEffect(() => {
+    fetchActores();
+  }, [fetchActores]);
+
+  const handleViewClick = (usuario: Actor) => {
     setSelectedUser(usuario);
     setIsSheetOpen(true);
   };
 
-  const handleEditRedirect = (usuario: UsuarioEstructura) => {
+  const handleEditRedirect = (usuario: Actor) => {
     // Redireccionar al formulario de edición segun la estructura.
     // Usamos el id por ahora de forma general, se puede expandir según requerimiento real.
     router.push(`/gestion-datos/estructura-organizativa/editar/${usuario.id}`);
@@ -162,7 +83,7 @@ export function ListadoUsuarios() {
               Panel de la estructura organizativa
             </h1>
             <p className="text-slate-500 font-medium text-sm italic">
-              Administra los roles y accesos de los {usuarios.length} usuarios registrados.
+              Administra la estructura del Ente con {totalCount} registros.
             </p>
           </div>
 
@@ -176,16 +97,28 @@ export function ListadoUsuarios() {
               align="end"
               className="w-[200px] bg-[#1B456F] text-white border-none rounded-md py-2"
             >
-              <DropdownMenuItem className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]">
+              <DropdownMenuItem
+                onClick={() => router.push("/admin_ente/configuracion/maxima-autoridad")}
+                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+              >
                 Máxima Autoridad
               </DropdownMenuItem>
-              <DropdownMenuItem className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]">
+              <DropdownMenuItem
+                onClick={() => router.push("/admin_ente/configuracion/unidad-usuaria")}
+                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+              >
                 Unidad Usuaria
               </DropdownMenuItem>
-              <DropdownMenuItem className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]">
+              <DropdownMenuItem
+                onClick={() => router.push("/admin_ente/configuracion/unidad-contratante")}
+                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+              >
                 Unidad Contratante
               </DropdownMenuItem>
-              <DropdownMenuItem className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]">
+              <DropdownMenuItem
+                onClick={() => router.push("/admin_ente/configuracion/comision-contrataciones")}
+                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+              >
                 Comisión de Contrataciones
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -194,6 +127,11 @@ export function ListadoUsuarios() {
 
         {/* Table Container */}
         <div className="overflow-x-auto bg-white rounded-sm border border-slate-200 relative min-h-[200px]">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
+              <Loader2 className="w-8 h-8 text-[#1B456F] animate-spin" />
+            </div>
+          )}
           <table className="w-full text-[13px] text-left">
             <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
               <tr>
@@ -214,56 +152,108 @@ export function ListadoUsuarios() {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((usuario) => (
-                <tr
-                  key={usuario.id}
-                  className={`border-b border-slate-200 transition-colors ${
-                    usuario.status === "Vencido" ? "bg-[#e5e5e5]" : "bg-white"
-                  }`}
-                >
-                  <td className="px-6 py-3 font-medium text-slate-800 max-w-[250px] leading-tight text-xs pl-8">
-                    {usuario.nombre}
-                  </td>
-                  <td className="px-4 py-3 text-slate-800 font-medium text-center text-xs">
-                    {usuario.estructura}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`inline-flex px-4 py-1.5 rounded-full text-[11px] font-semibold tracking-wide ${
-                        usuario.status === "Activo"
-                          ? "bg-success-bg text-success border border-success"
-                          : "bg-rechazado-bg text-rechazado border border-rechazado"
+              {usuarios.length > 0
+                ? usuarios.map((usuario) => (
+                    <tr
+                      key={usuario.id}
+                      className={`border-b border-slate-200 transition-colors ${
+                        !usuario.estatus ? "bg-[#e5e5e5]" : "bg-white"
                       }`}
                     >
-                      {usuario.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-800 font-medium text-center text-xs">
-                    {usuario.fechaRegistro}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-4">
-                      <button
-                        className="text-slate-700 hover:text-navy transition-colors"
-                        onClick={() => handleViewClick(usuario)}
-                      >
-                        <BsEye className="w-[18px] h-[18px]" />
-                      </button>
-                      <button
-                        className="text-slate-700 hover:text-navy transition-colors"
-                        onClick={() => handleEditRedirect(usuario)}
-                      >
-                        <BsPencilSquare className="w-[18px] h-[18px]" />
-                      </button>
-                      <button className="text-rechazado hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      <td className="px-6 py-3 font-medium text-slate-800 max-w-[250px] leading-tight text-xs pl-8">
+                        {usuario.nombre}
+                      </td>
+                      <td className="px-4 py-3 text-slate-800 font-medium text-center text-xs">
+                        {TIPO_MAP[usuario.tipo] || usuario.tipo}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-4 py-1.5 rounded-full text-[11px] font-semibold tracking-wide ${
+                            usuario.estatus
+                              ? "bg-success-bg text-success border border-success"
+                              : "bg-rechazado-bg text-rechazado border border-rechazado"
+                          }`}
+                        >
+                          {usuario.estatus ? "Activo" : "Vencido"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-800 font-medium text-center text-xs">
+                        {usuario.createdAt
+                          ? new Date(usuario.createdAt).toLocaleDateString("es-VE")
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-4">
+                          <button
+                            className="text-slate-700 hover:text-navy transition-colors"
+                            onClick={() => handleViewClick(usuario)}
+                          >
+                            <BsEye className="w-[18px] h-[18px]" />
+                          </button>
+                          <button
+                            className="text-slate-700 hover:text-navy transition-colors"
+                            onClick={() => handleEditRedirect(usuario)}
+                          >
+                            <BsPencilSquare className="w-[18px] h-[18px]" />
+                          </button>
+                          <button className="text-rechazado hover:text-red-700 transition-colors">
+                            <FaRegTrashAlt className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                : !loading && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-10 text-center text-slate-500 italic">
+                        No se encontraron registros
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex justify-end items-center mt-6">
+          <div className="flex justify-end items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-[#1B456F] hover:border-[#1B456F] transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <Button
+                  key={p}
+                  variant={page === p ? "default" : "outline"}
+                  onClick={() => setPage(p)}
+                  className={`w-9 h-9 rounded-lg p-0 font-bold transition-all ${
+                    page === p
+                      ? "bg-[#1B456F] hover:bg-[#123050] text-white shadow-md scale-105"
+                      : "border-slate-300 text-slate-600 hover:border-[#1B456F] hover:text-[#1B456F]"
+                  }`}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-[#1B456F] hover:border-[#1B456F] transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -277,7 +267,7 @@ export function ListadoUsuarios() {
                   Detalles de {selectedUser.nombre}
                 </SheetTitle>
                 <SheetDescription className="text-slate-500 font-medium italic text-left">
-                  Información detallada de la {selectedUser.estructura}
+                  Información detallada de la {TIPO_MAP[selectedUser.tipo] || selectedUser.tipo}
                 </SheetDescription>
               </SheetHeader>
 
@@ -293,7 +283,7 @@ export function ListadoUsuarios() {
                       <Label className="text-[#1B456F] font-bold text-xs">Nombres</Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.autoridad.nombres}
+                        value={selectedUser.detalles?.autoridad.nombres || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
                       />
                     </div>
@@ -301,7 +291,7 @@ export function ListadoUsuarios() {
                       <Label className="text-[#1B456F] font-bold text-xs">Apellidos</Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.autoridad.apellidos}
+                        value={selectedUser.detalles?.autoridad.apellidos || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
                       />
                     </div>
@@ -310,7 +300,7 @@ export function ListadoUsuarios() {
                       <Label className="text-[#1B456F] font-bold text-xs">Cargo</Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.autoridad.cargo}
+                        value={selectedUser.detalles?.autoridad.cargo || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
                       />
                     </div>
@@ -318,7 +308,7 @@ export function ListadoUsuarios() {
                       <Label className="text-[#1B456F] font-bold text-xs">Cedula</Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.autoridad.cedula}
+                        value={selectedUser.detalles?.autoridad.cedula || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300"
                       />
                     </div>
@@ -328,7 +318,7 @@ export function ListadoUsuarios() {
                     <Label className="text-[#1B456F] font-bold text-xs">Resolución</Label>
                     <Input
                       readOnly
-                      value={selectedUser.detalles.autoridad.resolucion}
+                      value={selectedUser.detalles?.autoridad.resolucion || ""}
                       className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 w-full"
                     />
                   </div>
@@ -347,7 +337,7 @@ export function ListadoUsuarios() {
                       </Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.delegado.nombre}
+                        value={selectedUser.detalles?.delegado.nombre || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 lg:w-3/4"
                       />
                     </div>
@@ -358,7 +348,7 @@ export function ListadoUsuarios() {
                       </Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.delegado.cedula}
+                        value={selectedUser.detalles?.delegado.cedula || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 lg:w-3/4"
                       />
                     </div>
@@ -367,7 +357,7 @@ export function ListadoUsuarios() {
                       <Label className="text-[#1B456F] font-bold text-xs">Cargo del delegado</Label>
                       <Input
                         readOnly
-                        value={selectedUser.detalles.delegado.cargo}
+                        value={selectedUser.detalles?.delegado.cargo || ""}
                         className="bg-white text-slate-500 font-medium italic h-9 border-slate-300 lg:w-3/4"
                       />
                     </div>
