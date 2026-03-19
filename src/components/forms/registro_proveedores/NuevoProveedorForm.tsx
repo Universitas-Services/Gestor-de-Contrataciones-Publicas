@@ -102,7 +102,9 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
 
   // Estados visuales duales (RIF y Cedula)
   const [rifTipo, setRifTipo] = useState("J");
-  const [rifCuerpo, setRifCuerpo] = useState(""); // Contendrá los 9 dígitos seguientes (8 cuerpo + 1 verificador)
+  const [rifCuerpo, setRifCuerpo] = useState(""); // 8 dígitos
+  const [rifVerificador, setRifVerificador] = useState(""); // 1 dígito
+  const rifVerificadorRef = useRef<HTMLInputElement>(null);
   const [cedulaTipo, setCedulaTipo] = useState("V");
   const [cedulaNumero, setCedulaNumero] = useState("");
 
@@ -213,7 +215,8 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
           const rifParts = data.rif.split("-");
           if (rifParts.length === 3) {
             setRifTipo(rifParts[0]);
-            setRifCuerpo(rifParts[1] + rifParts[2]);
+            setRifCuerpo(rifParts[1]);
+            setRifVerificador(rifParts[2]);
           }
         }
 
@@ -248,15 +251,15 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
   // Efecto para concatenar RIF
   useEffect(() => {
     if (isLoadingInitialData) return;
-    if (rifTipo && rifCuerpo.length === 9) {
-      form.setValue("rif", `${rifTipo}-${rifCuerpo.slice(0, 8)}-${rifCuerpo.slice(8)}`, {
+    if (rifTipo && rifCuerpo.length === 8 && rifVerificador.length === 1) {
+      form.setValue("rif", `${rifTipo}-${rifCuerpo}-${rifVerificador}`, {
         shouldValidate: true,
       });
-    } else if (rifCuerpo.length > 0) {
-      // Solo limpiar si el usuario realmente está interactuando (cuerpo no vacío)
+    } else if (rifCuerpo.length > 0 || rifVerificador.length > 0) {
+      // Solo limpiar si el usuario realmente está interactuando
       form.setValue("rif", "");
     }
-  }, [rifTipo, rifCuerpo, form, isLoadingInitialData]);
+  }, [rifTipo, rifCuerpo, rifVerificador, form, isLoadingInitialData]);
 
   // Efecto para concatenar Cédula Representante
   useEffect(() => {
@@ -522,9 +525,14 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                       </Select>
 
                       <InputOTP
-                        maxLength={9}
+                        maxLength={8}
                         value={rifCuerpo}
-                        onChange={(val) => setRifCuerpo(val)}
+                        onChange={(val) => {
+                          setRifCuerpo(val);
+                          if (val.length === 8) {
+                            rifVerificadorRef.current?.focus();
+                          }
+                        }}
                         disabled={isSubmitting}
                         pattern={REGEXP_ONLY_DIGITS}
                       >
@@ -538,11 +546,22 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                           <InputOTPSlot index={6} className="border-r-0 shadow-none" />
                           <InputOTPSlot index={7} className="rounded-r-md border-r shadow-none" />
                         </InputOTPGroup>
-                        <div className="text-slate-400 font-bold px-1 flex items-center">
-                          <MinusIcon className="h-4 w-4" />
-                        </div>
+                      </InputOTP>
+
+                      <div className="text-slate-400 font-bold px-1 flex items-center">
+                        <MinusIcon className="h-4 w-4" />
+                      </div>
+
+                      <InputOTP
+                        ref={rifVerificadorRef}
+                        maxLength={1}
+                        value={rifVerificador}
+                        onChange={(val) => setRifVerificador(val)}
+                        disabled={isSubmitting}
+                        pattern={REGEXP_ONLY_DIGITS}
+                      >
                         <InputOTPGroup>
-                          <InputOTPSlot index={8} className="rounded-md border-l shadow-none" />
+                          <InputOTPSlot index={0} className="rounded-md border-l shadow-none" />
                         </InputOTPGroup>
                       </InputOTP>
                     </div>

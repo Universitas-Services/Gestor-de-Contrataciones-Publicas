@@ -71,7 +71,9 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
   // Estados visuales para el RIF
   const [rifTipo, setRifTipo] = useState("G");
-  const [rifNumero, setRifNumero] = useState(""); // Contendrá los 9 dígitos seguientes (8 cuerpo + 1 verificador)
+  const [rifCuerpo, setRifCuerpo] = useState(""); // 8 dígitos del cuerpo
+  const [rifVerificador, setRifVerificador] = useState(""); // 1 dígito verificador
+  const verificadorInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<CompletarEnteFormValues>({
     resolver: zodResolver(completarEnteSchema),
@@ -93,13 +95,13 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
   // Sincronizar estados locales de RIF con react-hook-form
   useEffect(() => {
-    if (rifTipo && rifNumero.length === 9) {
-      const formattedRif = `${rifTipo}-${rifNumero.slice(0, 8)}-${rifNumero.slice(8)}`;
+    if (rifTipo && rifCuerpo.length === 8 && rifVerificador.length === 1) {
+      const formattedRif = `${rifTipo}-${rifCuerpo}-${rifVerificador}`;
       form.setValue("rif", formattedRif, { shouldValidate: true });
     } else {
       form.setValue("rif", "");
     }
-  }, [rifTipo, rifNumero, form]);
+  }, [rifTipo, rifCuerpo, rifVerificador, form]);
 
   // Cargar datos del ente al montar
   useEffect(() => {
@@ -126,15 +128,19 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
           const parts = ente.rif.split("-");
           if (parts.length === 3) {
             setRifTipo(parts[0]);
-            setRifNumero(parts[1] + parts[2]);
+            setRifCuerpo(parts[1]);
+            setRifVerificador(parts[2]);
           } else if (parts.length === 2) {
             setRifTipo(parts[0]);
             // Si viene G-XXXXXXXXX (sin el segundo guión)
-            setRifNumero(parts[1].replace(/-/g, "").slice(0, 9));
+            const numericPart = parts[1].replace(/-/g, "").slice(0, 9);
+            setRifCuerpo(numericPart.slice(0, 8));
+            setRifVerificador(numericPart.slice(8));
           } else {
             // fallback
             const numericPart = ente.rif.replace(/[^\d]/g, "").slice(0, 9);
-            setRifNumero(numericPart);
+            setRifCuerpo(numericPart.slice(0, 8));
+            setRifVerificador(numericPart.slice(8));
             if (/^[GJ]/.test(ente.rif)) {
               setRifTipo(ente.rif[0]);
             }
@@ -397,9 +403,14 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                                 </SelectContent>
                               </Select>
                               <InputOTP
-                                maxLength={9}
-                                value={rifNumero}
-                                onChange={(val) => setRifNumero(val)}
+                                maxLength={8}
+                                value={rifCuerpo}
+                                onChange={(val) => {
+                                  setRifCuerpo(val);
+                                  if (val.length === 8) {
+                                    verificadorInputRef.current?.focus();
+                                  }
+                                }}
                                 disabled={isSubmitting}
                                 pattern={REGEXP_ONLY_DIGITS}
                               >
@@ -413,11 +424,22 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                                   <InputOTPSlot index={6} className="border-r-0" />
                                   <InputOTPSlot index={7} className="rounded-r-md border-r" />
                                 </InputOTPGroup>
-                                <div className="text-slate-400 font-bold px-1">
-                                  <MinusIcon className="h-4 w-4" />
-                                </div>
+                              </InputOTP>
+
+                              <div className="text-slate-400 font-bold px-1">
+                                <MinusIcon className="h-4 w-4" />
+                              </div>
+
+                              <InputOTP
+                                ref={verificadorInputRef}
+                                maxLength={1}
+                                value={rifVerificador}
+                                onChange={(val) => setRifVerificador(val)}
+                                disabled={isSubmitting}
+                                pattern={REGEXP_ONLY_DIGITS}
+                              >
                                 <InputOTPGroup>
-                                  <InputOTPSlot index={8} className="rounded-md border-l" />
+                                  <InputOTPSlot index={0} className="rounded-md border-l" />
                                 </InputOTPGroup>
                               </InputOTP>
                             </div>
