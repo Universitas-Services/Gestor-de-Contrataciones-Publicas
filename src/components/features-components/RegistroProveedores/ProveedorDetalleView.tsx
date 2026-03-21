@@ -28,16 +28,7 @@ import { getProveedorById, cambiarEstatusProveedor } from "@/services/proveedore
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-
-interface Documento {
-  id: string;
-  proveedorId: string;
-  tipoDocumento: string;
-  urlArchivo: string;
-  observaciones?: string;
-  fechaCarga: string;
-  createdAt: string;
-}
+import { DocumentoPreviewDialog, type Documento } from "./DocumentoPreviewDialog";
 
 interface ProviderDetails {
   id: string;
@@ -72,6 +63,8 @@ export function ProveedorDetalleView({ id }: { id: string }) {
   const [provider, setProvider] = useState<ProviderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingEstatus, setUpdatingEstatus] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Documento | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -411,7 +404,10 @@ export function ProveedorDetalleView({ id }: { id: string }) {
                 <Card
                   key={doc.id}
                   className="p-3.5 rounded-xl border-border shadow-sm flex items-center gap-3 hover:border-navy transition-colors cursor-pointer group bg-white"
-                  onClick={() => window.open(doc.urlArchivo, "_blank")}
+                  onClick={() => {
+                    setSelectedDocument(doc);
+                    setIsPreviewOpen(true);
+                  }}
                 >
                   <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-navy/5 transition-colors">
                     <FileText className="w-5 h-5 text-slate-400 group-hover:text-navy" />
@@ -450,6 +446,13 @@ export function ProveedorDetalleView({ id }: { id: string }) {
           </Card>
         </div>
       </div>
+
+      <DocumentoPreviewDialog
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        documento={selectedDocument}
+        proveedorId={id}
+      />
     </div>
   );
 }

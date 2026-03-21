@@ -200,3 +200,63 @@ export async function eliminarProveedor(id: string) {
 
   return response.json();
 }
+
+/**
+ * GET /proveedores/{id}/documentos/{tipo}/visualizar
+ * Retorna la URL de previsualización del documento del proveedor.
+ */
+export async function visualizarDocumentoProveedor(
+  id: string,
+  tipo: string
+): Promise<{ data: Uint8Array; contentType: string }> {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/${id}/documentos/${tipo}/visualizar`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    if (response.status === 404) throw new Error("Documento no encontrado");
+    throw new Error(
+      errorData?.message ?? `Error al obtener la previsualización (${response.status})`
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const contentType = response.headers.get("Content-Type") || "application/pdf";
+  return { data: new Uint8Array(arrayBuffer), contentType };
+}
+
+/**
+ * GET /proveedores/{id}/documentos/{tipo}/descargar
+ * Descarga los bytes del documento. Retorna Uint8Array para crear un Blob en el cliente.
+ */
+export async function descargarDocumentoProveedor(
+  id: string,
+  tipo: string
+): Promise<{ data: Uint8Array; fileName: string }> {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/${id}/documentos/${tipo}/descargar`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    if (response.status === 404) throw new Error("Documento no encontrado");
+    throw new Error(errorData?.message ?? `Error al descargar el documento (${response.status})`);
+  }
+
+  const contentDisposition = response.headers.get("Content-Disposition");
+  let fileName = `${tipo}.pdf`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+    if (match?.[1]) fileName = match[1];
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return { data: new Uint8Array(arrayBuffer), fileName };
+}
