@@ -103,9 +103,9 @@ export default async function ConocenosPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-[#EFF2F5] p-6 md:p-10 flex flex-col">
+    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-conocenos-bg p-6 md:p-10 flex flex-col">
       <div className="w-full max-w-full mx-auto">
-        <h1 className="text-3xl font-bold text-center text-[#1B456F] mb-10">Conócenos</h1>
+        <h1 className="text-3xl font-bold text-center text-color-boton-2 mb-10">Conócenos</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {services.map((service, index) => (
             <ServiceCard key={index} {...service} />

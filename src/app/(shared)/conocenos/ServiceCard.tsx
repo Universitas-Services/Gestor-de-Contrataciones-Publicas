@@ -26,7 +26,7 @@ export function ServiceCard({
 }: ServiceCardProps) {
   return (
     <Card className="flex flex-col h-auto overflow-hidden hover:shadow-lg transition-shadow duration-300 border-slate-200 rounded-2xl mx-auto w-full max-w-[340px]">
-      <div className="relative w-full h-44 bg-[#ffffff] p-3 pb-2">
+      <div className="relative w-full h-44 bg-white p-3 pb-2">
         <div className="relative w-full h-full rounded-xl overflow-hidden">
           <Image
             src={imageSrc}
@@ -48,7 +48,7 @@ export function ServiceCard({
       <CardFooter className="px-3 pb-3 pt-0 mt-auto">
         <Button
           asChild
-          className="w-full bg-[#1B456F] hover:bg-[#123050] text-white rounded-lg h-8 font-medium text-xs"
+          className="w-full bg-color-boton-2 hover:bg-color-boton-2-hover text-white rounded-lg h-8 font-medium text-xs"
         >
           <Link href={href} target={target} rel={rel} download={download}>
             {buttonText}

@@ -55,6 +55,7 @@
 
   /* Login colors */
   --color-izq-login: var(--izq-login);
+  --color-login-gris: var(--login-gris);
   --color-color-boton-1: var(--color-boton-1);
   --color-color-boton-2: var(--color-boton-2);
   --color-color-boton-hover: var(--color-boton-hover);
@@ -69,6 +70,10 @@
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
   --color-success-text: var(--success-text);
+
+  /* Conocenos */
+  --color-conocenos-bg: var(--conocenos-bg);
+  --color-color-boton-2-hover: var(--color-boton-2-hover);
 
   /* Tipo (Area) colors */
   --color-tipo-obras: var(--tipo-obras);
@@ -148,50 +153,56 @@
 
   /* Login colors */
   --izq-login: oklch(0.7345 0.0106 267.33);
+  --login-gris: oklch(0.74 0.015 274);
   --color-boton-1: oklch(0.3832 0.0857 251.07);
   --color-titulos: oklch(0.397 0.0444 249);
   --color-subtitulos: oklch(0.5162 0.004 247.9);
-  --color-boton-2: #1b456f;
-  --color-boton-hover: #273646;
-  --df-bg: #dfeaf1;
-  --navy: #1e3a5f;
-  --navy-hover: #152c4a;
-  --dropzone-border: #aab7b8;
+  --color-boton-2: oklch(0.35 0.088 251);
+  --color-boton-hover: oklch(0.28 0.042 251);
+  --df-bg: oklch(0.92 0.022 228);
+  --navy: oklch(0.31 0.077 252);
+  --navy-hover: oklch(0.26 0.068 255);
+  --dropzone-border: oklch(0.75 0.019 212);
   --dropzone-bg: oklch(0.76 0.01 230 / 0.1);
-  --section-docs: #0ea5e9;
-  --success: #22c55e;
-  --success-bg: #f0fdf4;
-  --success-text: #15803d;
+  --section-docs: oklch(0.68 0.16 222);
+  --success: oklch(0.7253 0.1868 149.3);
+  --success-bg: oklch(0.9817 0.0175 151.28);
+  --success-text: oklch(0.527 0.1359 150.01);
+
+  /* Conocenos */
+  --conocenos-bg: oklch(0.96 0.012 245);
+  --color-boton-2-hover: oklch(0.24 0.065 255);
 
   /* Tipo (Area) colors */
-  --tipo-obras: #dc2626;
-  --tipo-obras-bg: #fecaca;
-  --tipo-obras-border: #f87171;
-  --tipo-bienes: #2563eb;
-  --tipo-bienes-bg: #bfdbfe;
-  --tipo-bienes-border: #60a5fa;
-  --tipo-servicios: #475569;
-  --tipo-servicios-bg: #e2e8f0;
-  --tipo-servicios-border: #94a3b8;
-  --vigente: #15803d;
-  --vigente-bg: #86efac;
-  --vigente-border: #16a34a;
-  --vencido: #9a3412;
-  --vencido-bg: #ffedd5;
-  --vencido-border: #f97316;
-  --pendiente: #a16207;
-  --pendiente-bg: #fefce8;
-  --pendiente-border: #fef08a;
-  --rechazado: #b91c1c;
-  --rechazado-bg: #fef2f2;
-  --rechazado-border: #fecaca;
-  --patrimonio: #16a34a;
+  --tipo-obras: oklch(0.5795 0.2169 27.16);
+  --tipo-obras-bg: oklch(0.8826 0.0769 20.4);
+  --tipo-obras-border: oklch(0.7049 0.1649 22.22);
+  --tipo-bienes: oklch(0.5463 0.2332 261.36);
+  --tipo-bienes-bg: oklch(0.8832 0.0727 241.21);
+  --tipo-bienes-border: oklch(0.7038 0.1489 246.87);
+  --tipo-servicios: oklch(0.4084 0.0433 256.14);
+  --tipo-servicios-bg: oklch(0.9161 0.023 250.8);
+  --tipo-servicios-border: oklch(0.6841 0.0411 252.08);
+  --vigente: oklch(0.527 0.1359 150.01);
+  --vigente-bg: oklch(0.8745 0.1494 150.1);
+  --vigente-border: oklch(0.6257 0.1663 149.65);
+  --vencido: oklch(0.4414 0.1526 35.65);
+  --vencido-bg: oklch(0.9522 0.057 79.62);
+  --vencido-border: oklch(0.7003 0.2048 50.05);
+  --pendiente: oklch(0.5232 0.1463 71.77);
+  --pendiente-bg: oklch(0.9887 0.029 97.41);
+  --pendiente-border: oklch(0.9388 0.1299 100.31);
+  --rechazado: oklch(0.4825 0.1999 27.25);
+  --rechazado-bg: oklch(0.9694 0.0191 21.4);
+  --rechazado-border: oklch(0.8826 0.0769 20.4);
+  --patrimonio: oklch(0.6257 0.1663 149.65);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
