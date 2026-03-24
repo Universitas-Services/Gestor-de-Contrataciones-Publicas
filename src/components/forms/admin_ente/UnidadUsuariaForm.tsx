@@ -134,7 +134,7 @@ export function UnidadUsuariaForm() {
                           {...field}
                           value={field.value || ""}
                           disabled={isLoading}
-                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                         />
                       </FormControl>
                       <FormMessage />
@@ -160,7 +160,7 @@ export function UnidadUsuariaForm() {
                           {...field}
                           value={field.value || ""}
                           disabled={isLoading}
-                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                         />
                       </FormControl>
                       <FormMessage />
@@ -186,7 +186,7 @@ export function UnidadUsuariaForm() {
                           {...field}
                           value={field.value || ""}
                           disabled={isLoading}
-                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                         />
                       </FormControl>
                       <FormMessage />
@@ -199,7 +199,7 @@ export function UnidadUsuariaForm() {
                 <Button
                   type="submit"
                   disabled={!form.formState.isValid || isLoading}
-                  className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11"
+                  className="bg-color-boton-2 hover:bg-color-boton-2/90 text-white font-inter px-8 h-11"
                 >
                   {isLoading ? (
                     <>

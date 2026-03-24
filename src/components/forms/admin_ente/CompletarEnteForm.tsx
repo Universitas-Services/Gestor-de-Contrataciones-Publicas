@@ -337,7 +337,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -364,7 +364,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -392,7 +392,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                                 onValueChange={setRifTipo}
                                 disabled={isSubmitting}
                               >
-                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-500 font-inter">
+                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-500 font-inter">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -547,7 +547,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-3/4"
                             />
                           </FormControl>
                           <FormMessage />
@@ -579,7 +579,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona estado" />
                               </SelectTrigger>
                             </FormControl>
@@ -615,7 +615,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona municipio" />
                               </SelectTrigger>
                             </FormControl>
@@ -655,7 +655,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona ciudad" />
                               </SelectTrigger>
                             </FormControl>
@@ -691,7 +691,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona parroquia" />
                               </SelectTrigger>
                             </FormControl>
@@ -731,7 +731,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -758,7 +758,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -785,7 +785,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -812,7 +812,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -847,7 +847,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="w-32 bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11"
+                  className="w-32 bg-color-boton-2 hover:bg-heading-secondary font-inter text-white h-11"
                 >
                   Siguiente
                 </Button>
@@ -856,7 +856,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                   type="button"
                   onClick={form.handleSubmit(onSubmit)}
                   disabled={isSubmitting}
-                  className="bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11 px-8"
+                  className="bg-color-boton-2 hover:bg-heading-secondary font-inter text-white h-11 px-8"
                 >
                   {isSubmitting ? (
                     <>

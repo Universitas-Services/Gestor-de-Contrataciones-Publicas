@@ -184,7 +184,7 @@ export function ListadoUsuarios() {
         {/* Header Area */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200 mb-6 pb-6">
           <div>
-            <h1 className="text-2xl font-extrabold text-[var(--color-boton-2)] tracking-tight mb-1">
+            <h1 className="text-2xl font-extrabold text-color-boton-2 tracking-tight mb-1">
               Panel de la estructura organizativa
             </h1>
             <p className="text-slate-500 font-medium text-sm italic">
@@ -194,35 +194,35 @@ export function ListadoUsuarios() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="bg-[var(--color-boton-2)] hover:bg-[#123050] text-white rounded-md px-6 py-5 h-10 flex items-center justify-between gap-6 font-semibold shadow-md min-w-[150px]">
+              <Button className="bg-color-boton-2 hover:bg-navy-deep text-white rounded-md px-6 py-5 h-10 flex items-center justify-between gap-6 font-semibold shadow-md min-w-[150px]">
                 Crear <Plus className="w-4 h-4 ml-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-[200px] bg-[var(--color-boton-2)] text-white border-none rounded-md py-2"
+              className="w-[200px] bg-color-boton-2 text-white border-none rounded-md py-2"
             >
               <DropdownMenuItem
                 onClick={() => router.push("/admin_ente/configuracion/maxima-autoridad")}
-                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
               >
                 Máxima Autoridad
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push("/admin_ente/configuracion/unidad-usuaria")}
-                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
               >
                 Unidad Usuaria
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push("/admin_ente/configuracion/unidad-contratante")}
-                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
               >
                 Unidad Contratante
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push("/admin_ente/configuracion/comision-contrataciones")}
-                className="focus:bg-[#123050] focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
               >
                 Comisión de Contrataciones
               </DropdownMenuItem>
@@ -234,14 +234,14 @@ export function ListadoUsuarios() {
         <div className="overflow-x-auto bg-white rounded-sm border border-slate-200 relative min-h-[200px]">
           {loading && (
             <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
-              <Loader2 className="w-8 h-8 text-[var(--color-boton-2)] animate-spin" />
+              <Loader2 className="w-8 h-8 text-color-boton-2 animate-spin" />
             </div>
           )}
           <table className="w-full text-[13px] text-left">
-            <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
+            <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3 font-semibold whitespace-nowrap pl-8">
-                  <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-navy">
                     Nombre (Persona o Comisión){" "}
                     <span className="text-slate-400 text-[10px] ml-1">↑↓</span>
                   </div>
@@ -262,7 +262,7 @@ export function ListadoUsuarios() {
                     <tr
                       key={usuario.id}
                       className={`border-b border-slate-200 transition-colors ${
-                        !usuario.estatus ? "bg-[#e5e5e5]" : "bg-white"
+                        !usuario.estatus ? "bg-border-light" : "bg-white"
                       }`}
                     >
                       <td className="px-6 py-3 font-medium text-slate-800 max-w-[250px] leading-tight text-xs pl-8">
@@ -330,7 +330,7 @@ export function ListadoUsuarios() {
               size="icon"
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-[var(--color-boton-2)] hover:border-[var(--color-boton-2)] transition-all"
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-color-boton-2 hover:border-color-boton-2 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
@@ -343,8 +343,8 @@ export function ListadoUsuarios() {
                   onClick={() => setPage(p)}
                   className={`w-9 h-9 rounded-lg p-0 font-bold transition-all ${
                     page === p
-                      ? "bg-[var(--color-boton-2)] hover:bg-[#123050] text-white shadow-md scale-105"
-                      : "border-slate-300 text-slate-600 hover:border-[var(--color-boton-2)] hover:text-[var(--color-boton-2)]"
+                      ? "bg-color-boton-2 hover:bg-navy-deep text-white shadow-md scale-105"
+                      : "border-slate-300 text-slate-600 hover:border-color-boton-2 hover:text-color-boton-2"
                   }`}
                 >
                   {p}
@@ -357,7 +357,7 @@ export function ListadoUsuarios() {
               size="icon"
               disabled={page === totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-[var(--color-boton-2)] hover:border-[var(--color-boton-2)] transition-all"
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-color-boton-2 hover:border-color-boton-2 transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </Button>
@@ -371,7 +371,7 @@ export function ListadoUsuarios() {
           {selectedUser && (
             <div className="flex flex-col h-full">
               <SheetHeader className="p-8 pb-4">
-                <SheetTitle className="text-2xl font-extrabold text-[var(--color-boton-2)] text-left">
+                <SheetTitle className="text-2xl font-extrabold text-color-boton-2 text-left">
                   Detalles de {selectedUser.nombre}
                 </SheetTitle>
                 <SheetDescription className="text-slate-500 font-medium italic text-left">
@@ -382,7 +382,7 @@ export function ListadoUsuarios() {
               <div className="flex-1 px-8 py-4 space-y-8">
                 {isFetchingDetails ? (
                   <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-                    <Loader2 className="h-8 w-8 animate-spin mb-4 text-[var(--color-boton-2)]" />
+                    <Loader2 className="h-8 w-8 animate-spin mb-4 text-color-boton-2" />
                     <p>Cargando detalles...</p>
                   </div>
                 ) : selectedUserDetails ? (
@@ -390,11 +390,11 @@ export function ListadoUsuarios() {
                     {selectedUser.tipo === "MAXIMA_AUTORIDAD" && (
                       <div className="space-y-4">
                         <div className="space-y-4">
-                          <h3 className="text-[var(--color-boton-2)] font-extrabold text-[13px] border-b border-slate-300 pb-1.5 flex items-center gap-2">
+                          <h3 className="text-color-boton-2 font-extrabold text-[13px] border-b border-slate-300 pb-1.5 flex items-center gap-2">
                             <span>Datos de la autoridad</span>
                           </h3>
                           <div className="space-y-1">
-                            <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                            <Label className="text-color-boton-2 font-bold text-[11px] block">
                               Nombre y apellido de la Máxima Autoridad
                             </Label>
                             <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -403,7 +403,7 @@ export function ListadoUsuarios() {
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                              <Label className="text-color-boton-2 font-bold text-[11px] block">
                                 Cargo
                               </Label>
                               <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -411,7 +411,7 @@ export function ListadoUsuarios() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                              <Label className="text-color-boton-2 font-bold text-[11px] block">
                                 Cédula
                               </Label>
                               <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -420,7 +420,7 @@ export function ListadoUsuarios() {
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                            <Label className="text-color-boton-2 font-bold text-[11px] block">
                               Resolución / Designación
                             </Label>
                             <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -431,11 +431,11 @@ export function ListadoUsuarios() {
 
                         {selectedUserDetails.esDelegado && (
                           <div className="space-y-4 pt-2">
-                            <h3 className="text-[var(--color-boton-2)] font-extrabold text-[13px] border-b border-slate-300 pb-1.5 flex items-center gap-2">
+                            <h3 className="text-color-boton-2 font-extrabold text-[13px] border-b border-slate-300 pb-1.5 flex items-center gap-2">
                               <span>Datos del delegado</span>
                             </h3>
                             <div className="space-y-1">
-                              <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                              <Label className="text-color-boton-2 font-bold text-[11px] block">
                                 Nombre completo del delegado
                               </Label>
                               <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -444,7 +444,7 @@ export function ListadoUsuarios() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1">
-                                <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                                <Label className="text-color-boton-2 font-bold text-[11px] block">
                                   Cédula del delegado
                                 </Label>
                                 <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -452,7 +452,7 @@ export function ListadoUsuarios() {
                                 </div>
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                                <Label className="text-color-boton-2 font-bold text-[11px] block">
                                   Cargo del delegado
                                 </Label>
                                 <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -467,11 +467,11 @@ export function ListadoUsuarios() {
 
                     {selectedUser.tipo === "UNIDAD_USUARIA" && (
                       <div className="space-y-4">
-                        <h3 className="text-[var(--color-boton-2)] font-extrabold text-[13px] border-b border-slate-300 pb-1.5">
+                        <h3 className="text-color-boton-2 font-extrabold text-[13px] border-b border-slate-300 pb-1.5">
                           Informacion general
                         </h3>
                         <div className="space-y-1">
-                          <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Nombre de la Unidad, Gerencia u Oficina Usuaria
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -479,7 +479,7 @@ export function ListadoUsuarios() {
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Nombre y apellido del Responsable de la Unidad
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -487,7 +487,7 @@ export function ListadoUsuarios() {
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Cargo del Responsable de la Unidad Usuaria
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -499,11 +499,11 @@ export function ListadoUsuarios() {
 
                     {selectedUser.tipo === "UNIDAD_CONTRATANTE" && (
                       <div className="space-y-4">
-                        <h3 className="text-[var(--color-boton-2)] font-extrabold text-[13px] border-b border-slate-300 pb-1.5">
+                        <h3 className="text-color-boton-2 font-extrabold text-[13px] border-b border-slate-300 pb-1.5">
                           Informacion general
                         </h3>
                         <div className="space-y-1">
-                          <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Nombre de la Unidad, Gerencia u Oficina que funge como Unidad
                             Contratante.
                           </Label>
@@ -512,7 +512,7 @@ export function ListadoUsuarios() {
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Nombre y apellido del Responsable de la Unidad Contratante.
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -520,7 +520,7 @@ export function ListadoUsuarios() {
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Cargo del Responsable de la Unidad Contratante
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -533,11 +533,11 @@ export function ListadoUsuarios() {
                     {selectedUser.tipo === "COMISION_CONTRATACIONES" && (
                       <div className="space-y-8">
                         <div className="space-y-4">
-                          <h3 className="text-[var(--color-boton-2)] font-extrabold text-[13px] border-b border-slate-300 pb-1.5">
+                          <h3 className="text-color-boton-2 font-extrabold text-[13px] border-b border-slate-300 pb-1.5">
                             Información general
                           </h3>
                           <div className="space-y-1">
-                            <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block leading-tight">
+                            <Label className="text-color-boton-2 font-bold text-[11px] block leading-tight">
                               Nombre, denominación o nomenclatura de la Comisión de Contrataciones
                             </Label>
                             <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -545,7 +545,7 @@ export function ListadoUsuarios() {
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-[var(--color-boton-2)] font-bold text-[11px] block">
+                            <Label className="text-color-boton-2 font-bold text-[11px] block">
                               Resolución
                             </Label>
                             <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
@@ -556,23 +556,23 @@ export function ListadoUsuarios() {
 
                         {/* Miembros de la Comisión */}
                         <div className="space-y-4 pt-2">
-                          <h3 className="text-[var(--color-boton-2)] font-extrabold text-[15px] border-b border-slate-300 pb-2">
+                          <h3 className="text-color-boton-2 font-extrabold text-[15px] border-b border-slate-300 pb-2">
                             Miembros de la comisión
                           </h3>
                           <div className="border border-slate-200 rounded-md bg-white shadow-sm overflow-hidden">
                             <Table className="w-full">
                               <TableHeader className="bg-white border-b border-slate-200">
                                 <TableRow className="hover:bg-white text-left">
-                                  <TableHead className="font-bold text-[var(--color-boton-2)] text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
                                     Nombre
                                   </TableHead>
-                                  <TableHead className="font-bold text-[var(--color-boton-2)] text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
                                     Cédula
                                   </TableHead>
-                                  <TableHead className="font-bold text-[var(--color-boton-2)] text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
                                     Rol
                                   </TableHead>
-                                  <TableHead className="font-bold text-[var(--color-boton-2)] text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
                                     Área
                                   </TableHead>
                                 </TableRow>
@@ -631,13 +631,13 @@ export function ListadoUsuarios() {
               <div className="p-8 pt-6 flex justify-end gap-3 pb-12 mt-auto border-t border-slate-100 bg-slate-50/50">
                 <Button
                   onClick={() => handleEditRedirect(selectedUser)}
-                  className="bg-[var(--color-boton-2)] hover:bg-[var(--color-boton-hover)] text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"
+                  className="bg-color-boton-2 hover:bg-color-boton-hover text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"
                 >
                   Editar
                 </Button>
                 <Button
                   onClick={() => setIsSheetOpen(false)}
-                  className="bg-[var(--color-boton-2)] hover:bg-[var(--color-boton-hover)] text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"
+                  className="bg-color-boton-2 hover:bg-color-boton-hover text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"
                 >
                   Cancelar
                 </Button>
@@ -651,7 +651,7 @@ export function ListadoUsuarios() {
       <AlertDialog open={!!actorToDelete} onOpenChange={(open) => !open && setActorToDelete(null)}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[var(--color-boton-2)] font-bold">
+            <AlertDialogTitle className="text-color-boton-2 font-bold">
               ¿Estás seguro de eliminar este registro?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600">

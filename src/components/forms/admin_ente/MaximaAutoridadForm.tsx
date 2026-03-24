@@ -249,7 +249,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -277,7 +277,7 @@ export function MaximaAutoridadForm() {
                                 onValueChange={setCedulaAuthTipo}
                                 disabled={isLoading}
                               >
-                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-500 font-inter">
+                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-500 font-inter">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -292,7 +292,7 @@ export function MaximaAutoridadForm() {
                                 }
                                 disabled={isLoading}
                                 maxLength={8}
-                                className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-[150px]"
+                                className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-[150px]"
                                 placeholder="00000000"
                               />
                             </div>
@@ -320,7 +320,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -348,7 +348,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-3/4"
                             />
                           </FormControl>
                           <FormMessage />
@@ -376,7 +376,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-3/4"
                             />
                           </FormControl>
                           <FormMessage />
@@ -400,7 +400,7 @@ export function MaximaAutoridadForm() {
                               onClick={() => field.onChange(true)}
                               className={`h-11 w-24 rounded-md border font-inter font-medium transition-colors ${
                                 field.value === true
-                                  ? "bg-[#1B456F] text-white border-[#1B456F] hover:bg-[#1B456F]/90"
+                                  ? "bg-color-boton-2 text-white border-color-boton-2 hover:bg-color-boton-2/90"
                                   : "bg-white text-slate-500 border-slate-300 hover:bg-slate-50"
                               }`}
                             >
@@ -411,7 +411,7 @@ export function MaximaAutoridadForm() {
                               onClick={() => field.onChange(false)}
                               className={`h-11 w-24 rounded-md border font-inter font-medium transition-colors ${
                                 field.value === false
-                                  ? "bg-[#1B456F] text-white border-[#1B456F] hover:bg-[#1B456F]/90"
+                                  ? "bg-color-boton-2 text-white border-color-boton-2 hover:bg-color-boton-2/90"
                                   : "bg-white text-slate-500 border-slate-300 hover:bg-slate-50"
                               }`}
                             >
@@ -429,7 +429,7 @@ export function MaximaAutoridadForm() {
                       <Button
                         type="button"
                         onClick={handleNextStep}
-                        className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11"
+                        className="bg-color-boton-2 hover:bg-color-boton-2/90 text-white font-inter px-8 h-11"
                       >
                         Siguiente
                       </Button>
@@ -437,7 +437,7 @@ export function MaximaAutoridadForm() {
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11"
+                        className="bg-color-boton-2 hover:bg-color-boton-2/90 text-white font-inter px-8 h-11"
                       >
                         {isLoading ? (
                           <>
@@ -474,7 +474,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -502,7 +502,7 @@ export function MaximaAutoridadForm() {
                                 onValueChange={setCedulaDelTipo}
                                 disabled={isLoading}
                               >
-                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-500 font-inter">
+                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-500 font-inter">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -517,7 +517,7 @@ export function MaximaAutoridadForm() {
                                 }
                                 disabled={isLoading}
                                 maxLength={8}
-                                className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-[150px]"
+                                className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-[150px]"
                                 placeholder="00000000"
                               />
                             </div>
@@ -545,7 +545,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -573,7 +573,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-3/4"
                             />
                           </FormControl>
                           <FormMessage />
@@ -601,7 +601,7 @@ export function MaximaAutoridadForm() {
                               {...field}
                               value={field.value || ""}
                               disabled={isLoading}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-3/4"
                             />
                           </FormControl>
                           <FormMessage />
@@ -626,7 +626,7 @@ export function MaximaAutoridadForm() {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="bg-[#1B456F] hover:bg-[#1B456F]/90 text-white font-inter px-8 h-11"
+                      className="bg-color-boton-2 hover:bg-color-boton-2/90 text-white font-inter px-8 h-11"
                     >
                       {isLoading ? (
                         <>

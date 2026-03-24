@@ -112,7 +112,7 @@ export function RegistroProveedoresDashboard() {
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1e293b] tracking-tight mb-1">
+          <h1 className="text-2xl font-bold text-heading-dark tracking-tight mb-1">
             Estadisticas generales
           </h1>
           <p className="text-slate-500 font-medium">
@@ -120,7 +120,7 @@ export function RegistroProveedoresDashboard() {
           </p>
         </div>
         <Link href="/registro-proveedores/listado">
-          <Button className="bg-[#1e3a5f] hover:bg-[#152c4a] text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
+          <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
             <List className="w-5 h-5" />
             Ver lista de proveedores
           </Button>
@@ -132,11 +132,11 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total registrados</h3>
-              <BsFillPeopleFill className="w-6 h-6 text-[#1e293b]" />
+              <h3 className="text-lg font-bold text-heading-dark">Total registrados</h3>
+              <BsFillPeopleFill className="w-6 h-6 text-heading-dark" />
             </div>
-            <div className="text-3xl font-extrabold text-[#1e293b] mb-1">{totalCount}</div>
-            <p className="text-xs font-semibold text-[#84cc16] flex items-center gap-1">
+            <div className="text-3xl font-extrabold text-heading-dark mb-1">{totalCount}</div>
+            <p className="text-xs font-semibold text-lime flex items-center gap-1">
               {stats?.crecimientoMensual?.porcentajeRegistrados >= 0 ? "+" : ""}
               {stats?.crecimientoMensual?.porcentajeRegistrados || 0}% este mes
             </p>
@@ -147,11 +147,11 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total activos</h3>
-              <BsFillCheckSquareFill className="w-5 h-5 text-[#1e3a5f]" />
+              <h3 className="text-lg font-bold text-heading-dark">Total activos</h3>
+              <BsFillCheckSquareFill className="w-5 h-5 text-navy" />
             </div>
-            <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">{approvedCount}</div>
-            <p className="text-xs font-semibold text-[#84cc16] flex items-center gap-1">
+            <div className="text-3xl font-extrabold text-navy mb-1">{approvedCount}</div>
+            <p className="text-xs font-semibold text-lime flex items-center gap-1">
               {stats?.crecimientoMensual?.porcentajeAprobados >= 0 ? "+" : ""}
               {stats?.crecimientoMensual?.porcentajeAprobados || 0}% este mes
             </p>
@@ -162,13 +162,13 @@ export function RegistroProveedoresDashboard() {
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total vencidos</h3>
-              <IoAlertCircleOutline className="w-6 h-6 text-[#ef4444]" />
+              <h3 className="text-lg font-bold text-heading-dark">Total vencidos</h3>
+              <IoAlertCircleOutline className="w-6 h-6 text-danger" />
             </div>
-            <div className="text-3xl font-extrabold text-[#ef4444] mb-1">
+            <div className="text-3xl font-extrabold text-danger mb-1">
               {stats?.resumen?.totalRechazados || 0}
             </div>
-            <p className="text-xs font-semibold text-[#ef4444] flex items-center gap-1">
+            <p className="text-xs font-semibold text-danger flex items-center gap-1">
               {stats?.crecimientoMensual?.porcentajeRechazados >= 0 ? "+" : ""}
               {stats?.crecimientoMensual?.porcentajeRechazados || 0}% este mes
             </p>
@@ -178,11 +178,11 @@ export function RegistroProveedoresDashboard() {
 
       {/* Secondary Category Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-[#6366f1] border shadow-sm rounded-xl hover:shadow-md transition-shadow">
+        <Card className="border-indigo border shadow-sm rounded-xl hover:shadow-md transition-shadow">
           <CardContent className="p-2 pl-6 flex items-center gap-4">
-            <IoIosPrint className="w-4 h-4 text-[#1e3a5f]" />
+            <IoIosPrint className="w-4 h-4 text-navy" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Bienes</h4>
+              <h4 className="text-sm font-bold text-heading-dark leading-tight">Bienes</h4>
               <span className="text-xs font-medium text-slate-500 leading-tight">
                 {stats?.distribucionPorArea?.BIENES || 0}
               </span>
@@ -190,11 +190,11 @@ export function RegistroProveedoresDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#ef4444] border shadow-sm rounded-xl hover:shadow-md transition-shadow">
+        <Card className="border-danger border shadow-sm rounded-xl hover:shadow-md transition-shadow">
           <CardContent className="p-2 pl-6 flex items-center gap-4">
-            <IoIosHammer className="w-4 h-4 text-[#1e3a5f]" />
+            <IoIosHammer className="w-4 h-4 text-navy" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Obras</h4>
+              <h4 className="text-sm font-bold text-heading-dark leading-tight">Obras</h4>
               <span className="text-xs font-medium text-slate-500 leading-tight">
                 {stats?.distribucionPorArea?.OBRAS || 0}
               </span>
@@ -204,9 +204,9 @@ export function RegistroProveedoresDashboard() {
 
         <Card className="border-slate-400 border shadow-sm rounded-xl hover:shadow-md transition-shadow">
           <CardContent className="p-2 pl-6 flex items-center gap-4">
-            <IoIosBriefcase className="w-4 h-4 text-[#1e3a5f]" />
+            <IoIosBriefcase className="w-4 h-4 text-navy" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-sm font-bold text-[#1e293b] leading-tight">Servicios</h4>
+              <h4 className="text-sm font-bold text-heading-dark leading-tight">Servicios</h4>
               <span className="text-xs font-medium text-slate-500 leading-tight">
                 {stats?.distribucionPorArea?.SERVICIOS || stats?.distribucionPorArea?.SERVICIO || 0}
               </span>
@@ -217,7 +217,7 @@ export function RegistroProveedoresDashboard() {
 
       {/* Table Section */}
       <div className="pt-6">
-        <h2 className="text-2xl font-bold text-[#1e293b] tracking-tight mb-6">
+        <h2 className="text-2xl font-bold text-heading-dark tracking-tight mb-6">
           Lista de proveedores por aprobar
         </h2>
 
@@ -228,10 +228,10 @@ export function RegistroProveedoresDashboard() {
             </div>
           )}
           <table className="w-full text-[13px] text-left">
-            <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
+            <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3 font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-navy">
                     Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
@@ -309,7 +309,7 @@ export function RegistroProveedoresDashboard() {
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => handleToggleApproval(provider.id)}
-                          className="relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 bg-[#ef4444]"
+                          className="relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 bg-danger"
                         >
                           <span className="sr-only">Aprobar proveedor</span>
                           <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0" />
@@ -394,7 +394,7 @@ export function RegistroProveedoresDashboard() {
                 variant={page === p ? "default" : "outline"}
                 className={`w-8 h-8 rounded p-0 ${
                   page === p
-                    ? "bg-[#1e3a5f] hover:bg-[#152c4a] text-white"
+                    ? "bg-navy hover:bg-navy-hover text-white"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >

@@ -24,3 +24,15 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// 3. Mock para ResizeObserver (Soluciona el ReferenceError de input-otp)
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// 4. Mock para document.elementFromPoint (Soluciona Unhandled Error de input-otp en jsdom)
+if (typeof document !== "undefined") {
+  document.elementFromPoint = vi.fn();
+}

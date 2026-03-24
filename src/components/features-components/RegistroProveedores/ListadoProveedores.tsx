@@ -139,7 +139,7 @@ export function ListadoProveedores() {
         {/* Header Area Inside Card */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-100 mb-6 pb-6">
           <div>
-            <h1 className="text-2xl font-extrabold text-[#1e293b] tracking-tight mb-1">
+            <h1 className="text-2xl font-extrabold text-heading-dark tracking-tight mb-1">
               Listado de Proveedores
             </h1>
             <p className="text-slate-500 font-medium text-sm">
@@ -202,10 +202,10 @@ export function ListadoProveedores() {
             </div>
           )}
           <table className="w-full text-[13px] text-left">
-            <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
+            <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3 font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer hover:text-[#1e3a5f]">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-navy">
                     Nombre del proveedor
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
@@ -280,9 +280,7 @@ export function ListadoProveedores() {
                             handleToggleApproval(provider.id, provider.estatusValidacion)
                           }
                           className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 ${
-                            provider.estatusValidacion === "APROBADO"
-                              ? "bg-success"
-                              : "bg-[#ef4444]"
+                            provider.estatusValidacion === "APROBADO" ? "bg-success" : "bg-danger"
                           }`}
                         >
                           <span className="sr-only">Cambiar estatus</span>
@@ -429,10 +427,10 @@ export function ListadoProveedores() {
                   <BsFillCheckSquareFill className="w-4 h-4 text-navy" />
                 </div>
               </div>
-              <div className="text-xl font-extrabold text-[#ef4444] leading-tight">
+              <div className="text-xl font-extrabold text-danger leading-tight">
                 {stats?.resumen?.totalRechazados || 0}
               </div>
-              <p className="text-[9px] font-bold text-[#ef4444]">Requiere atención</p>
+              <p className="text-[9px] font-bold text-danger">Requiere atención</p>
             </CardContent>
           </Card>
 
@@ -449,7 +447,7 @@ export function ListadoProveedores() {
               <div className="text-xl font-extrabold text-navy leading-tight">
                 {stats?.resumen?.totalPendientes || 0}
               </div>
-              <p className="text-[9px] font-bold text-[#92400e]">Pendiente revisión</p>
+              <p className="text-[9px] font-bold text-amber-dark">Pendiente revisión</p>
             </CardContent>
           </Card>
         </div>

@@ -10,7 +10,7 @@ export default async function EstructuraOrganizativaPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-[#DFEAF1] p-6 md:p-10">
+    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-df-bg p-6 md:p-10">
       <div className="mx-auto max-w-full">
         <ListadoUsuarios />
       </div>

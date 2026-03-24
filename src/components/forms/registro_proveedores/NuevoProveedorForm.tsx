@@ -450,7 +450,7 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
               {/* Sección 1: Identificación y validación */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-1 h-6 bg-[#84cc16] rounded-full"></div>
+                  <div className="w-1 h-6 bg-lime rounded-full"></div>
                   <h2 className="text-xl font-bold text-color-titulos">
                     1. Identificación y validación
                   </h2>

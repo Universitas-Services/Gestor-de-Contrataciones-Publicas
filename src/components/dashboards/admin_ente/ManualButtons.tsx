@@ -84,7 +84,7 @@ export function ManualButtons({ orientation = "horizontal" }: ManualButtonsProps
           onClick={handlePreview}
           disabled={isPreviewing || isDownloading}
           size={isVertical ? "default" : "sm"}
-          className={`${isVertical ? "w-52" : "px-4"} gap-2 bg-[#1B456F] font-semibold text-white hover:bg-[#123050]`}
+          className={`${isVertical ? "w-52" : "px-4"} gap-2 bg-color-boton-2 font-semibold text-white hover:bg-navy-deep`}
         >
           {isPreviewing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -99,7 +99,7 @@ export function ManualButtons({ orientation = "horizontal" }: ManualButtonsProps
           disabled={isDownloading || isPreviewing}
           size={isVertical ? "default" : "sm"}
           variant={isVertical ? "outline" : "default"}
-          className={`${isVertical ? "w-52 border-2 border-[#1B456F] text-[#1B456F] bg-white hover:bg-[#1B456F] hover:text-white" : "bg-[#1B456F] text-white hover:bg-[#123050] px-4"} gap-2 font-semibold`}
+          className={`${isVertical ? "w-52 border-2 border-color-boton-2 text-color-boton-2 bg-white hover:bg-color-boton-2 hover:text-white" : "bg-color-boton-2 text-white hover:bg-navy-deep px-4"} gap-2 font-semibold`}
         >
           {isDownloading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
