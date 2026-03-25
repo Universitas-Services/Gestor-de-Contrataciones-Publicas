@@ -294,13 +294,13 @@ export function ComisionContratacionesForm() {
 
             {/* ====== SECCIÓN: MIEMBROS DE LA COMISIÓN ====== */}
             <div className="pt-8 mt-8 border-t border-slate-200">
-              <h3 className="text-[20px] font-bold text-[slate-700] font-inter mb-4">
+              <h3 className="text-[20px] font-bold text-[slate-700] font-inter mb-2">
                 Registrar miembros de la comisión
               </h3>
-              <p className="text-slate-500 italic font-inter text-base mb-2">
+              <p className="text-slate-500 italic font-inter text-base mb-4">
                 Artículos 18.7 LOPA; 3, 22 LCC; 14 NORMAS DE CONTROL INTERNO SUNAI.
               </p>
-              <p className="text-slate-600 font-inter text-sm mb-6">
+              <p className="text-slate-600 italic font-inter text-sm mb-6">
                 Es importante que indique nombres y apellidos de los miembros de la comisión en cada
                 una de las áreas que corresponda, completando obligatoriamente cada campo
               </p>
@@ -357,7 +357,7 @@ export function ComisionContratacionesForm() {
                                     <Input
                                       {...field}
                                       value={field.value || ""}
-                                      placeholder="Ej. María Pérez"
+                                      placeholder="Ej. María José Pérez Rodríguez"
                                       disabled={isLoading}
                                       className="h-10 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 text-center"
                                     />
@@ -388,7 +388,7 @@ export function ComisionContratacionesForm() {
                                           disabled={isLoading}
                                         >
                                           <SelectTrigger
-                                            className={`w-[65px] h-10 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 font-inter px-2 ${tipo ? "text-slate-900" : "text-slate-500"}`}
+                                            className={`w-[65px] h-10 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 font-inter px-2 justify-center gap-1 ${tipo ? "text-slate-900" : "text-slate-500"}`}
                                           >
                                             <SelectValue />
                                           </SelectTrigger>
@@ -410,7 +410,7 @@ export function ComisionContratacionesForm() {
                                           }}
                                           maxLength={8}
                                           placeholder="12345678"
-                                          className="h-10 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 flex-1 min-w-0"
+                                          className="h-10 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 flex-1 min-w-0 text-center"
                                         />
                                       </div>
                                     </FormControl>

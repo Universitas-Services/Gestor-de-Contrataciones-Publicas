@@ -33,7 +33,7 @@ import {
 } from "@/lib/schemas/comisionContratacionesSchema";
 import { BsEye, BsPencilSquare } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
-import { ChevronDown, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, Plus, ChevronLeft, ChevronRight, Loader2, MoreVertical } from "lucide-react";
 import { getDirectorioActores } from "@/services/directorioService";
 import type { Actor, ActorTipo } from "@/types/directorio.types";
 import { toast } from "sonner";
@@ -73,7 +73,7 @@ export function ListadoUsuarios() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [actorToDelete, setActorToDelete] = useState<Actor | null>(null);
+  const [actorToToggle, setActorToToggle] = useState<Actor | null>(null);
 
   // Sheet states
   const [selectedUserDetails, setSelectedUserDetails] = useState<any>(null);
@@ -148,34 +148,45 @@ export function ListadoUsuarios() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (!actorToDelete) return;
+  const confirmToggle = async () => {
+    if (!actorToToggle) return;
     try {
       setLoading(true);
-      switch (actorToDelete.tipo) {
+      switch (actorToToggle.tipo) {
         case "MAXIMA_AUTORIDAD":
-          await eliminarMaximaAutoridad(actorToDelete.id);
+          await eliminarMaximaAutoridad(actorToToggle.id);
           break;
         case "UNIDAD_USUARIA":
-          await eliminarUnidadUsuaria(actorToDelete.id);
+          await eliminarUnidadUsuaria(actorToToggle.id);
           break;
         case "UNIDAD_CONTRATANTE":
-          await eliminarUnidadContratante(actorToDelete.id);
+          await eliminarUnidadContratante(actorToToggle.id);
           break;
         case "COMISION_CONTRATACIONES":
-          await eliminarComisionContrataciones(actorToDelete.id);
+          await eliminarComisionContrataciones(actorToToggle.id);
           break;
         default:
           throw new Error("Tipo de actor desconocido");
       }
-      toast.success("Registro eliminado exitosamente");
+      toast.success(`Registro ${actorToToggle.estatus ? "inactivado" : "activado"} exitosamente`);
       await fetchActores();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al eliminar");
+      toast.error(error instanceof Error ? error.message : "Error al cambiar estado");
     } finally {
-      setActorToDelete(null);
+      setActorToToggle(null);
       setLoading(false);
     }
+  };
+
+  const handleToggleClick = (usuario: Actor) => {
+    if (usuario.tipo === "MAXIMA_AUTORIDAD" && !usuario.estatus) {
+      const activeExists = usuarios.some((u) => u.tipo === "MAXIMA_AUTORIDAD" && u.estatus);
+      if (activeExists) {
+        toast.error("Debe desactivar la Máxima Autoridad actual para poder activar otra");
+        return;
+      }
+    }
+    setActorToToggle(usuario);
   };
 
   return (
@@ -253,6 +264,9 @@ export function ListadoUsuarios() {
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
                   Fecha de registro
                 </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Habilitado
+                </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Opciones</th>
               </tr>
             </thead>
@@ -279,7 +293,7 @@ export function ListadoUsuarios() {
                               : "bg-rechazado-bg text-rechazado border border-rechazado"
                           }`}
                         >
-                          {usuario.estatus ? "Activo" : "Vencido"}
+                          {usuario.estatus ? "Activo" : "Inactivo"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-800 font-medium text-center text-xs">
@@ -288,26 +302,49 @@ export function ListadoUsuarios() {
                           : "-"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-4">
-                          <button
-                            className="text-slate-700 hover:text-navy transition-colors title='Ver detalles'"
-                            onClick={() => handleViewClick(usuario)}
+                        <button
+                          onClick={() => handleToggleClick(usuario)}
+                          className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-color-boton-2 focus:ring-offset-2 ${
+                            usuario.estatus ? "bg-success" : "bg-slate-300"
+                          }`}
+                        >
+                          <span className="sr-only">Cambiar estatus</span>
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              usuario.estatus ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-slate-700 hover:text-navy hover:bg-slate-100 flex items-center justify-center rounded-full mx-auto outline-none ring-0"
+                            >
+                              <span className="sr-only">Abrir menú</span>
+                              <MoreVertical className="h-5 w-5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="bg-white border border-slate-200 min-w-[140px] shadow-md"
                           >
-                            <BsEye className="w-[18px] h-[18px]" />
-                          </button>
-                          <button
-                            className="text-slate-700 hover:text-navy transition-colors title='Editar'"
-                            onClick={() => handleEditRedirect(usuario)}
-                          >
-                            <BsPencilSquare className="w-[18px] h-[18px]" />
-                          </button>
-                          <button
-                            className="text-rechazado hover:text-red-700 transition-colors title='Eliminar'"
-                            onClick={() => setActorToDelete(usuario)}
-                          >
-                            <FaRegTrashAlt className="w-4 h-4" />
-                          </button>
-                        </div>
+                            <DropdownMenuItem
+                              onClick={() => handleViewClick(usuario)}
+                              className="cursor-pointer flex items-center gap-2 hover:bg-slate-50 focus:bg-slate-50 text-[13px] text-slate-700 font-medium py-2 outline-none"
+                            >
+                              <BsEye className="w-[15px] h-[15px]" /> Ver detalles
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEditRedirect(usuario)}
+                              className="cursor-pointer flex items-center gap-2 hover:bg-slate-50 focus:bg-slate-50 text-[13px] text-slate-700 font-medium py-2 outline-none"
+                            >
+                              <BsPencilSquare className="w-[15px] h-[15px]" /> Editar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))
@@ -560,19 +597,19 @@ export function ListadoUsuarios() {
                             Miembros de la comisión
                           </h3>
                           <div className="border border-slate-200 rounded-md bg-white shadow-sm overflow-hidden">
-                            <Table className="w-full">
+                            <Table className="w-full table-fixed">
                               <TableHeader className="bg-white border-b border-slate-200">
                                 <TableRow className="hover:bg-white text-left">
-                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-[11px] h-10 px-1 pl-3 w-[30%]">
                                     Nombre
                                   </TableHead>
-                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-[11px] h-10 px-1 w-[20%]">
                                     Cédula
                                   </TableHead>
-                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-[11px] h-10 px-1 w-[23%]">
                                     Rol
                                   </TableHead>
-                                  <TableHead className="font-bold text-color-boton-2 text-xs h-11 px-3">
+                                  <TableHead className="font-bold text-color-boton-2 text-[11px] h-10 px-1 pr-3 w-[27%]">
                                     Área
                                   </TableHead>
                                 </TableRow>
@@ -594,18 +631,18 @@ export function ListadoUsuarios() {
                                       key={idx}
                                       className="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
                                     >
-                                      <TableCell className="font-medium text-slate-700 text-xs py-3 px-3 align-top whitespace-normal break-words">
+                                      <TableCell className="font-medium text-slate-700 text-[11px] py-2.5 px-1 pl-3 align-top whitespace-normal break-words leading-tight">
                                         {miembro.nombreCompletoMiembro}
                                       </TableCell>
-                                      <TableCell className="text-slate-600 font-medium text-xs py-3 px-3 align-top whitespace-nowrap">
+                                      <TableCell className="text-slate-600 font-medium text-[11px] py-2.5 px-1 align-top whitespace-nowrap leading-tight">
                                         {miembro.cedulaMiembro}
                                       </TableCell>
-                                      <TableCell className="text-slate-600 font-medium text-xs py-3 px-3 align-top whitespace-normal break-words">
+                                      <TableCell className="text-slate-600 font-medium text-[11px] py-2.5 px-1 align-top whitespace-normal break-words leading-tight">
                                         {TIPO_MIEMBRO_LABELS[
                                           miembro.tipoMiembro as keyof typeof TIPO_MIEMBRO_LABELS
                                         ] || miembro.tipoMiembro}
                                       </TableCell>
-                                      <TableCell className="text-slate-600 font-medium text-xs py-3 px-3 align-top whitespace-normal break-words">
+                                      <TableCell className="text-slate-600 font-medium text-[11px] py-2.5 px-1 pr-3 align-top whitespace-normal break-words leading-tight">
                                         {AREA_REPRESENTACION_LABELS[
                                           miembro.areaRepresentacion as keyof typeof AREA_REPRESENTACION_LABELS
                                         ] || miembro.areaRepresentacion}
@@ -647,25 +684,27 @@ export function ListadoUsuarios() {
         </SheetContent>
       </Sheet>
 
-      {/* AlertDialog for Delete Confirmation */}
-      <AlertDialog open={!!actorToDelete} onOpenChange={(open) => !open && setActorToDelete(null)}>
+      {/* AlertDialog for Toggle Confirmation */}
+      <AlertDialog open={!!actorToToggle} onOpenChange={(open) => !open && setActorToToggle(null)}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-color-boton-2 font-bold">
-              ¿Estás seguro de eliminar este registro?
+              {actorToToggle?.estatus
+                ? "¿Estás seguro de inactivar este registro?"
+                : "¿Estás seguro de activar este registro?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600">
-              Esta acción borrará lógicamente a {actorToDelete?.nombre} del sistema. ¿Deseas
-              continuar?
+              Esta acción cambiará el estado de la actividad de {actorToToggle?.nombre} en el
+              sistema. ¿Deseas continuar?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="font-semibold text-slate-600">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-rechazado hover:bg-red-700 text-white font-semibold"
+              onClick={confirmToggle}
+              className="bg-color-boton-2 hover:bg-navy-deep text-white font-semibold"
             >
-              Eliminar
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
