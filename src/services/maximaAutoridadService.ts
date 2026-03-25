@@ -133,3 +133,53 @@ export const eliminarMaximaAutoridad = async (id: string | number): Promise<void
 
   revalidatePath("/gestion-datos/estructura-organizativa");
 };
+
+/**
+ * PATCH /maxima-autoridad/{id}/activar
+ * Activa la Máxima Autoridad.
+ */
+export const activarMaximaAutoridad = async (
+  id: string | number
+): Promise<MaximaAutoridadResponse> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/maxima-autoridad/${id}/activar`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al activar la Máxima Autoridad");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+  return response.json() as Promise<MaximaAutoridadResponse>;
+};
+
+/**
+ * PATCH /maxima-autoridad/{id}/desactivar
+ * Desactiva la Máxima Autoridad.
+ */
+export const desactivarMaximaAutoridad = async (
+  id: string | number
+): Promise<MaximaAutoridadResponse> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/maxima-autoridad/${id}/desactivar`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al desactivar la Máxima Autoridad");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+  return response.json() as Promise<MaximaAutoridadResponse>;
+};

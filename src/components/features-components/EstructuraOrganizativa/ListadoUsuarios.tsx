@@ -47,7 +47,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { eliminarMaximaAutoridad, obtenerMaximaAutoridad } from "@/services/maximaAutoridadService";
+import {
+  eliminarMaximaAutoridad,
+  obtenerMaximaAutoridad,
+  activarMaximaAutoridad,
+  desactivarMaximaAutoridad,
+} from "@/services/maximaAutoridadService";
 import { eliminarUnidadUsuaria, obtenerUnidadUsuaria } from "@/services/unidadUsuariaService";
 import {
   eliminarUnidadContratante,
@@ -154,7 +159,11 @@ export function ListadoUsuarios() {
       setLoading(true);
       switch (actorToToggle.tipo) {
         case "MAXIMA_AUTORIDAD":
-          await eliminarMaximaAutoridad(actorToToggle.id);
+          if (actorToToggle.estatus) {
+            await desactivarMaximaAutoridad(actorToToggle.id);
+          } else {
+            await activarMaximaAutoridad(actorToToggle.id);
+          }
           break;
         case "UNIDAD_USUARIA":
           await eliminarUnidadUsuaria(actorToToggle.id);
@@ -168,7 +177,9 @@ export function ListadoUsuarios() {
         default:
           throw new Error("Tipo de actor desconocido");
       }
-      toast.success(`Registro ${actorToToggle.estatus ? "inactivado" : "activado"} exitosamente`);
+      toast.success(
+        `${actorToToggle.nombre} ha sido ${actorToToggle.estatus ? "desactivado" : "activado"} exitosamente.`
+      );
       await fetchActores();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al cambiar estado");
