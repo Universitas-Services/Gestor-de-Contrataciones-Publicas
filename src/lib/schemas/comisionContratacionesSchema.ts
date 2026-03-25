@@ -37,7 +37,7 @@ export const AREA_REPRESENTACION_LABELS: Record<
  * Schema de validación para cada miembro de la comisión
  */
 export const miembroSchema = z.object({
-  id: z.number().optional(), // El backend seguramente devolverá un ID
+  id: z.union([z.number(), z.string()]).optional(), // El backend puede devolver string o number
   nombreCompletoMiembro: z
     .string()
     .min(1, "El nombre completo del miembro es requerido")
@@ -58,7 +58,7 @@ export const miembroSchema = z.object({
  * Schema de validación para el formulario base de Comisión de Contrataciones
  */
 export const comisionContratacionesSchema = z.object({
-  id: z.number().optional(),
+  id: z.union([z.number(), z.string()]).optional(),
   denominacionComision: z
     .string()
     .min(1, "La denominación de la comisión es requerida")
@@ -68,7 +68,34 @@ export const comisionContratacionesSchema = z.object({
     .min(1, "Los datos de designación son requeridos")
     .max(255, "Máximo 255 caracteres"),
   comisionCertificada: z.boolean(),
-  miembros: z.array(miembroSchema).optional(),
+  miembros: z
+    .array(miembroSchema)
+    .length(8, "La comisión debe tener exactamente 8 miembros")
+    .refine((miembros) => {
+      const rolesPorArea: Record<string, Set<string>> = {};
+
+      for (const miembro of miembros) {
+        if (!miembro.areaRepresentacion || !miembro.tipoMiembro) continue;
+        if (!rolesPorArea[miembro.areaRepresentacion]) {
+          rolesPorArea[miembro.areaRepresentacion] = new Set();
+        }
+        rolesPorArea[miembro.areaRepresentacion].add(miembro.tipoMiembro);
+      }
+
+      const areasRequeridas = [
+        "AREA_JURIDICA",
+        "AREA_TECNICA",
+        "AREA_ECONOMICA_FINANCIERA",
+        "SECRETARIO_A",
+      ];
+
+      for (const area of areasRequeridas) {
+        if (!rolesPorArea[area] || rolesPorArea[area].size !== 2) {
+          return false;
+        }
+      }
+      return true;
+    }, "Debe haber exactamente un miembro principal y un suplente por cada área"),
 });
 
 export type MiembroFormValues = z.infer<typeof miembroSchema>;

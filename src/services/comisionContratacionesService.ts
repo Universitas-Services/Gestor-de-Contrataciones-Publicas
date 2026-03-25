@@ -44,6 +44,7 @@ export const registrarComisionContrataciones = async (
       denominacionComision: payload.denominacionComision,
       datosDesignacionComision: payload.datosDesignacionComision,
       comisionCertificada: payload.comisionCertificada,
+      miembros: payload.miembros,
     }),
   });
 
@@ -80,87 +81,6 @@ export const obtenerComisionContrataciones = async (
   }
 
   return response.json() as Promise<GetComisionResponse>;
-};
-
-/**
- * POST /comision-contrataciones/{id}/miembros
- * Agrega un nuevo miembro a la comisión existente.
- */
-export const registrarMiembroComision = async (
-  comisionId: string | number,
-  payload: MiembroFormValues
-): Promise<MiembroResponse> => {
-  const token = await getServerToken();
-
-  const response = await fetch(`${API_URL}/comision-contrataciones/${comisionId}/miembros`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.message ?? "Error al agregar el miembro");
-  }
-
-  revalidatePath("/gestion-datos/estructura-organizativa");
-  return response.json() as Promise<MiembroResponse>;
-};
-
-/**
- * DELETE /comision-contrataciones/miembros/{miembroId}
- * Elimina un miembro específico.
- */
-export const eliminarMiembroComision = async (miembroId: string | number): Promise<void> => {
-  const token = await getServerToken();
-
-  // Ojo: Si el backend requiere el ID de la comisión en la URL, sería /comision-contrataciones/{comisionId}/miembros/{miembroId}.
-  // Según el prompt es `DELETE /comision-contrataciones/miembros/{miembroId}`
-  const response = await fetch(`${API_URL}/comision-contrataciones/miembros/${miembroId}`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.message ?? "Error al eliminar el miembro");
-  }
-
-  revalidatePath("/gestion-datos/estructura-organizativa");
-};
-
-/**
- * PATCH /comision-contrataciones/miembros/{miembroId}
- * Actualiza los datos de un miembro específico de la comisión.
- */
-export const actualizarMiembroComision = async (
-  miembroId: string | number,
-  payload: Partial<MiembroFormValues>
-): Promise<MiembroResponse> => {
-  const token = await getServerToken();
-
-  const response = await fetch(`${API_URL}/comision-contrataciones/miembros/${miembroId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.message ?? "Error al actualizar el miembro");
-  }
-
-  revalidatePath("/gestion-datos/estructura-organizativa");
-  return response.json() as Promise<MiembroResponse>;
 };
 
 /**

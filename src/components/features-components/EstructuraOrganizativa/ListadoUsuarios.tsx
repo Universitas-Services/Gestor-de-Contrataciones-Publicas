@@ -194,13 +194,13 @@ export function ListadoUsuarios() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="bg-color-boton-2 hover:bg-navy-deep text-white rounded-md px-6 py-5 h-10 flex items-center justify-between gap-6 font-semibold shadow-md min-w-[150px]">
-                Crear <Plus className="w-4 h-4 ml-2" />
+              <Button className="bg-navy hover:bg-navy-deep text-white rounded-md px-6 py-5 h-10 flex items-center justify-center gap-2 font-sans font-semibold text-[14.81px] leading-[1.5] tracking-[-0.01em] shadow-md min-w-[150px]">
+                Crear <Plus className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-[200px] bg-color-boton-2 text-white border-none rounded-md py-2"
+              className="w-[200px] bg-navy text-white border-none rounded-md py-2"
             >
               <DropdownMenuItem
                 onClick={() => router.push("/admin_ente/configuracion/maxima-autoridad")}
