@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { previewManual, descargarManual } from "@/services/manualService";
 import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 
-export function ManualButtons() {
+interface ManualButtonsProps {
+  orientation?: "horizontal" | "vertical";
+}
+
+export function ManualButtons({ orientation = "horizontal" }: ManualButtonsProps) {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -71,27 +75,38 @@ export function ManualButtons() {
     }
   };
 
+  const isVertical = orientation === "vertical";
+
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className={`flex ${isVertical ? "flex-col items-center gap-3" : "items-center gap-2"}`}>
         <Button
           onClick={handlePreview}
-          disabled={isPreviewing}
-          size="sm"
-          className="bg-green-600 hover:bg-green-700 text-white"
+          disabled={isPreviewing || isDownloading}
+          size={isVertical ? "default" : "sm"}
+          className={`${isVertical ? "w-52" : "px-4"} gap-2 bg-color-boton-2 font-semibold text-white hover:bg-navy-deep`}
         >
-          {isPreviewing ? <Loader2 className="animate-spin" /> : <Eye />}
-          {isPreviewing ? "Cargando..." : "Pre-visualización del Manual"}
+          {isPreviewing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+          {isVertical ? "Previsualizar manual" : "Ver manual"}
         </Button>
 
         <Button
           onClick={handleDescargar}
-          disabled={isDownloading}
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          disabled={isDownloading || isPreviewing}
+          size={isVertical ? "default" : "sm"}
+          variant={isVertical ? "outline" : "default"}
+          className={`${isVertical ? "w-52 border-2 border-color-boton-2 text-color-boton-2 bg-white hover:bg-color-boton-2 hover:text-white" : "bg-color-boton-2 text-white hover:bg-navy-deep px-4"} gap-2 font-semibold`}
         >
-          {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
-          {isDownloading ? "Descargando..." : "Descargar Manual"}
+          {isDownloading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {isVertical ? "Descargar manual" : "Descargar"}
         </Button>
       </div>
 

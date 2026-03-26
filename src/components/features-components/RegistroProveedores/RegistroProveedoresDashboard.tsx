@@ -9,78 +9,110 @@ import { IoIosBriefcase, IoIosHammer, IoIosPrint } from "react-icons/io";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  getProveedores,
+  cambiarEstatusProveedor,
+  getEstadisticasProveedores,
+  eliminarProveedor,
+} from "@/services/proveedores.service";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-interface ProviderData {
+interface Provider {
   id: string;
-  name: string;
+  nombre: string;
   rif: string;
-  representative: string;
-  type: "Obras" | "Bienes" | "Servicios";
-  status: "Activo" | "Por vencer" | "Vencido";
-  isApproved: boolean;
+  nombreRepLegal: string;
+  areaEspecialidad: string;
+  estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
 
-const mockProviders: ProviderData[] = [
-  {
-    id: "1",
-    name: "Constructora Sambil C.A.",
-    rif: "J-30456890-1",
-    representative: "Ricardo Rodriguez",
-    type: "Obras",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "2",
-    name: "Insumos Logisticos Express",
-    rif: "J-41233455-2",
-    representative: "Mariana Valera",
-    type: "Bienes",
-    status: "Por vencer",
-    isApproved: false,
-  },
-  {
-    id: "3",
-    name: "Tecnologías del Sur",
-    rif: "J-50998122-0",
-    representative: "Héctor Méndez",
-    type: "Servicios",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "4",
-    name: "Suministros Médicos Global",
-    rif: "J-22877341-5",
-    representative: "Elena Farias",
-    type: "Bienes",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "5",
-    name: "Asesoria Contable & Cia",
-    rif: "J-31990442-8",
-    representative: "Juan Pablo Duarte",
-    type: "Servicios",
-    status: "Vencido",
-    isApproved: false,
-  },
-];
-
 export function RegistroProveedoresDashboard() {
-  const [providers, setProviders] = useState<ProviderData[]>(mockProviders);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [approvedCount, setApprovedCount] = useState(0);
+  const [stats, setStats] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const limit = 5;
 
-  const toggleApproval = (id: string) => {
-    setProviders(providers.map((p) => (p.id === id ? { ...p, isApproved: !p.isApproved } : p)));
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [pendingRes, rejectedRes, statsRes] = await Promise.all([
+        getProveedores({ estatusValidacion: "PENDIENTE", page, limit }),
+        getProveedores({ estatusValidacion: "RECHAZADO", page, limit }),
+        getEstadisticasProveedores(),
+      ]);
+
+      const combinedPending = [...(pendingRes.data || []), ...(rejectedRes.data || [])];
+      setProviders(combinedPending.slice(0, limit));
+
+      const maxPendingTotal = Math.max(pendingRes.total || 0, rejectedRes.total || 0);
+      setTotalPages(Math.ceil(maxPendingTotal / limit) || 1);
+
+      setStats(statsRes);
+      setPendingCount(statsRes.resumen.totalPendientes + statsRes.resumen.totalRechazados);
+      setTotalCount(statsRes.resumen.totalRegistrados);
+      setApprovedCount(statsRes.resumen.totalAprobados);
+    } catch (error) {
+      toast.error("Error al cargar datos del dashboard");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await eliminarProveedor(id);
+      toast.success("Proveedor eliminado exitosamente");
+      fetchData();
+    } catch (error) {
+      toast.error("Error al eliminar el proveedor");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleToggleApproval = async (id: string) => {
+    try {
+      await cambiarEstatusProveedor(id, "APROBADO");
+      toast.success("Proveedor aprobado exitosamente");
+      // Remove from local list so it disappears as requested
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+      // Refresh counts
+      setPendingCount((prev) => Math.max(0, prev - 1));
+      setTotalCount((prev) => prev); // Total stays same
+      setApprovedCount((prev) => prev + 1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al aprobar el proveedor");
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, [page]);
+
   return (
-    <div className="w-full max-w-[1280px] mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500 bg-white min-h-[calc(100vh-80px)] rounded-xl">
+    <div className="w-full max-w-5xl mx-auto p-6 md:p-8 space-y-6 animate-in fade-in duration-500 bg-white min-h-[calc(100vh-64px)] rounded-xl">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight mb-1">
+          <h1 className="text-2xl font-bold text-heading-dark tracking-tight mb-1">
             Estadisticas generales
           </h1>
           <p className="text-slate-500 font-medium">
@@ -88,7 +120,7 @@ export function RegistroProveedoresDashboard() {
           </p>
         </div>
         <Link href="/registro-proveedores/listado">
-          <Button className="bg-[#1e3a5f] hover:bg-[#152c4a] text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
+          <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
             <List className="w-5 h-5" />
             Ver lista de proveedores
           </Button>
@@ -97,71 +129,87 @@ export function RegistroProveedoresDashboard() {
 
       {/* Main KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-[#1e293b]">Total registrados</h3>
-              <BsFillPeopleFill className="w-7 h-7 text-[#1e293b]" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-heading-dark">Total registrados</h3>
+              <BsFillPeopleFill className="w-6 h-6 text-heading-dark" />
             </div>
-            <div className="text-4xl font-extrabold text-[#1e293b] mb-2">1,250</div>
-            <p className="text-sm font-semibold text-[#84cc16]">5% este mes</p>
+            <div className="text-3xl font-extrabold text-heading-dark mb-1">{totalCount}</div>
+            <p className="text-xs font-semibold text-lime flex items-center gap-1">
+              {stats?.crecimientoMensual?.porcentajeRegistrados >= 0 ? "+" : ""}
+              {stats?.crecimientoMensual?.porcentajeRegistrados || 0}% este mes
+            </p>
           </CardContent>
         </Card>
 
         {/* Card 2 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-[#1e293b]">Total activos</h3>
-              <BsFillCheckSquareFill className="w-6 h-6 text-[#1e3a5f]" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-heading-dark">Total activos</h3>
+              <BsFillCheckSquareFill className="w-5 h-5 text-navy" />
             </div>
-            <div className="text-4xl font-extrabold text-[#1e3a5f] mb-2">1,180</div>
-            <p className="text-sm font-semibold text-[#84cc16]">3% este mes</p>
+            <div className="text-3xl font-extrabold text-navy mb-1">{approvedCount}</div>
+            <p className="text-xs font-semibold text-lime flex items-center gap-1">
+              {stats?.crecimientoMensual?.porcentajeAprobados >= 0 ? "+" : ""}
+              {stats?.crecimientoMensual?.porcentajeAprobados || 0}% este mes
+            </p>
           </CardContent>
         </Card>
 
         {/* Card 3 */}
         <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-[#1e293b]">Total vencidos</h3>
-              <IoAlertCircleOutline className="w-7 h-7 text-[#334155]" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-heading-dark">Total vencidos</h3>
+              <IoAlertCircleOutline className="w-6 h-6 text-danger" />
             </div>
-            <div className="text-4xl font-extrabold text-[#334155] mb-2">70</div>
-            <p className="text-sm font-semibold text-[#ef4444]">2% este mes</p>
+            <div className="text-3xl font-extrabold text-danger mb-1">
+              {stats?.resumen?.totalRechazados || 0}
+            </div>
+            <p className="text-xs font-semibold text-danger flex items-center gap-1">
+              {stats?.crecimientoMensual?.porcentajeRechazados >= 0 ? "+" : ""}
+              {stats?.crecimientoMensual?.porcentajeRechazados || 0}% este mes
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Secondary Category Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-[#6366f1] border shadow-sm rounded-xl hover:shadow-md transition-shadow">
-          <CardContent className="p-3 pl-8 flex items-center gap-4">
-            <IoIosPrint className="w-5 h-5 text-[#1e3a5f]" />
+        <Card className="border-indigo border shadow-sm rounded-xl hover:shadow-md transition-shadow">
+          <CardContent className="p-2 pl-6 flex items-center gap-4">
+            <IoIosPrint className="w-4 h-4 text-navy" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-base font-bold text-[#1e293b] leading-tight">Bienes</h4>
-              <span className="text-sm font-medium text-slate-500 leading-tight">450</span>
+              <h4 className="text-sm font-bold text-heading-dark leading-tight">Bienes</h4>
+              <span className="text-xs font-medium text-slate-500 leading-tight">
+                {stats?.distribucionPorArea?.BIENES || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#ef4444] border shadow-sm rounded-xl hover:shadow-md transition-shadow">
-          <CardContent className="p-3 pl-8 flex items-center gap-4">
-            <IoIosHammer className="w-5 h-5 text-[#1e3a5f]" />
+        <Card className="border-danger border shadow-sm rounded-xl hover:shadow-md transition-shadow">
+          <CardContent className="p-2 pl-6 flex items-center gap-4">
+            <IoIosHammer className="w-4 h-4 text-navy" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-base font-bold text-[#1e293b] leading-tight">Obras</h4>
-              <span className="text-sm font-medium text-slate-500 leading-tight">320</span>
+              <h4 className="text-sm font-bold text-heading-dark leading-tight">Obras</h4>
+              <span className="text-xs font-medium text-slate-500 leading-tight">
+                {stats?.distribucionPorArea?.OBRAS || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-slate-400 border shadow-sm rounded-xl hover:shadow-md transition-shadow">
-          <CardContent className="p-3 pl-8 flex items-center gap-4">
-            <IoIosBriefcase className="w-5 h-5 text-[#1e3a5f]" />
+          <CardContent className="p-2 pl-6 flex items-center gap-4">
+            <IoIosBriefcase className="w-4 h-4 text-navy" />
             <div className="flex flex-col justify-center">
-              <h4 className="text-base font-bold text-[#1e293b] leading-tight">Servicios</h4>
-              <span className="text-sm font-medium text-slate-500 leading-tight">444</span>
+              <h4 className="text-sm font-bold text-heading-dark leading-tight">Servicios</h4>
+              <span className="text-xs font-medium text-slate-500 leading-tight">
+                {stats?.distribucionPorArea?.SERVICIOS || stats?.distribucionPorArea?.SERVICIO || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -169,163 +217,197 @@ export function RegistroProveedoresDashboard() {
 
       {/* Table Section */}
       <div className="pt-6">
-        <h2 className="text-2xl font-bold text-[#1e293b] tracking-tight mb-6">
+        <h2 className="text-2xl font-bold text-heading-dark tracking-tight mb-6">
           Lista de proveedores por aprobar
         </h2>
 
-        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-[#f8fafc] text-[#475569] font-medium border-b border-slate-200">
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm relative min-h-[200px]">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy"></div>
+            </div>
+          )}
+          <table className="w-full text-[13px] text-left">
+            <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
-                <th className="p-4 w-12 text-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                  />
-                </th>
-                <th className="p-4 font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-[#1e3a5f]">
+                <th className="px-6 py-3 font-semibold whitespace-nowrap">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-navy">
                     Nombre del proveedor
-                    <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">
-                  Representante Legal
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Representante legal
                 </th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">tipo</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Estatus</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Aprobación</th>
-                <th className="p-4 font-semibold text-center whitespace-nowrap">Acción</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Aprobación
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {providers.map((provider, index) => (
-                <tr
-                  key={provider.id}
-                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-                    index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
-                  }`}
-                >
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                    />
-                  </td>
-                  <td className="p-4 font-semibold text-slate-700 whitespace-nowrap">
-                    {provider.name}
-                  </td>
-                  <td className="p-4 text-slate-600 text-center whitespace-nowrap">
-                    {provider.rif}
-                  </td>
-                  <td className="p-4 text-slate-600 text-center font-medium whitespace-nowrap">
-                    {provider.representative}
-                  </td>
-
-                  {/* Tipo Pill */}
-                  <td className="p-4 text-center">
-                    <span
-                      className={`inline-flex px-4 py-1.5 rounded-full text-xs font-bold border ${
-                        provider.type === "Obras"
-                          ? "bg-[#fecaca] text-[#dc2626] border-[#f87171]"
-                          : provider.type === "Bienes"
-                            ? "bg-[#bfdbfe] text-[#2563eb] border-[#60a5fa]"
-                            : "bg-[#e2e8f0] text-[#475569] border-[#94a3b8]"
+              {providers.length > 0
+                ? providers.map((provider, index) => (
+                    <tr
+                      key={provider.id}
+                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
+                        index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
                       }`}
                     >
-                      {provider.type}
-                    </span>
-                  </td>
+                      <td className="px-6 py-3 font-semibold text-slate-700 whitespace-nowrap max-w-[200px] truncate">
+                        {provider.nombre}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-center whitespace-nowrap">
+                        {provider.rif}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-center font-medium whitespace-nowrap max-w-[150px] truncate">
+                        {provider.nombreRepLegal}
+                      </td>
 
-                  {/* Estatus Pill */}
-                  <td className="p-4 text-center">
-                    <span
-                      className={`inline-flex px-4 py-1.5 rounded-full text-xs font-bold border ${
-                        provider.status === "Activo"
-                          ? "bg-[#bbf7d0] text-[#16a34a] border-[#4ade80]"
-                          : provider.status === "Por vencer"
-                            ? "bg-[#ffedd5] text-[#d97706] border-[#fbbf24]"
-                            : "bg-[#fee2e2] text-[#dc2626] border-[#f87171]"
-                      }`}
-                    >
-                      {provider.status}
-                    </span>
-                  </td>
+                      {/* Area Pill */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            provider.areaEspecialidad === "OBRAS"
+                              ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
+                              : provider.areaEspecialidad === "BIENES"
+                                ? "bg-tipo-bienes-bg text-tipo-bienes border-tipo-bienes-border"
+                                : "bg-tipo-servicios-bg text-tipo-servicios border-tipo-servicios-border"
+                          }`}
+                        >
+                          {provider.areaEspecialidad}
+                        </span>
+                      </td>
 
-                  {/* Aprobación Switch */}
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => toggleApproval(provider.id)}
-                      className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
-                        provider.isApproved ? "bg-[#84cc16]" : "bg-[#ef4444]"
-                      }`}
-                    >
-                      <span className="sr-only">Toggle approval</span>
-                      <span
-                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          provider.isApproved ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </td>
+                      {/* Estatus Pill */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            provider.estatusValidacion === "APROBADO"
+                              ? "bg-success-bg text-success-text border-success/30"
+                              : provider.estatusValidacion === "PENDIENTE"
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                : provider.estatusValidacion === "RECHAZADO"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                          }`}
+                        >
+                          {provider.estatusValidacion === "APROBADO"
+                            ? "activo"
+                            : provider.estatusValidacion === "PENDIENTE"
+                              ? "por aprobar"
+                              : provider.estatusValidacion === "RECHAZADO"
+                                ? "vencido"
+                                : "en revisión"}
+                        </span>
+                      </td>
 
-                  {/* Acciones */}
-                  <td className="p-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsEye className="w-5 h-5" />
-                      </button>
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsPencilSquare className="w-5 h-5" />
-                      </button>
-                      <button className="text-red-500 hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      {/* Aprobación Switch */}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleToggleApproval(provider.id)}
+                          className="relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 bg-danger"
+                        >
+                          <span className="sr-only">Aprobar proveedor</span>
+                          <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0" />
+                        </button>
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <Link href={`/registro-proveedores/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsEye className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
+                          <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsPencilSquare className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button className="text-red-400 hover:text-red-600 transition-colors">
+                                <FaRegTrashAlt className="w-4 h-4" />
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción eliminará al proveedor{" "}
+                                  <strong>{provider.nombre}</strong> de forma lógica. Podrás seguir
+                                  viendo su historial si es necesario, pero ya no aparecerá en las
+                                  listas activas.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(provider.id)}
+                                  className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
+                                  disabled={isDeleting}
+                                >
+                                  {isDeleting ? "Eliminando..." : "Eliminar"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                : !loading && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-10 text-center text-slate-500 italic">
+                        No hay proveedores pendientes por aprobar
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination Dummy */}
+        {/* Dynamic Pagination */}
         <div className="flex justify-end items-center mt-6 gap-2">
           <Button
             variant="outline"
             size="icon"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
             className="w-8 h-8 rounded text-slate-500 hover:text-slate-700"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button
-            variant="default"
-            className="w-8 h-8 rounded bg-[#1e3a5f] hover:bg-[#152c4a] text-white p-0"
-          >
-            1
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded text-slate-600 hover:bg-slate-100 p-0"
-          >
-            2
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded text-slate-600 hover:bg-slate-100 p-0"
-          >
-            3
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded text-slate-600 hover:bg-slate-100 p-0"
-          >
-            4
-          </Button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <Button
+                key={p}
+                onClick={() => setPage(p)}
+                variant={page === p ? "default" : "outline"}
+                className={`w-8 h-8 rounded p-0 ${
+                  page === p
+                    ? "bg-navy hover:bg-navy-hover text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {p}
+              </Button>
+            ))}
+          </div>
+
           <Button
             variant="outline"
             size="icon"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
             className="w-8 h-8 rounded text-slate-500 hover:text-slate-700"
           >
             <ChevronRight className="w-4 h-4" />

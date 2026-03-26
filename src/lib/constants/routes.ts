@@ -30,7 +30,6 @@ export const ROLE_ROUTES = {
     propuestas: "/admin_ente/propuestas",
     adjudicaciones: "/admin_ente/adjudicaciones",
     fiscalizacion: "/admin_ente/fiscalizacion",
-    configuracion: "/admin_ente/configuracion",
     maximaAutoridad: "/admin_ente/configuracion/maxima-autoridad",
     unidadUsuaria: "/admin_ente/configuracion/unidad-usuaria",
     unidadContratante: "/admin_ente/configuracion/unidad-contratante",
@@ -41,6 +40,8 @@ export const ROLE_ROUTES = {
     conocenos: "/conocenos",
     repositorioLegal: "/repositorio-legal",
     registroProveedores: "/registro-proveedores",
+    perfilEnte: "/gestion-datos/perfil",
+    estructuraOrganizativa: "/gestion-datos/estructura-organizativa",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",

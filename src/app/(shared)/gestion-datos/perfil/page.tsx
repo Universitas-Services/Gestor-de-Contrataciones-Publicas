@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import { Building2 } from "lucide-react";
 import Image from "next/image";
-import { ManualActions } from "./ManualActions";
+import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons";
 
 export default async function PerfilEntePage() {
   const user = await getCurrentUser();
@@ -23,17 +23,10 @@ export default async function PerfilEntePage() {
   const enteInfo = await obtenerEnte(user.enteId);
 
   return (
-    <div className="min-h-[calc(100vh-80px)] rounded-xl bg-[#DFEAF1] p-6 md:p-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 relative flex items-center">
-          <Image
-            src="/img_app/icono_sin_relleno.png"
-            alt="Logo Sistema Integrado"
-            width={85}
-            height={85}
-            className="absolute -left-12 md:-left-28 object-contain"
-          />
-          <h1 className="w-full text-center text-2xl font-bold text-[#1B456F]">
+    <div className="min-h-[calc(100vh-64px)] rounded-xl bg-df-bg p-6 md:p-10">
+      <div className="mx-auto max-w-full">
+        <div className="mb-6 flex items-center">
+          <h1 className="w-full text-center text-2xl font-bold text-color-boton-2">
             Información general del Ente
           </h1>
         </div>
@@ -55,13 +48,13 @@ export default async function PerfilEntePage() {
                 )}
               </div>
               <div className="flex flex-1 flex-col">
-                <h2 className="text-xl font-bold text-[#1B456F]">{enteInfo.nombre}</h2>
+                <h2 className="text-xl font-bold text-color-boton-2">{enteInfo.nombre}</h2>
                 <p className="text-sm font-medium text-slate-600">{enteInfo.rif}</p>
                 <p className="mt-1 text-xs italic text-slate-500">
                   {enteInfo.organoAdscripcion || "Sin órgano de adscripción asociado"}
                 </p>
               </div>
-              <Button asChild className="w-32 bg-[#1B456F] font-semibold hover:bg-[#123050]">
+              <Button asChild className="w-32 bg-color-boton-2 font-semibold hover:bg-navy-deep">
                 <Link href={ROLE_ROUTES.admin_ente.completarEnte}>Editar</Link>
               </Button>
             </CardContent>
@@ -72,12 +65,12 @@ export default async function PerfilEntePage() {
             <div className="flex flex-col gap-8">
               {/* Datos de Identificación */}
               <section>
-                <h3 className="mb-4 text-lg font-bold text-[#1B456F] border-b pb-2">
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2">
                   Datos de Identificación
                 </h3>
                 <div className="rounded-lg border bg-white p-5 pr-10 shadow-sm space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[#1B456F] font-bold text-xs">
+                    <Label className="text-color-boton-2 font-bold text-xs">
                       Nombre del Órgano o Ente Contratante.
                     </Label>
                     <Input
@@ -88,7 +81,9 @@ export default async function PerfilEntePage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">Acrónimo o siglas</Label>
+                      <Label className="text-color-boton-2 font-bold text-xs">
+                        Acrónimo o siglas
+                      </Label>
                       <Input
                         value={enteInfo.siglas}
                         readOnly
@@ -96,7 +91,7 @@ export default async function PerfilEntePage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[#1B456F] font-bold text-xs">RIF</Label>
+                      <Label className="text-color-boton-2 font-bold text-xs">RIF</Label>
                       <Input
                         value={enteInfo.rif}
                         readOnly
@@ -105,7 +100,7 @@ export default async function PerfilEntePage() {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[#1B456F] font-bold text-xs">
+                    <Label className="text-color-boton-2 font-bold text-xs">
                       Órgano de Adscripción
                     </Label>
                     <Input
@@ -119,12 +114,14 @@ export default async function PerfilEntePage() {
 
               {/* Estructura Organizativa */}
               <section>
-                <h3 className="mb-4 text-lg font-bold text-[#1B456F] border-b pb-2">
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2">
                   Estructura Organizativa (Unidades responsables)
                 </h3>
                 <div className="rounded-lg border bg-white p-5 pr-10 shadow-sm space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[#1B456F] font-bold text-xs">Unidad contratante</Label>
+                    <Label className="text-color-boton-2 font-bold text-xs">
+                      Unidad contratante
+                    </Label>
                     <Input
                       value={enteInfo.nombreUnidadContratante}
                       readOnly
@@ -132,7 +129,7 @@ export default async function PerfilEntePage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[#1B456F] font-bold text-xs">
+                    <Label className="text-color-boton-2 font-bold text-xs">
                       Gestión Administrativa y Financiera
                     </Label>
                     <Input
@@ -142,7 +139,7 @@ export default async function PerfilEntePage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[#1B456F] font-bold text-xs">
+                    <Label className="text-color-boton-2 font-bold text-xs">
                       Responsable de Sistemas y Tecnología
                     </Label>
                     <Input
@@ -159,12 +156,12 @@ export default async function PerfilEntePage() {
             <div className="flex flex-col gap-8">
               {/* Ubicación Geográfica */}
               <section>
-                <h3 className="mb-4 text-lg font-bold text-[#1B456F] border-b pb-2">
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2">
                   Ubicación Geográfica
                 </h3>
                 <div className="rounded-lg border bg-white p-5 pr-10 shadow-sm space-y-4">
                   <div className="space-y-1.5 pl-4">
-                    <Label className="text-[#1B456F] font-bold text-xs">Estado</Label>
+                    <Label className="text-color-boton-2 font-bold text-xs">Estado</Label>
                     <Input
                       value={enteInfo.estado}
                       readOnly
@@ -172,7 +169,7 @@ export default async function PerfilEntePage() {
                     />
                   </div>
                   <div className="space-y-1.5 pl-4">
-                    <Label className="text-[#1B456F] font-bold text-xs">Municipio</Label>
+                    <Label className="text-color-boton-2 font-bold text-xs">Municipio</Label>
                     <Input
                       value={enteInfo.municipio}
                       readOnly
@@ -180,7 +177,7 @@ export default async function PerfilEntePage() {
                     />
                   </div>
                   <div className="space-y-1.5 pl-4">
-                    <Label className="text-[#1B456F] font-bold text-xs">Parroquia</Label>
+                    <Label className="text-color-boton-2 font-bold text-xs">Parroquia</Label>
                     <Input
                       value={enteInfo.parroquia}
                       readOnly
@@ -188,7 +185,7 @@ export default async function PerfilEntePage() {
                     />
                   </div>
                   <div className="space-y-1.5 pl-4 mt-8">
-                    <Label className="text-[#1B456F] font-bold text-xs">Dirección Fiscal</Label>
+                    <Label className="text-color-boton-2 font-bold text-xs">Dirección Fiscal</Label>
                     <Input
                       value={enteInfo.direccionFiscal}
                       readOnly
@@ -199,7 +196,7 @@ export default async function PerfilEntePage() {
               </section>
 
               {/* Botones Manuales */}
-              <ManualActions />
+              <ManualButtons orientation="vertical" />
             </div>
           </div>
         </div>

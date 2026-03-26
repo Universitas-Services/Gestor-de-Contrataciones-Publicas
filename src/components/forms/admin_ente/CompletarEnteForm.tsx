@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, ImageIcon, Loader2, MinusIcon } from "lucide-react";
 import {
   completarEnteSchema,
   type CompletarEnteFormValues,
@@ -31,6 +31,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 // --- Datos manuales para los Selects ---
 
@@ -65,7 +72,9 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
   // Estados visuales para el RIF
   const [rifTipo, setRifTipo] = useState("G");
-  const [rifNumero, setRifNumero] = useState("");
+  const [rifCuerpo, setRifCuerpo] = useState(""); // 8 dígitos del cuerpo
+  const [rifVerificador, setRifVerificador] = useState(""); // 1 dígito verificador
+  const verificadorInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<CompletarEnteFormValues>({
     resolver: zodResolver(completarEnteSchema),
@@ -87,11 +96,13 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
 
   // Sincronizar estados locales de RIF con react-hook-form
   useEffect(() => {
-    if (rifTipo && rifNumero) {
-      const formattedRif = `${rifTipo}-${rifNumero}`;
+    if (rifTipo && rifCuerpo.length === 8 && rifVerificador.length === 1) {
+      const formattedRif = `${rifTipo}-${rifCuerpo}-${rifVerificador}`;
       form.setValue("rif", formattedRif, { shouldValidate: true });
+    } else {
+      form.setValue("rif", "");
     }
-  }, [rifTipo, rifNumero, form]);
+  }, [rifTipo, rifCuerpo, rifVerificador, form]);
 
   // Cargar datos del ente al montar
   useEffect(() => {
@@ -116,12 +127,24 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
         // Cargar RIF dividido si existe
         if (ente.rif) {
           const parts = ente.rif.split("-");
-          if (parts.length >= 2) {
-            setRifTipo(parts[0] || "G");
-            const numeroCrudo = parts.slice(1).join("-");
-            setRifNumero(numeroCrudo);
+          if (parts.length === 3) {
+            setRifTipo(parts[0]);
+            setRifCuerpo(parts[1]);
+            setRifVerificador(parts[2]);
+          } else if (parts.length === 2) {
+            setRifTipo(parts[0]);
+            // Si viene G-XXXXXXXXX (sin el segundo guión)
+            const numericPart = parts[1].replace(/-/g, "").slice(0, 9);
+            setRifCuerpo(numericPart.slice(0, 8));
+            setRifVerificador(numericPart.slice(8));
           } else {
-            setRifNumero(ente.rif); // fallback
+            // fallback
+            const numericPart = ente.rif.replace(/[^\d]/g, "").slice(0, 9);
+            setRifCuerpo(numericPart.slice(0, 8));
+            setRifVerificador(numericPart.slice(8));
+            if (/^[GJ]/.test(ente.rif)) {
+              setRifTipo(ente.rif[0]);
+            }
           }
         }
 
@@ -262,7 +285,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   // Loading state inicial
   if (isLoadingData) {
     return (
-      <div className="mx-auto w-full max-w-4xl bg-white shadow-sm pb-16">
+      <div className="mx-auto w-full max-w-6xl bg-white shadow-sm pb-16">
         <div className="flex items-center justify-center py-24">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -274,7 +297,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-4xl shadow-sm border-0 mb-16">
+    <Card className="mx-auto w-full max-w-6xl shadow-sm border-0 mb-16">
       <CardHeader className="px-10 pt-12 pb-6 border-b border-slate-200">
         <CardTitle className="text-[28px] font-bold text-[slate-700] font-inter">
           {step === 1 ? "Datos generales" : "Ubicación y estructura"}
@@ -314,7 +337,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -341,7 +364,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -369,7 +392,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                                 onValueChange={setRifTipo}
                                 disabled={isSubmitting}
                               >
-                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-500 font-inter">
+                                <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-500 font-inter">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -381,17 +404,46 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
-                              <Input
-                                value={rifNumero}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^\d-]/g, "");
-                                  setRifNumero(val);
+                              <InputOTP
+                                maxLength={8}
+                                value={rifCuerpo}
+                                onChange={(val) => {
+                                  setRifCuerpo(val);
+                                  if (val.length === 8) {
+                                    verificadorInputRef.current?.focus();
+                                  }
                                 }}
                                 disabled={isSubmitting}
-                                placeholder="00000000-0"
-                                className="w-[140px] h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 placeholder:text-slate-300 font-inter text-center"
-                                maxLength={10}
-                              />
+                                pattern={REGEXP_ONLY_DIGITS}
+                              >
+                                <InputOTPGroup>
+                                  <InputOTPSlot index={0} className="border-r-0" />
+                                  <InputOTPSlot index={1} className="border-r-0" />
+                                  <InputOTPSlot index={2} className="border-r-0" />
+                                  <InputOTPSlot index={3} className="border-r-0" />
+                                  <InputOTPSlot index={4} className="border-r-0" />
+                                  <InputOTPSlot index={5} className="border-r-0" />
+                                  <InputOTPSlot index={6} className="border-r-0" />
+                                  <InputOTPSlot index={7} className="rounded-r-md border-r" />
+                                </InputOTPGroup>
+                              </InputOTP>
+
+                              <div className="text-slate-400 font-bold px-1">
+                                <MinusIcon className="h-4 w-4" />
+                              </div>
+
+                              <InputOTP
+                                ref={verificadorInputRef}
+                                maxLength={1}
+                                value={rifVerificador}
+                                onChange={(val) => setRifVerificador(val)}
+                                disabled={isSubmitting}
+                                pattern={REGEXP_ONLY_DIGITS}
+                              >
+                                <InputOTPGroup>
+                                  <InputOTPSlot index={0} className="rounded-md border-l" />
+                                </InputOTPGroup>
+                              </InputOTP>
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -495,7 +547,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-3/4"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-3/4"
                             />
                           </FormControl>
                           <FormMessage />
@@ -527,7 +579,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona estado" />
                               </SelectTrigger>
                             </FormControl>
@@ -563,7 +615,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona municipio" />
                               </SelectTrigger>
                             </FormControl>
@@ -603,7 +655,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona ciudad" />
                               </SelectTrigger>
                             </FormControl>
@@ -639,7 +691,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                             disabled={isSubmitting}
                           >
                             <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-[#1B456F]/30 text-slate-400 text-sm font-inter placeholder:italic">
+                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
                                 <SelectValue placeholder="selecciona parroquia" />
                               </SelectTrigger>
                             </FormControl>
@@ -679,7 +731,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -706,7 +758,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -733,7 +785,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -760,7 +812,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                               {...field}
                               value={field.value || ""}
                               disabled={isSubmitting}
-                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-[#1B456F]/30 w-full md:w-2/3 lg:w-1/2"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
                             />
                           </FormControl>
                           <FormMessage />
@@ -795,7 +847,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="w-32 bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11"
+                  className="w-32 bg-color-boton-2 hover:bg-heading-secondary font-inter text-white h-11"
                 >
                   Siguiente
                 </Button>
@@ -804,7 +856,7 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                   type="button"
                   onClick={form.handleSubmit(onSubmit)}
                   disabled={isSubmitting}
-                  className="bg-[#1B456F] hover:bg-[#273646] font-inter text-white h-11 px-8"
+                  className="bg-color-boton-2 hover:bg-heading-secondary font-inter text-white h-11 px-8"
                 >
                   {isSubmitting ? (
                     <>

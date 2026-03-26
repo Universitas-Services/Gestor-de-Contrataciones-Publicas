@@ -162,7 +162,9 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
     expect(screen.getByDisplayValue("INP")).toBeInTheDocument();
 
     // Verificamos que el hook completó el RIF correctamente
-    expect(screen.getByDisplayValue("12345678-9")).toBeInTheDocument();
+    // InputOTP separa el cuerpo (8 dígitos) y el verificador (1 dígito)
+    expect(screen.getByDisplayValue("12345678")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("9")).toBeInTheDocument();
   });
 
   it("2. Validaciones: No permite avanzar al Paso 2 si faltan campos requeridos en el Paso 1", async () => {
@@ -200,8 +202,23 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
     await user.type(screen.getByLabelText(/Indique el acrónimo/i), "MINCEN");
     await user.type(screen.getByLabelText(/órgano de adscripción/i), "Presidencia");
 
-    const rifNumeroInput = screen.getByPlaceholderText("00000000-0");
-    await user.type(rifNumeroInput, "87654321-5");
+    // InputOTP: esperar y obtener usando atributos específicos
+    const rifCuerpoInput = await waitFor(() => {
+      const input = document.querySelector('input[maxlength="8"]') as HTMLInputElement;
+      if (!input) throw new Error("No se encontró el input OTP del cuerpo (maxlength 8)");
+      return input;
+    });
+
+    const rifVerificadorInput = await waitFor(() => {
+      const input = document.querySelector('input[maxlength="1"]') as HTMLInputElement;
+      if (!input) throw new Error("No se encontró el input OTP verificador (maxlength 1)");
+      return input;
+    });
+
+    await user.click(rifCuerpoInput);
+    await user.type(rifCuerpoInput, "87654321");
+    await user.click(rifVerificadorInput);
+    await user.type(rifVerificadorInput, "5");
 
     await user.click(screen.getByRole("button", { name: /siguiente/i }));
 

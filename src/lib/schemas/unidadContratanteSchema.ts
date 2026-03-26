@@ -5,10 +5,18 @@ import { z } from "zod";
  * Endpoint: POST /unidad-contratante
  */
 export const unidadContratanteSchema = z.object({
-  nombreUnidadContratante: z.string().min(1, "El nombre de la Unidad Contratante es requerido"),
-  nombreResponsableUnidad: z.string().min(1, "El nombre del responsable de la unidad es requerido"),
-  cargoResponsable: z.string().min(1, "El cargo del responsable es requerido"),
-  activa: z.boolean(),
+  nombreUnidadContratante: z
+    .string()
+    .min(1, "El nombre de la Unidad Contratante es requerido")
+    .max(255, "Máximo 255 caracteres"),
+  nombreResponsableUnidad: z
+    .string()
+    .min(1, "El nombre del responsable de la unidad es requerido")
+    .max(255, "Máximo 255 caracteres"),
+  cargoResponsable: z
+    .string()
+    .min(1, "El cargo del responsable es requerido")
+    .max(255, "Máximo 255 caracteres"),
 });
 
 export type UnidadContratanteFormValues = z.infer<typeof unidadContratanteSchema>;

@@ -1,372 +1,456 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Filter, ArrowUpDown, ChevronLeft } from "lucide-react";
+import { ChevronRight, Search, Filter, ArrowUpDown, ChevronLeft, Loader2 } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
-import { IoAlertCircleOutline } from "react-icons/io5";
+import { IoAlertCircleOutline, IoFilterOutline } from "react-icons/io5";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  getProveedores,
+  cambiarEstatusProveedor,
+  getEstadisticasProveedores,
+  eliminarProveedor,
+} from "@/services/proveedores.service";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-interface ProviderData {
+interface Provider {
   id: string;
-  name: string;
+  nombre: string;
   rif: string;
-  representative: string;
-  type: "Obras" | "Bienes" | "Servicios";
-  status: "Activo" | "Por vencer" | "Vencido";
-  isApproved: boolean;
+  nombreRepLegal: string;
+  areaEspecialidad: string;
+  estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
+  // Add other fields as needed based on API response
 }
 
-const mockProviders: ProviderData[] = [
-  {
-    id: "1",
-    name: "Constructora Sambil C.A.",
-    rif: "J-30456890-1",
-    representative: "Ricardo Rodriguez",
-    type: "Obras",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "2",
-    name: "Insumos Logisticos Express",
-    rif: "J-41233455-2",
-    representative: "Mariana Valera",
-    type: "Bienes",
-    status: "Por vencer",
-    isApproved: false,
-  },
-  {
-    id: "3",
-    name: "Tecnologías del Sur",
-    rif: "J-50998122-0",
-    representative: "Héctor Méndez",
-    type: "Servicios",
-    status: "Vencido",
-    isApproved: false,
-  },
-  {
-    id: "4",
-    name: "Suministros Médicos Global",
-    rif: "J-22877341-5",
-    representative: "Elena Farias",
-    type: "Bienes",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "5",
-    name: "Asesoria Contable & Cia",
-    rif: "J-31990442-8",
-    representative: "Juan Pablo Duarte",
-    type: "Servicios",
-    status: "Vencido",
-    isApproved: false,
-  },
-  {
-    id: "6",
-    name: "Constructora Sambil C.A.",
-    rif: "J-30456890-1",
-    representative: "Ricardo Rodriguez",
-    type: "Obras",
-    status: "Activo",
-    isApproved: true,
-  },
-  {
-    id: "7",
-    name: "Insumos Logisticos Express",
-    rif: "J-41233455-2",
-    representative: "Mariana Valera",
-    type: "Bienes",
-    status: "Por vencer",
-    isApproved: false,
-  },
-];
-
 export function ListadoProveedores() {
-  const [providers, setProviders] = useState<ProviderData[]>(mockProviders);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState<any>(null);
 
-  const toggleApproval = (id: string) => {
-    setProviders(providers.map((p) => (p.id === id ? { ...p, isApproved: !p.isApproved } : p)));
+  // Filters
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("TODOS");
+  const [areaFilter, setAreaFilter] = useState("TODOS");
+  const [limit] = useState(10);
+
+  const fetchProviders = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Logic to determine if search is RIF or Name (simplistic approach)
+      const isRif = /^[VGJ]-?\d/.test(search);
+      const data = await getProveedores({
+        page,
+        limit,
+        estatusValidacion:
+          statusFilter === "ACTIVO" || statusFilter === "POR_VENCER"
+            ? "APROBADO"
+            : statusFilter === "VENCIDO"
+              ? "RECHAZADO"
+              : statusFilter === "POR_APROBAR"
+                ? "PENDIENTE"
+                : undefined,
+        areaEspecialidad: areaFilter !== "TODOS" ? areaFilter : undefined,
+        rif: isRif ? search : undefined,
+        nombre: !isRif ? search : undefined,
+      });
+
+      setProviders(data.data || []);
+      setTotalPages(data.meta?.totalPages || 1);
+      setTotalCount(data.meta?.totalItems || 0);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al cargar proveedores");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, statusFilter, search]);
+
+  const handleToggleApproval = async (id: string, currentStatus: string) => {
+    try {
+      // API only accepts APROBADO or RECHAZADO
+      const nextStatus = currentStatus === "APROBADO" ? "RECHAZADO" : "APROBADO";
+      await cambiarEstatusProveedor(id, nextStatus);
+      toast.success(nextStatus === "APROBADO" ? "Proveedor aprobado" : "Proveedor rechazado");
+      fetchProviders(); // Refresh list to reflect changes
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al cambiar el estatus del proveedor"
+      );
+    }
   };
 
-  return (
-    <div className="w-full max-w-[1280px] mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#1e293b] tracking-tight mb-1">
-            Listado de Proveedores
-          </h1>
-          <p className="text-slate-500 font-medium">
-            Gestiona la base de datos centralizada de tus proveedores
-          </p>
-        </div>
-        <Link href="/registro-proveedores/nuevo">
-          <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
-            + Agregar nuevo proveedor
-          </Button>
-        </Link>
-      </div>
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await eliminarProveedor(id);
+      toast.success("Proveedor eliminado exitosamente");
+      fetchProviders();
+    } catch (error) {
+      toast.error("Error al eliminar el proveedor");
+    } finally {
+      setIsDeleting(false);
+      setProviderToDelete(null);
+    }
+  };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProviders();
+    }, 500); // Simple debounce
+    return () => clearTimeout(timer);
+  }, [fetchProviders]);
+
+  useEffect(() => {
+    getEstadisticasProveedores().then(setStats).catch(console.error);
+  }, []);
+
+  return (
+    <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
       {/* Main Container White */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
+        {/* Header Area Inside Card */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-100 mb-6 pb-6">
+          <div>
+            <h1 className="text-2xl font-extrabold text-heading-dark tracking-tight mb-1">
+              Listado de Proveedores
+            </h1>
+            <p className="text-slate-500 font-medium text-sm">
+              Gestiona la base de datos centralizada de tus proveedores
+            </p>
+          </div>
+          <Link href="/registro-proveedores/nuevo">
+            <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
+              + Agregar nuevo proveedor
+            </Button>
+          </Link>
+        </div>
+
         {/* Toolbar */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
+            <Input
               type="text"
-              placeholder="Buscar por nombre, RIF o representante..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o RIF..."
+              className="w-full pl-10 pr-4 h-[42px] rounded-lg border-slate-300 focus-visible:ring-navy text-sm bg-white"
             />
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <select className="appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] text-sm font-medium w-36">
-                <option>Tipo: Todos</option>
-                <option>Obras</option>
-                <option>Bienes</option>
-                <option>Servicios</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                <svg
-                  className="fill-current h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
-            <div className="relative">
-              <select className="appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] text-sm font-medium w-40">
-                <option>Status: Todos</option>
-                <option>Activo</option>
-                <option>Por vencer</option>
-                <option>Vencido</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                <svg
-                  className="fill-current h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              className="h-[42px] px-4 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
-            >
-              <Filter className="w-5 h-5" />
-            </Button>
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger className="w-40 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Tipo: Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Tipo: Todos</SelectItem>
+                <SelectItem value="BIENES">Bienes</SelectItem>
+                <SelectItem value="OBRAS">Obras</SelectItem>
+                <SelectItem value="SERVICIOS">Servicios</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-44 h-[42px] border-slate-300 focus:ring-navy bg-white">
+                <SelectValue placeholder="Estatus: Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Estatus: Todos</SelectItem>
+                <SelectItem value="ACTIVO">Activo</SelectItem>
+                <SelectItem value="POR_VENCER">Por vencer</SelectItem>
+                <SelectItem value="VENCIDO">Vencido</SelectItem>
+                <SelectItem value="POR_APROBAR">Por aprobar</SelectItem>
+                <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-[#ffffff] text-[#1e293b] font-bold border-b border-slate-200">
+        {/* Table Container */}
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 relative min-h-[200px]">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
+              <Loader2 className="w-8 h-8 text-navy animate-spin" />
+            </div>
+          )}
+          <table className="w-full text-[13px] text-left">
+            <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
-                <th className="p-4 w-12 text-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                  />
-                </th>
-                <th className="p-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-[#1e3a5f]">
+                <th className="px-6 py-3 font-semibold whitespace-nowrap">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-navy">
                     Nombre del proveedor
-                    <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </th>
-                <th className="p-4 text-center whitespace-nowrap">Rif</th>
-                <th className="p-4 text-center whitespace-nowrap">Representante Legal</th>
-                <th className="p-4 text-center whitespace-nowrap">tipo</th>
-                <th className="p-4 text-center whitespace-nowrap">Estatus</th>
-                <th className="p-4 text-center whitespace-nowrap">Aprobación</th>
-                <th className="p-4 text-center whitespace-nowrap">Acción</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Representante Legal
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">tipo</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                  Aprobación
+                </th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {providers.map((provider, index) => (
-                <tr
-                  key={provider.id + index}
-                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-                    index % 2 !== 0 ? "bg-slate-50/50" : "bg-white"
-                  }`}
-                >
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
-                    />
-                  </td>
-                  <td className="p-4 font-semibold text-[#1e293b] whitespace-nowrap">
-                    {provider.name}
-                  </td>
-                  <td className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
-                    {provider.rif}
-                  </td>
-                  <td className="p-4 text-[#1e3a5f] font-medium text-center whitespace-nowrap">
-                    {provider.representative}
-                  </td>
-
-                  {/* Tipo Pill */}
-                  <td className="p-4 text-center">
-                    <span
-                      className={`inline-flex px-6 py-1 rounded-full text-xs font-bold border ${
-                        provider.type === "Obras"
-                          ? "bg-[#fecaca] text-[#dc2626] border-[#fca5a5]"
-                          : provider.type === "Bienes"
-                            ? "bg-[#bfdbfe] text-[#2563eb] border-[#93c5fd]"
-                            : "bg-[#475569] text-white border-[#334155]"
+              {providers.length > 0
+                ? providers.map((provider, index) => (
+                    <tr
+                      key={provider.id}
+                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
+                        index % 2 !== 0 ? "bg-slate-50/30" : "bg-white"
                       }`}
                     >
-                      {provider.type}
-                    </span>
-                  </td>
+                      <td className="px-6 py-3 font-semibold text-slate-700 max-w-[200px] truncate">
+                        {provider.nombre}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
+                      <td className="px-4 py-3 text-slate-600 text-center font-medium max-w-[150px] truncate">
+                        {provider.nombreRepLegal}
+                      </td>
 
-                  {/* Estatus Pill */}
-                  <td className="p-4 text-center">
-                    <span
-                      className={`inline-flex px-6 py-1 rounded-full text-xs font-bold border ${
-                        provider.status === "Activo"
-                          ? "bg-[#bbf7d0] text-[#16a34a] border-[#86efac]"
-                          : provider.status === "Por vencer"
-                            ? "bg-[#ffedd5] text-[#d97706] border-[#fcd34d]"
-                            : "bg-[#fee2e2] text-[#dc2626] border-[#fca5a5]"
-                      }`}
-                    >
-                      {provider.status}
-                    </span>
-                  </td>
-
-                  {/* Aprobación Switch */}
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => toggleApproval(provider.id)}
-                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
-                        provider.isApproved ? "bg-[#84cc16]" : "bg-[#ef4444]"
-                      }`}
-                    >
-                      <span className="sr-only">Toggle approval</span>
-                      <span
-                        className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          provider.isApproved ? "translate-x-6" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </td>
-
-                  {/* Acciones */}
-                  <td className="p-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <Link href={`/registro-proveedores/${provider.id}`}>
-                        <button
-                          className="text-slate-600 hover:text-slate-900 transition-colors"
-                          title="Ver perfil"
+                      {/* Tipo Pill */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            provider.areaEspecialidad === "OBRAS"
+                              ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
+                              : provider.areaEspecialidad === "BIENES"
+                                ? "bg-tipo-bienes-bg text-tipo-bienes border-tipo-bienes-border"
+                                : "bg-tipo-servicios-bg text-tipo-servicios border-tipo-servicios-border"
+                          }`}
                         >
-                          <BsEye className="w-5 h-5" />
+                          {provider.areaEspecialidad}
+                        </span>
+                      </td>
+
+                      {/* Estatus Pill */}
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            provider.estatusValidacion === "APROBADO"
+                              ? "bg-success-bg text-success-text border-success/30"
+                              : provider.estatusValidacion === "PENDIENTE"
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                : "bg-red-50 text-red-700 border-red-200"
+                          }`}
+                        >
+                          {provider.estatusValidacion === "APROBADO"
+                            ? "activo"
+                            : provider.estatusValidacion === "PENDIENTE"
+                              ? "por aprobar"
+                              : "vencido"}
+                        </span>
+                      </td>
+
+                      {/* Aprobación Switch */}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() =>
+                            handleToggleApproval(provider.id, provider.estatusValidacion)
+                          }
+                          className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 ${
+                            provider.estatusValidacion === "APROBADO" ? "bg-success" : "bg-danger"
+                          }`}
+                        >
+                          <span className="sr-only">Cambiar estatus</span>
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              provider.estatusValidacion === "APROBADO"
+                                ? "translate-x-4"
+                                : "translate-x-0"
+                            }`}
+                          />
                         </button>
-                      </Link>
-                      <button className="text-slate-600 hover:text-slate-900 transition-colors">
-                        <BsPencilSquare className="w-5 h-5" />
-                      </button>
-                      <button className="text-red-500 hover:text-red-700 transition-colors">
-                        <FaRegTrashAlt className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <Link href={`/registro-proveedores/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsEye className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
+                          <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                            <button className="text-slate-500 hover:text-navy transition-colors">
+                              <BsPencilSquare className="w-4.5 h-4.5" />
+                            </button>
+                          </Link>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button className="text-red-400 hover:text-red-600 transition-colors">
+                                <FaRegTrashAlt className="w-4 h-4" />
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción eliminará al proveedor{" "}
+                                  <strong>{provider.nombre}</strong> de forma lógica. Podrás seguir
+                                  viendo su historial si es necesario, pero ya no aparecerá en las
+                                  listas activas.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(provider.id)}
+                                  className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
+                                  disabled={isDeleting}
+                                >
+                                  {isDeleting ? "Eliminando..." : "Eliminar"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                : !loading && (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-10 text-center text-slate-500 italic">
+                        No se encontraron proveedores
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination Dummy */}
-        <div className="flex justify-end items-center mt-6 gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-8 h-8 rounded border-slate-300 text-slate-500 hover:text-slate-700"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="default"
-            className="w-8 h-8 rounded bg-[#1e3a5f] hover:bg-[#152c4a] text-white p-0"
-          >
-            1
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded border-slate-300 text-slate-600 hover:bg-slate-100 p-0"
-          >
-            2
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded border-slate-300 text-slate-600 hover:bg-slate-100 p-0"
-          >
-            3
-          </Button>
-          <Button
-            variant="outline"
-            className="w-8 h-8 rounded border-slate-300 text-slate-600 hover:bg-slate-100 p-0"
-          >
-            4
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-8 h-8 rounded border-slate-300 text-slate-500 hover:text-slate-700"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+        {/* Pagination */}
+        <div className="flex justify-end items-center mt-6">
+          <div className="flex justify-end items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-navy hover:border-navy transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <Button
+                  key={p}
+                  variant={page === p ? "default" : "outline"}
+                  onClick={() => setPage(p)}
+                  className={`w-9 h-9 rounded-lg p-0 font-bold transition-all ${
+                    page === p
+                      ? "bg-navy hover:bg-navy-hover text-white shadow-md scale-105"
+                      : "border-slate-300 text-slate-600 hover:border-navy hover:text-navy"
+                  }`}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="w-9 h-9 rounded-lg border-slate-300 text-slate-500 hover:text-navy hover:border-navy transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Footer KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Total Proveedores</h3>
-              <BsFillPeopleFill className="w-6 h-6 text-[#475569]" />
-            </div>
-            <div className="text-3xl font-extrabold text-[#1e293b] mb-1">124</div>
-            <p className="text-xs font-semibold text-[#84cc16]">+12 este mes</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Documentación vencida</h3>
-              <div className="p-1 bg-[#1e3a5f] rounded flex items-center justify-center">
-                <BsFillCheckSquareFill className="w-4 h-4 text-white" />
+        {/* Footer KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
+            <CardContent className="p-2.5">
+              <div className="flex justify-between items-start mb-0">
+                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Total Proveedores
+                </h3>
+                <div className="transition-colors">
+                  <BsFillPeopleFill className="w-4 h-4 text-navy" />
+                </div>
               </div>
-            </div>
-            <div className="text-3xl font-extrabold text-[#1e3a5f] mb-1">18</div>
-            <p className="text-xs font-semibold text-[#ef4444]">Requiere atención</p>
-          </CardContent>
-        </Card>
+              <div className="text-xl font-extrabold text-navy leading-tight">
+                {stats?.resumen?.totalRegistrados || totalCount}
+              </div>
+              <p className="text-[9px] font-bold text-success-text">
+                {stats?.crecimientoMensual?.registradosEsteMes >= 0 ? "+" : ""}
+                {stats?.crecimientoMensual?.registradosEsteMes || 0} este mes
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-bold text-[#1e293b]">Proceso de aprobación</h3>
-              <IoAlertCircleOutline className="w-7 h-7 text-[#334155]" />
-            </div>
-            <div className="text-3xl font-extrabold text-[#334155] mb-1">15</div>
-            <p className="text-xs font-semibold text-[#ef4444]">Pendiente revisión</p>
-          </CardContent>
-        </Card>
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
+            <CardContent className="p-2.5">
+              <div className="flex justify-between items-start mb-0">
+                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Documentación vencida
+                </h3>
+                <div className="transition-colors">
+                  <BsFillCheckSquareFill className="w-4 h-4 text-navy" />
+                </div>
+              </div>
+              <div className="text-xl font-extrabold text-danger leading-tight">
+                {stats?.resumen?.totalRechazados || 0}
+              </div>
+              <p className="text-[9px] font-bold text-danger">Requiere atención</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
+            <CardContent className="p-2.5">
+              <div className="flex justify-between items-start mb-0">
+                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
+                  Proceso de aprobación
+                </h3>
+                <div className="transition-colors">
+                  <IoAlertCircleOutline className="w-5 h-5 text-navy" />
+                </div>
+              </div>
+              <div className="text-xl font-extrabold text-navy leading-tight">
+                {stats?.resumen?.totalPendientes || 0}
+              </div>
+              <p className="text-[9px] font-bold text-amber-dark">Pendiente revisión</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -55,13 +55,62 @@
 
   /* Login colors */
   --color-izq-login: var(--izq-login);
+  --color-login-gris: var(--login-gris);
   --color-color-boton-1: var(--color-boton-1);
   --color-color-boton-2: var(--color-boton-2);
+  --color-color-boton-hover: var(--color-boton-hover);
   --color-color-titulos: var(--color-titulos);
   --color-color-subtitulos: var(--color-subtitulos);
   --color-df-bg: var(--df-bg);
   --color-navy: var(--navy);
   --color-navy-hover: var(--navy-hover);
+  --color-dropzone-border: var(--dropzone-border);
+  --color-dropzone-bg: var(--dropzone-bg);
+  --color-section-docs: var(--section-docs);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-text: var(--success-text);
+
+  /* Hardcoded color refactor */
+  --color-heading-dark: var(--heading-dark);
+  --color-text-muted-dark: var(--text-muted-dark);
+  --color-heading-secondary: var(--heading-secondary);
+  --color-navy-deep: var(--navy-deep);
+  --color-blue-accent: var(--blue-accent);
+  --color-lime: var(--lime);
+  --color-danger: var(--danger);
+  --color-amber-dark: var(--amber-dark);
+  --color-indigo: var(--indigo);
+  --color-slate-bg: var(--slate-bg);
+  --color-border-light: var(--border-light);
+
+  /* Conocenos */
+  --color-conocenos-bg: var(--conocenos-bg);
+  --color-color-boton-2-hover: var(--color-boton-2-hover);
+
+  /* Tipo (Area) colors */
+  --color-tipo-obras: var(--tipo-obras);
+  --color-tipo-obras-bg: var(--tipo-obras-bg);
+  --color-tipo-obras-border: var(--tipo-obras-border);
+  --color-tipo-bienes: var(--tipo-bienes);
+  --color-tipo-bienes-bg: var(--tipo-bienes-bg);
+  --color-tipo-bienes-border: var(--tipo-bienes-border);
+  --color-tipo-servicios: var(--tipo-servicios);
+  --color-tipo-servicios-bg: var(--tipo-servicios-bg);
+  --color-tipo-servicios-border: var(--tipo-servicios-border);
+  --color-vigente: var(--vigente);
+  --color-vigente-bg: var(--vigente-bg);
+  --color-vigente-border: var(--vigente-border);
+  --color-vencido: var(--vencido);
+  --color-vencido-bg: var(--vencido-bg);
+  --color-vencido-border: var(--vencido-border);
+  --color-pendiente: var(--pendiente);
+  --color-pendiente-bg: var(--pendiente-bg);
+  --color-pendiente-border: var(--pendiente-border);
+  --color-rechazado: var(--rechazado);
+  --color-rechazado-bg: var(--rechazado-bg);
+  --color-rechazado-border: var(--rechazado-border);
+  --color-patrimonio: var(--patrimonio);
 }
 
 :root {
@@ -117,19 +166,69 @@
 
   /* Login colors */
   --izq-login: oklch(0.7345 0.0106 267.33);
+  --login-gris: oklch(0.74 0.015 274);
   --color-boton-1: oklch(0.3832 0.0857 251.07);
   --color-titulos: oklch(0.397 0.0444 249);
   --color-subtitulos: oklch(0.5162 0.004 247.9);
-  --color-boton-2: #1b456f;
-  --df-bg: #dfeaf1;
-  --navy: #1e3a5f;
-  --navy-hover: #152c4a;
+  --color-boton-2: oklch(0.35 0.088 251);
+  --color-boton-hover: oklch(0.28 0.042 251);
+  --df-bg: oklch(0.92 0.022 228);
+  --navy: oklch(0.3462 0.0736 256.04);
+  --navy-hover: oklch(0.2911 0.0624 255.82);
+  --dropzone-border: oklch(0.75 0.019 212);
+  --dropzone-bg: oklch(0.76 0.01 230 / 0.1);
+  --section-docs: oklch(0.68 0.16 222);
+  --success: oklch(0.7253 0.1868 149.3);
+  --success-bg: oklch(0.9817 0.0175 151.28);
+  --success-text: oklch(0.527 0.1359 150.01);
+
+  /* Conocenos */
+  --conocenos-bg: oklch(0.96 0.012 245);
+  --color-boton-2-hover: oklch(0.24 0.065 255);
+
+  /* Tipo (Area) colors */
+  --tipo-obras: oklch(0.5795 0.2169 27.16);
+  --tipo-obras-bg: oklch(0.8826 0.0769 20.4);
+  --tipo-obras-border: oklch(0.7049 0.1649 22.22);
+  --tipo-bienes: oklch(0.5463 0.2332 261.36);
+  --tipo-bienes-bg: oklch(0.8832 0.0727 241.21);
+  --tipo-bienes-border: oklch(0.7038 0.1489 246.87);
+  --tipo-servicios: oklch(0.4084 0.0433 256.14);
+  --tipo-servicios-bg: oklch(0.9161 0.023 250.8);
+  --tipo-servicios-border: oklch(0.6841 0.0411 252.08);
+  --vigente: oklch(0.527 0.1359 150.01);
+  --vigente-bg: oklch(0.8745 0.1494 150.1);
+  --vigente-border: oklch(0.6257 0.1663 149.65);
+  --vencido: oklch(0.4414 0.1526 35.65);
+  --vencido-bg: oklch(0.9522 0.057 79.62);
+  --vencido-border: oklch(0.7003 0.2048 50.05);
+  --pendiente: oklch(0.5232 0.1463 71.77);
+  --pendiente-bg: oklch(0.9887 0.029 97.41);
+  --pendiente-border: oklch(0.9388 0.1299 100.31);
+  --rechazado: oklch(0.4825 0.1999 27.25);
+  --rechazado-bg: oklch(0.9694 0.0191 21.4);
+  --rechazado-border: oklch(0.8826 0.0769 20.4);
+  --patrimonio: oklch(0.6257 0.1663 149.65);
+
+  /* Hardcoded color refactor */
+  --heading-dark: oklch(0.2795 0.0368 260.03);
+  --text-muted-dark: oklch(0.4455 0.0374 257.28);
+  --heading-secondary: oklch(0.3268 0.0348 250.53);
+  --navy-deep: oklch(0.3044 0.0682 252.27);
+  --blue-accent: oklch(0.4226 0.1043 244.05);
+  --lime: oklch(0.7681 0.2044 130.85);
+  --danger: oklch(0.6368 0.2078 25.33);
+  --amber-dark: oklch(0.4732 0.1247 46.2);
+  --indigo: oklch(0.5854 0.2041 277.12);
+  --slate-bg: oklch(0.9842 0.0034 247.86);
+  --border-light: oklch(0.9219 0 89.88);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
