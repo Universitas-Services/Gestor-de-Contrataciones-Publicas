@@ -2,10 +2,6 @@ import type { UserRole } from "@/types/role.types";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
 import {
-  Gavel,
-  FileCheck,
-  Award,
-  Shield,
   CheckCircle,
   Eye,
   ClipboardList,
@@ -57,6 +53,10 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
             href: "/gestion-datos/perfil",
           },
           {
+            label: "Gestión de usuarios",
+            href: "/gestion-datos/usuarios",
+          },
+          {
             label: "Estructura organizativa",
             href: "/gestion-datos/estructura-organizativa",
           },
@@ -66,26 +66,6 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Registro de proveedores",
         href: "/registro-proveedores",
         icon: Newspaper,
-      },
-      {
-        label: "Licitaciones",
-        href: ROLE_ROUTES.admin_ente.licitaciones,
-        icon: Gavel,
-      },
-      {
-        label: "Propuestas",
-        href: ROLE_ROUTES.admin_ente.propuestas,
-        icon: FileCheck,
-      },
-      {
-        label: "Adjudicaciones",
-        href: ROLE_ROUTES.admin_ente.adjudicaciones,
-        icon: Award,
-      },
-      {
-        label: "Fiscalización",
-        href: ROLE_ROUTES.admin_ente.fiscalizacion,
-        icon: Shield,
       },
     ],
   },
