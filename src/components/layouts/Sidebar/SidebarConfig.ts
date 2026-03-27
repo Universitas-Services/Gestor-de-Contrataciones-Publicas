@@ -54,6 +54,10 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
             href: "/gestion-datos/perfil",
           },
           {
+            label: "Gestión de usuarios",
+            href: ROLE_ROUTES.admin_ente.usuarios,
+          },
+          {
             label: "Estructura organizativa",
             href: "/gestion-datos/estructura-organizativa",
           },
