@@ -13,6 +13,7 @@ import {
   Download,
   Newspaper,
   Globe,
+  SquarePen,
 } from "lucide-react";
 
 import { IconType } from "react-icons";
@@ -66,6 +67,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Registro de proveedores",
         href: "/registro-proveedores",
         icon: Newspaper,
+      },
+      {
+        label: "Elaboración de Expediente de selección de Contratista",
+        href: "/elaboracion-expediente",
+        icon: SquarePen,
       },
     ],
   },
