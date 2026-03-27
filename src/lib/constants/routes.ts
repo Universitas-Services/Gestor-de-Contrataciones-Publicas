@@ -42,6 +42,7 @@ export const ROLE_ROUTES = {
     registroProveedores: "/registro-proveedores",
     perfilEnte: "/gestion-datos/perfil",
     estructuraOrganizativa: "/gestion-datos/estructura-organizativa",
+    usuarios: "/admin_ente/gestion-datos/usuarios",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",
