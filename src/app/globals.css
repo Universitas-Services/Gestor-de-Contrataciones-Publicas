@@ -111,6 +111,14 @@
   --color-rechazado-bg: var(--rechazado-bg);
   --color-rechazado-border: var(--rechazado-border);
   --color-patrimonio: var(--patrimonio);
+
+  /* Expediente - Fases */
+  --color-fase-1: var(--fase-1);
+  --color-fase-2: var(--fase-2);
+  --color-fase-3: var(--fase-3);
+  --color-fase-4: var(--fase-4);
+  --color-progress-bar: var(--progress-bar);
+  --color-card-accent-border: var(--card-accent-border);
 }
 
 :root {
@@ -209,6 +217,14 @@
   --rechazado-bg: oklch(0.9694 0.0191 21.4);
   --rechazado-border: oklch(0.8826 0.0769 20.4);
   --patrimonio: oklch(0.6257 0.1663 149.65);
+
+  /* Expediente - Fases */
+  --fase-1: oklch(0.7 0.015 260);
+  --fase-2: oklch(0.75 0.16 85);
+  --fase-3: oklch(0.65 0.17 145);
+  --fase-4: oklch(0.4 0.08 255);
+  --progress-bar: oklch(0.65 0.17 145);
+  --card-accent-border: oklch(0.5 0.13 250);
 
   /* Hardcoded color refactor */
   --heading-dark: oklch(0.2795 0.0368 260.03);

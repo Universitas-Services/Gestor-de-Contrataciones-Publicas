@@ -2,10 +2,6 @@ import type { UserRole } from "@/types/role.types";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
 import {
-  Gavel,
-  FileCheck,
-  Award,
-  Shield,
   CheckCircle,
   Eye,
   ClipboardList,
@@ -17,6 +13,7 @@ import {
   Download,
   Newspaper,
   Globe,
+  SquarePen,
 } from "lucide-react";
 
 import { IconType } from "react-icons";
@@ -68,24 +65,9 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         icon: Newspaper,
       },
       {
-        label: "Licitaciones",
-        href: ROLE_ROUTES.admin_ente.licitaciones,
-        icon: Gavel,
-      },
-      {
-        label: "Propuestas",
-        href: ROLE_ROUTES.admin_ente.propuestas,
-        icon: FileCheck,
-      },
-      {
-        label: "Adjudicaciones",
-        href: ROLE_ROUTES.admin_ente.adjudicaciones,
-        icon: Award,
-      },
-      {
-        label: "Fiscalización",
-        href: ROLE_ROUTES.admin_ente.fiscalizacion,
-        icon: Shield,
+        label: "Elaboración de Expediente de selección de Contratista",
+        href: "/elaboracion-expediente",
+        icon: SquarePen,
       },
     ],
   },
