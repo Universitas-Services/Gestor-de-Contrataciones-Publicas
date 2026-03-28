@@ -2,6 +2,7 @@
 
 import { getServerToken } from "@/lib/auth/session";
 import type { EnteResponse, EnteUpdatePayload } from "@/types/ente.types";
+import type { CreateUserPayload, CreateUserResponse } from "@/types/user-management.types";
 
 /**
  * Servicio para el módulo de Entes
@@ -97,4 +98,40 @@ export const actualizarLogoEnte = async (
 
   const text = await response.text();
   return { message: text || "Logo actualizado correctamente" };
+};
+
+/**
+ * POST /entes/{id}/usuarios
+ * Crea un nuevo usuario asociado a un Ente específico.
+ */
+export const crearUsuarioEnte = async (
+  enteId: string,
+  payload: CreateUserPayload
+): Promise<CreateUserResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/usuarios`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    if (response.status === 403) {
+      throw new Error("No autorizado para realizar esta acción");
+    }
+
+    if (response.status === 409) {
+      throw new Error("El usuario ya existe con este correo electrónico");
+    }
+
+    throw new Error(errorData?.message ?? "Error al crear el usuario");
+  }
+
+  return response.json() as Promise<CreateUserResponse>;
 };
