@@ -2,7 +2,11 @@
 
 import { getServerToken } from "@/lib/auth/session";
 import type { EnteResponse, EnteUpdatePayload } from "@/types/ente.types";
-import type { CreateUserPayload, CreateUserResponse } from "@/types/user-management.types";
+import type {
+  CreateUserPayload,
+  CreateUserResponse,
+  UserListResponse,
+} from "@/types/user-management.types";
 
 /**
  * Servicio para el módulo de Entes
@@ -134,4 +138,41 @@ export const crearUsuarioEnte = async (
   }
 
   return response.json() as Promise<CreateUserResponse>;
+};
+
+/**
+ * GET /entes/{id}/usuarios
+ * Obtiene el listado paginado de usuarios de un Ente.
+ */
+export const listarUsuariosEnte = async (
+  enteId: string,
+  params: {
+    page?: number;
+    limit?: number;
+    rol?: string;
+    busqueda?: string;
+  }
+): Promise<UserListResponse> => {
+  const token = await getServerToken();
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.rol) queryParams.append("rol", params.rol);
+  if (params.busqueda) queryParams.append("busqueda", params.busqueda);
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/usuarios?${queryParams.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener el listado de usuarios");
+  }
+
+  return response.json() as Promise<UserListResponse>;
 };
