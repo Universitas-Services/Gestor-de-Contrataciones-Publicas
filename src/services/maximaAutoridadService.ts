@@ -65,10 +65,34 @@ export const registrarMaximaAutoridad = async (
 };
 
 /**
+ * GET /maxima-autoridad
+ * Lista todas las Máximas Autoridades del Ente actual.
+ */
+export const listarMaximasAutoridades = async (): Promise<Record<string, unknown>[]> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/maxima-autoridad`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al listar las Máximas Autoridades");
+  }
+  return response.json();
+};
+
+/**
  * GET /maxima-autoridad/{id}
  * Obtiene los detalles de la Máxima Autoridad.
  */
-export const obtenerMaximaAutoridad = async (id: string | number): Promise<any> => {
+export const obtenerMaximaAutoridad = async (
+  id: string | number
+): Promise<Record<string, unknown>> => {
   const token = await getServerToken();
   const response = await fetch(`${API_URL}/maxima-autoridad/${id}`, {
     method: "GET",

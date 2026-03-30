@@ -22,7 +22,7 @@ export function CalendarGrid({ currentMonth, events }: CalendarGridProps) {
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
 
   return (
-    <div className="w-full overflow-hidden rounded-b-lg border border-slate-200 border-t-0">
+    <div className="w-full rounded-b-lg border border-slate-200 border-t-0 overflow-visible">
       {/* Day-of-week header row */}
       <div className="grid grid-cols-7 bg-heading-dark">
         {DAY_HEADERS.map((day) => (
@@ -35,8 +35,8 @@ export function CalendarGrid({ currentMonth, events }: CalendarGridProps) {
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7">
+      {/* Calendar grid — overflow:visible so event bars can bleed across cell borders */}
+      <div className="grid grid-cols-7 overflow-visible">
         {days.map((day, idx) => (
           <CalendarCell key={idx} day={day} currentMonth={currentMonth} events={events} />
         ))}

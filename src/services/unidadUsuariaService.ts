@@ -56,10 +56,34 @@ export const registrarUnidadUsuaria = async (
 };
 
 /**
+ * GET /unidad-usuaria
+ * Lista todas las Unidades Usuarias del Ente actual.
+ */
+export const listarUnidadesUsuarias = async (): Promise<Record<string, unknown>[]> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/unidad-usuaria`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al listar las Unidades Usuarias");
+  }
+  return response.json();
+};
+
+/**
  * GET /unidad-usuaria/{id}
  * Obtiene los detalles de la Unidad Usuaria.
  */
-export const obtenerUnidadUsuaria = async (id: string | number): Promise<any> => {
+export const obtenerUnidadUsuaria = async (
+  id: string | number
+): Promise<Record<string, unknown>> => {
   const token = await getServerToken();
   const response = await fetch(`${API_URL}/unidad-usuaria/${id}`, {
     method: "GET",
