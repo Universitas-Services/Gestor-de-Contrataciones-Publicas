@@ -11,6 +11,7 @@ interface PlanificacionStepProps {
   initialMonth: Date;
   onBack: () => void;
   onFinish: () => void;
+  onEventDrop?: (eventId: string, diffInDays: number) => void;
   isLoading?: boolean;
 }
 
@@ -55,6 +56,7 @@ export function PlanificacionStep({
   initialMonth,
   onBack,
   onFinish,
+  onEventDrop,
   isLoading = false,
 }: PlanificacionStepProps) {
   return (
@@ -62,7 +64,11 @@ export function PlanificacionStep({
       {/* Calendar */}
       {events.length > 0 ? (
         <>
-          <ProcedureCalendar events={events} initialMonth={initialMonth} />
+          <ProcedureCalendar
+            events={events}
+            initialMonth={initialMonth}
+            onEventDrop={onEventDrop}
+          />
           <ProcedureLegend />
         </>
       ) : (

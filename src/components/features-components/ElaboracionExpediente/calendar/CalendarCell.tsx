@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { isSameMonth, isToday } from "date-fns";
+import { isSameMonth, isToday, differenceInDays } from "date-fns";
 import type { IEvent } from "./types";
 import {
   getEventsForDay,
@@ -16,6 +16,7 @@ interface CalendarCellProps {
   day: Date;
   currentMonth: Date;
   events: IEvent[];
+  onEventDrop?: (eventId: string, diffInDays: number) => void;
 }
 
 function isWeekend(d: Date): boolean {
@@ -23,7 +24,7 @@ function isWeekend(d: Date): boolean {
   return dow === 0 || dow === 6;
 }
 
-export function CalendarCell({ day, currentMonth, events }: CalendarCellProps) {
+export function CalendarCell({ day, currentMonth, events, onEventDrop }: CalendarCellProps) {
   const inCurrentMonth = isSameMonth(day, currentMonth);
   const today = isToday(day);
   const weekend = isWeekend(day);
@@ -47,9 +48,33 @@ export function CalendarCell({ day, currentMonth, events }: CalendarCellProps) {
       className={`
         min-h-[110px] border-b border-r border-slate-200 transition-colors overflow-visible
         ${cellBg}
-        ${weekend ? "cursor-not-allowed select-none" : ""}
+        ${weekend ? "cursor-not-allowed select-none" : "hover:bg-slate-100/30"}
       `}
       title={weekend ? "Sábado y domingo no son días hábiles" : undefined}
+      onDragOver={(e) => {
+        if (!weekend) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+      }}
+      onDrop={(e) => {
+        if (weekend || !onEventDrop) return;
+        e.preventDefault();
+        try {
+          const data = e.dataTransfer.getData("application/json");
+          if (!data) return;
+          const payload = JSON.parse(data);
+          if (payload.eventId && payload.draggedFromDate) {
+            const dragDate = new Date(payload.draggedFromDate);
+            const diff = differenceInDays(day, dragDate);
+            if (diff !== 0) {
+              onEventDrop(payload.eventId, diff);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to parse event drop payload", error);
+        }
+      }}
     >
       {/* Day number — top right */}
       <div className="relative z-10 flex justify-end pr-1 pt-0.5 mb-1">
@@ -66,6 +91,7 @@ export function CalendarCell({ day, currentMonth, events }: CalendarCellProps) {
           <EventChip
             key={event.id}
             event={event}
+            day={day}
             isStart={isEventStart(event, day)}
             isEnd={isEventEnd(event, day)}
             isResuming={isResumingAfterWeekend(event, day)}

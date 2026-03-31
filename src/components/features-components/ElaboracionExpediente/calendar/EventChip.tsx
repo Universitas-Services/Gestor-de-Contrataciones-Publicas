@@ -6,6 +6,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 
 interface EventChipProps {
   event: IEvent;
+  /** The specific day (cell) this chip is being rendered in */
+  day: Date;
   /** This day is the first day of the event (actual startDate) */
   isStart: boolean;
   /** This day is the last day of the event (actual endDate) */
@@ -37,7 +39,7 @@ interface EventChipProps {
  *   var(--cal-disponibilidad), var(--cal-evaluacion), etc.
  * color-mix() provides semi-transparency without hardcoding values.
  */
-export function EventChip({ event, isStart, isEnd, isResuming, isPausing }: EventChipProps) {
+export function EventChip({ event, day, isStart, isEnd, isResuming, isPausing }: EventChipProps) {
   const c = `var(--${event.colorVar})`;
 
   // ── Left side: start of a visual segment ────────────────────────────
@@ -83,7 +85,15 @@ export function EventChip({ event, isStart, isEnd, isResuming, isPausing }: Even
       <TooltipTrigger asChild>
         <div
           style={style}
-          className="h-[18px] leading-[18px] px-1.5 text-[9px] font-semibold truncate cursor-pointer"
+          className="h-[18px] leading-[18px] px-1.5 text-[9px] font-semibold truncate cursor-pointer hover:opacity-80 transition-opacity"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData(
+              "application/json",
+              JSON.stringify({ eventId: event.id, draggedFromDate: day.toISOString() })
+            );
+            e.dataTransfer.effectAllowed = "move";
+          }}
         >
           {/* Label only on the true first day of the event */}
           {isStart ? event.title : "\u00a0"}

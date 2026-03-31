@@ -99,14 +99,13 @@ const PLIEGO_FIN = "fechaFinDisponibilidadPliego";
 
 function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
   const events: IEvent[] = [];
-  let evIdx = 1;
 
   // Pliego: evento de rango inicio→fin
   const pInicio = cronograma[PLIEGO_INICIO];
   const pFin = cronograma[PLIEGO_FIN];
   if (pInicio && pFin) {
     events.push({
-      id: "ev-pliego",
+      id: "rango-pliego",
       title: "Disponibilidad del Pliego",
       startDate: (pInicio as string).split("T")[0],
       endDate: (pFin as string).split("T")[0],
@@ -127,7 +126,7 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
     .forEach(([key, value]) => {
       const dateStr = (value as string).split("T")[0];
       events.push({
-        id: `ev-${evIdx++}`,
+        id: key,
         title: EVENT_TITLES[key] || key,
         startDate: dateStr,
         endDate: dateStr,
@@ -311,6 +310,55 @@ export function CrearExpedienteWizard() {
     }
   };
 
+  // ─── Drag & Drop Event ──────────────────────────────────────────
+  const handleEventDrop = (eventId: string, diffInDays: number) => {
+    if (!cronogramaData || diffInDays === 0) return;
+
+    const addDays = (dateStr: string, days: number): string => {
+      const date = new Date(`${dateStr.split("T")[0]}T00:00:00`);
+      date.setDate(date.getDate() + days);
+      return date.toISOString().split("T")[0];
+    };
+
+    const isWeekend = (dateStr: string): boolean => {
+      const date = new Date(`${dateStr.split("T")[0]}T00:00:00`);
+      const dow = date.getDay();
+      return dow === 0 || dow === 6;
+    };
+
+    const newCronograma = { ...cronogramaData };
+
+    if (eventId === "rango-pliego") {
+      const pInicio = newCronograma[PLIEGO_INICIO] as string;
+      const pFin = newCronograma[PLIEGO_FIN] as string;
+      if (!pInicio || !pFin) return;
+
+      const newInicio = addDays(pInicio, diffInDays);
+      const newFin = addDays(pFin, diffInDays);
+
+      if (isWeekend(newInicio) || isWeekend(newFin)) {
+        toast.error("Las fechas del Pliego no pueden caer en fin de semana.");
+        return;
+      }
+
+      (newCronograma as Record<string, unknown>)[PLIEGO_INICIO] = newInicio + "T00:00:00.000Z";
+      (newCronograma as Record<string, unknown>)[PLIEGO_FIN] = newFin + "T00:00:00.000Z";
+    } else {
+      const currentVal = (newCronograma as Record<string, unknown>)[eventId] as string;
+      if (!currentVal) return;
+
+      const newVal = addDays(currentVal, diffInDays);
+      if (isWeekend(newVal)) {
+        toast.error("La fecha no puede caer en fin de semana.");
+        return;
+      }
+      (newCronograma as Record<string, unknown>)[eventId] = newVal + "T00:00:00.000Z";
+    }
+
+    setCronogramaData(newCronograma);
+    setCalendarEvents(cronogramaToEvents(newCronograma as Record<string, unknown>));
+  };
+
   // ─── Render ───────────────────────────────────────────────────────
   const { title, description } = STEP_META[currentStep - 1];
 
@@ -353,6 +401,7 @@ export function CrearExpedienteWizard() {
             initialMonth={calendarInitialMonth}
             onBack={handleStep4Back}
             onFinish={handleFinish}
+            onEventDrop={handleEventDrop}
             isLoading={isLoading}
           />
         )}

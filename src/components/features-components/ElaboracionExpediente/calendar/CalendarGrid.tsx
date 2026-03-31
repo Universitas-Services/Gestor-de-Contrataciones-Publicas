@@ -10,9 +10,10 @@ const DAY_HEADERS = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERN
 interface CalendarGridProps {
   currentMonth: Date;
   events: IEvent[];
+  onEventDrop?: (eventId: string, diffInDays: number) => void;
 }
 
-export function CalendarGrid({ currentMonth, events }: CalendarGridProps) {
+export function CalendarGrid({ currentMonth, events, onEventDrop }: CalendarGridProps) {
   // Build the full grid: from start of the first week to end of the last week of the month
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -38,7 +39,13 @@ export function CalendarGrid({ currentMonth, events }: CalendarGridProps) {
       {/* Calendar grid — overflow:visible so event bars can bleed across cell borders */}
       <div className="grid grid-cols-7 overflow-visible">
         {days.map((day, idx) => (
-          <CalendarCell key={idx} day={day} currentMonth={currentMonth} events={events} />
+          <CalendarCell
+            key={idx}
+            day={day}
+            currentMonth={currentMonth}
+            events={events}
+            onEventDrop={onEventDrop}
+          />
         ))}
       </div>
     </div>
