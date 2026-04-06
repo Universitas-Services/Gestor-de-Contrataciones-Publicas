@@ -32,6 +32,15 @@ export interface MaximaAutoridadResponse {
   message: string;
 }
 
+export interface MaximaAutoridadRecord extends MaximaAutoridadPayload {
+  id: string;
+  enteId: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  version: number;
+}
+
 // --- Endpoints ---
 
 /**
@@ -68,7 +77,7 @@ export const registrarMaximaAutoridad = async (
  * GET /maxima-autoridad
  * Lista todas las Máximas Autoridades del Ente actual.
  */
-export const listarMaximasAutoridades = async (): Promise<Record<string, unknown>[]> => {
+export const listarMaximasAutoridades = async (): Promise<MaximaAutoridadRecord[]> => {
   const token = await getServerToken();
   const response = await fetch(`${API_URL}/maxima-autoridad`, {
     method: "GET",
@@ -83,7 +92,8 @@ export const listarMaximasAutoridades = async (): Promise<Record<string, unknown
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData?.message ?? "Error al listar las Máximas Autoridades");
   }
-  return response.json();
+  const json = await response.json();
+  return json.data || json;
 };
 
 /**
@@ -92,7 +102,7 @@ export const listarMaximasAutoridades = async (): Promise<Record<string, unknown
  */
 export const obtenerMaximaAutoridad = async (
   id: string | number
-): Promise<Record<string, unknown>> => {
+): Promise<MaximaAutoridadRecord> => {
   const token = await getServerToken();
   const response = await fetch(`${API_URL}/maxima-autoridad/${id}`, {
     method: "GET",
@@ -106,7 +116,8 @@ export const obtenerMaximaAutoridad = async (
   if (!response.ok) {
     throw new Error("Error al obtener la Máxima Autoridad");
   }
-  return response.json();
+  const json = await response.json();
+  return json.data || json;
 };
 
 /**

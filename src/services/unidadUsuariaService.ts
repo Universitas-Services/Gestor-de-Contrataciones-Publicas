@@ -23,6 +23,15 @@ export interface UnidadUsuariaResponse {
   message: string;
 }
 
+export interface UnidadUsuariaRecord extends UnidadUsuariaPayload {
+  id: string;
+  enteId: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  version: number;
+}
+
 // --- Endpoints ---
 
 /**
@@ -59,7 +68,7 @@ export const registrarUnidadUsuaria = async (
  * GET /unidad-usuaria
  * Lista todas las Unidades Usuarias del Ente actual.
  */
-export const listarUnidadesUsuarias = async (): Promise<Record<string, unknown>[]> => {
+export const listarUnidadesUsuarias = async (): Promise<UnidadUsuariaRecord[]> => {
   const token = await getServerToken();
   const response = await fetch(`${API_URL}/unidad-usuaria`, {
     method: "GET",
@@ -74,16 +83,15 @@ export const listarUnidadesUsuarias = async (): Promise<Record<string, unknown>[
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData?.message ?? "Error al listar las Unidades Usuarias");
   }
-  return response.json();
+  const json = await response.json();
+  return json.data || json;
 };
 
 /**
  * GET /unidad-usuaria/{id}
  * Obtiene los detalles de la Unidad Usuaria.
  */
-export const obtenerUnidadUsuaria = async (
-  id: string | number
-): Promise<Record<string, unknown>> => {
+export const obtenerUnidadUsuaria = async (id: string | number): Promise<UnidadUsuariaRecord> => {
   const token = await getServerToken();
   const response = await fetch(`${API_URL}/unidad-usuaria/${id}`, {
     method: "GET",
@@ -97,7 +105,8 @@ export const obtenerUnidadUsuaria = async (
   if (!response.ok) {
     throw new Error("Error al obtener la Unidad Usuaria");
   }
-  return response.json();
+  const json = await response.json();
+  return json.data || json;
 };
 
 /**

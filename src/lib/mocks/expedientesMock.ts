@@ -16,20 +16,20 @@ export const CRONOGRAMA_EJEMPLO: IEvent[] = [
     title: "Disponibilidad del Pliego",
     startDate: "2026-03-02",
     endDate: "2026-03-07",
-    color: "orange",
+    colorVar: "orange",
   },
   {
     id: "ev-2",
     title: "Apertura de Actividades",
     startDate: "2026-03-05",
     endDate: "2026-03-05",
-    color: "green",
+    colorVar: "green",
   },
   {
     id: "ev-3",
     title: "Modificaciones al Pliego",
     startDate: "2026-03-09",
     endDate: "2026-03-09",
-    color: "blue",
+    colorVar: "blue",
   },
 ];

@@ -106,7 +106,7 @@ export function MaximaAutoridadForm() {
               cargoOficialAutoridad: data.cargoOficialAutoridad || "",
               datosDesignacionAutoridad: data.datosDesignacionAutoridad || "",
               leyesAtribucionesSuscribirAutoridad: data.leyesAtribucionesSuscribirAutoridad || "",
-              esDelegado: data.esDelegado ?? false,
+              esDelegado: !!data.esDelegado,
               vigente: data.vigente ?? true,
               nombreCompletoDelegado: data.nombreCompletoDelegado || "",
               cedulaDelegado: data.cedulaDelegado || "",
