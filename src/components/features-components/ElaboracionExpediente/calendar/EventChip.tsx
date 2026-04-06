@@ -85,9 +85,15 @@ export function EventChip({ event, day, isStart, isEnd, isResuming, isPausing }:
       <TooltipTrigger asChild>
         <div
           style={style}
-          className="h-[18px] leading-[18px] px-1.5 text-[9px] font-semibold truncate cursor-pointer hover:opacity-80 transition-opacity"
-          draggable
+          className={`h-[18px] leading-[18px] px-1.5 text-[9px] font-semibold truncate transition-opacity ${
+            event.readonly ? "cursor-default" : "cursor-pointer hover:opacity-80"
+          }`}
+          draggable={!event.readonly}
           onDragStart={(e) => {
+            if (event.readonly) {
+              e.preventDefault();
+              return;
+            }
             e.dataTransfer.setData(
               "application/json",
               JSON.stringify({ eventId: event.id, draggedFromDate: day.toISOString() })

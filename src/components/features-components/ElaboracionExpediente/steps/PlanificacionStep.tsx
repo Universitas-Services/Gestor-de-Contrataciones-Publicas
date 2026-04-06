@@ -13,6 +13,8 @@ interface PlanificacionStepProps {
   onFinish: () => void;
   onEventDrop?: (eventId: string, diffInDays: number) => void;
   isLoading?: boolean;
+  /** Oculta los botones de navegación (para embeber en vista de detalle) */
+  hideButtons?: boolean;
 }
 
 // ─── 10 items = exactamente 5 por fila × 2 filas ─────────────────────
@@ -58,6 +60,7 @@ export function PlanificacionStep({
   onFinish,
   onEventDrop,
   isLoading = false,
+  hideButtons = false,
 }: PlanificacionStepProps) {
   return (
     <div className="space-y-6">
@@ -77,33 +80,35 @@ export function PlanificacionStep({
         </div>
       )}
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-4 border-t border-slate-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          disabled={isLoading}
-          className="border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold px-8 h-11 rounded-md cursor-pointer"
-        >
-          Atrás
-        </Button>
-        <Button
-          type="button"
-          onClick={onFinish}
-          disabled={isLoading}
-          className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creando expediente...
-            </>
-          ) : (
-            "Crear Expediente"
-          )}
-        </Button>
-      </div>
+      {/* Navigation — se oculta en modo detalle */}
+      {!hideButtons && (
+        <div className="flex justify-between pt-4 border-t border-slate-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            disabled={isLoading}
+            className="border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold px-8 h-11 rounded-md cursor-pointer"
+          >
+            Atrás
+          </Button>
+          <Button
+            type="button"
+            onClick={onFinish}
+            disabled={isLoading}
+            className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creando expediente...
+              </>
+            ) : (
+              "Crear Expediente"
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

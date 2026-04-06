@@ -47,8 +47,83 @@ export interface EditarExpedientePayload {
   fechaLlamadoParticipar?: string;
 }
 
+// ─── Sub-types del GET /expedientes/{id} ──────────────────────────
+
+export interface CronogramaData {
+  id: string;
+  expedienteId: string;
+  fechaLlamadoParticipar: string;
+  fechaInicioDisponibilidadPliego: string;
+  fechaFinDisponibilidadPliego: string;
+  fechaSolicitudAclaratorias: string;
+  fechaRespuestaAclaratorias: string;
+  fechaModificacionPliego: string;
+  fechaActoRecepcionAperturaSobres: string;
+  fechaLimiteEvaluacion: string;
+  fechaLimiteAdjudicacion: string;
+  fechaLimiteNotificacion: string;
+  fechaLimiteGarantias: string;
+  fechaLimiteFirmaContrato: string;
+}
+
+export interface MiembroComision {
+  id: string;
+  nombreCompletoMiembro: string;
+  cedulaMiembro: string;
+  tipoMiembro: string;
+  areaRepresentacion: string;
+}
+
+export interface ComisionData {
+  id: string;
+  denominacionComision: string;
+  datosDesignacionComision: string;
+  comisionCertificada: boolean;
+  activa: boolean;
+  miembros: MiembroComision[];
+}
+
+export interface UnidadUsuariaData {
+  id: string;
+  nombreUnidadUsuaria: string;
+  nombreResponsableUnidadUsuaria: string;
+  cargoResponsableUnidadUsuaria: string;
+  activa: boolean;
+}
+
+export interface AutoridadData {
+  id: string;
+  nombreCompletoAutoridad: string;
+  cedulaAutoridad: string;
+  cargoOficialAutoridad: string;
+  esDelegado: boolean;
+  vigente: boolean;
+  nombreCompletoDelegado?: string;
+  cargoOficialDelegado?: string;
+}
+
+export interface ModalidadData {
+  id: string;
+  tipoContratacion: string;
+  montoEstimadoBs: string;
+  montoEstimadoDolar: string;
+  valorUcauBase: string;
+  modalidadSeleccion: string;
+}
+
 export interface ExpedienteResponse {
   id: string;
+  descripcionObjeto: string;
+  codigoNomenclatura: string;
+  estatusProceso: string;
+  autoridadFirmaComoDelegado: boolean;
+  createdAt: string;
+  updatedAt: string;
+  modalidad?: ModalidadData;
+  comision?: ComisionData;
+  unidadUsuaria?: UnidadUsuariaData;
+  autoridad?: AutoridadData;
+  cronograma?: CronogramaData;
   [key: string]: unknown;
 }
 
@@ -179,13 +254,44 @@ export const guardarCronograma = async (
 ): Promise<ExpedienteResponse> => {
   const token = await getServerToken();
 
+  // Validate and strip extra properties like id, createdAt, etc. that the backend rejects.
+  const {
+    fechaLlamadoParticipar,
+    fechaInicioDisponibilidadPliego,
+    fechaFinDisponibilidadPliego,
+    fechaSolicitudAclaratorias,
+    fechaRespuestaAclaratorias,
+    fechaModificacionPliego,
+    fechaActoRecepcionAperturaSobres,
+    fechaLimiteEvaluacion,
+    fechaLimiteAdjudicacion,
+    fechaLimiteNotificacion,
+    fechaLimiteGarantias,
+    fechaLimiteFirmaContrato,
+  } = payload as any;
+
+  const validPayload = {
+    fechaLlamadoParticipar,
+    fechaInicioDisponibilidadPliego,
+    fechaFinDisponibilidadPliego,
+    fechaSolicitudAclaratorias,
+    fechaRespuestaAclaratorias,
+    fechaModificacionPliego,
+    fechaActoRecepcionAperturaSobres,
+    fechaLimiteEvaluacion,
+    fechaLimiteAdjudicacion,
+    fechaLimiteNotificacion,
+    fechaLimiteGarantias,
+    fechaLimiteFirmaContrato,
+  };
+
   const response = await fetch(`${API_URL}/expedientes/${id}/cronograma`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(validPayload),
   });
 
   const result = await handleResponse<ExpedienteResponse>(

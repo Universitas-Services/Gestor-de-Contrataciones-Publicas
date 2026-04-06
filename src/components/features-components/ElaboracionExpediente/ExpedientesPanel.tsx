@@ -478,9 +478,11 @@ function ExpedienteRow({
       {/* Acción */}
       <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center gap-3">
-          <button className="text-slate-500 hover:text-navy transition-colors cursor-pointer">
-            <Eye className="w-4.5 h-4.5" />
-          </button>
+          <Link href={`/elaboracion-expediente/${expediente.id}`}>
+            <button className="text-slate-500 hover:text-navy transition-colors cursor-pointer">
+              <Eye className="w-4.5 h-4.5" />
+            </button>
+          </Link>
           <button
             onClick={onDelete}
             className="text-red-400 hover:text-red-600 transition-colors cursor-pointer"

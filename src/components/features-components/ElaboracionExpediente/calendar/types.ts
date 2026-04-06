@@ -10,4 +10,6 @@ export interface IEvent {
    * Used as: var(--color-<colorVar>)
    */
   colorVar: string;
+  /** If true, the event cannot be moved via drag and drop */
+  readonly?: boolean;
 }

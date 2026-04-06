@@ -29,11 +29,17 @@ import {
   guardarCronograma,
   obtenerExpediente,
 } from "@/services/expedienteService";
+import type { ExpedienteResponse } from "@/services/expedienteService";
+import {
+  isFechaEditable,
+  moverFechaCronograma,
+  calcularFechasSugeridas,
+} from "@/lib/utils/cronogramaUtils";
 import type { IEvent } from "./calendar/types";
 
 // ─── Step meta ───────────────────────────────────────────────────────
 
-const STEP_META = [
+const STEP_META_CREAR = [
   {
     title: "Creación de nuevo expediente",
     description:
@@ -53,6 +59,22 @@ const STEP_META = [
     title: "Planificación del procedimiento",
     description:
       "Visualice y ajuste los lapsos del procedimiento. Arrastre los eventos para modificar las fechas respetando las validaciones legales.",
+  },
+];
+
+const STEP_META_EDITAR = [
+  {
+    title: "Editar datos del expediente",
+    description:
+      "Modifique los datos básicos del procedimiento. El cronograma se edita directamente desde la vista de detalle.",
+  },
+  {
+    title: "Análisis de modalidad",
+    description: "Verifique los datos financieros actualizados.",
+  },
+  {
+    title: "Configuración de actores",
+    description: "Actualice las autoridades que intervendrán en el procedimiento.",
   },
 ];
 
@@ -110,6 +132,7 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
       startDate: (pInicio as string).split("T")[0],
       endDate: (pFin as string).split("T")[0],
       colorVar: "cal-disponibilidad",
+      readonly: true,
     });
   }
 
@@ -131,21 +154,39 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
         startDate: dateStr,
         endDate: dateStr,
         colorVar: EVENT_COLOR_VARS[key] || "cal-llamado",
+        readonly: !isFechaEditable(key),
       });
     });
 
   return events;
 }
 
+// ─── Props ───────────────────────────────────────────────────────────
+
+export interface CrearExpedienteWizardProps {
+  /** ID del expediente ya existente (modo edición) */
+  expedienteId?: string;
+  /** Datos precargados del expediente (modo edición) */
+  datosIniciales?: ExpedienteResponse;
+  /** Activa el modo edición (omite el paso 4 de cronograma) */
+  modoEdicion?: boolean;
+}
+
 // ─── Component ───────────────────────────────────────────────────────
 
-export function CrearExpedienteWizard() {
+export function CrearExpedienteWizard({
+  expedienteId: expedienteIdProp,
+  datosIniciales,
+  modoEdicion = false,
+}: CrearExpedienteWizardProps = {}) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Borrador creado en paso 2 "Confirmar"
-  const [expedienteId, setExpedienteId] = useState<string | null>(null);
+  const STEP_META = modoEdicion ? STEP_META_EDITAR : STEP_META_CREAR;
+
+  // En modo edición el ID llega como prop, en creación se recibe del servidor
+  const [expedienteId, setExpedienteId] = useState<string | null>(expedienteIdProp ?? null);
 
   // Datos calculados para el paso 2 (se recrean en cada paso 1 → 2)
   const [analisisData, setAnalisisData] = useState<AnalisisModalidad | null>(null);
@@ -159,11 +200,17 @@ export function CrearExpedienteWizard() {
   const datosBasicosForm = useForm<DatosBasicosFormValues>({
     resolver: zodResolver(datosBasicosSchema),
     defaultValues: {
-      descripcionObjeto: "",
-      codigoNomenclatura: "",
-      tipoContratacion: undefined,
-      montoEstimadoBs: undefined,
-      montoEstimadoDolar: undefined,
+      descripcionObjeto: datosIniciales?.descripcionObjeto ?? "",
+      codigoNomenclatura: datosIniciales?.codigoNomenclatura ?? "",
+      tipoContratacion:
+        (datosIniciales?.modalidad
+          ?.tipoContratacion as DatosBasicosFormValues["tipoContratacion"]) ?? undefined,
+      montoEstimadoBs: datosIniciales?.modalidad?.montoEstimadoBs
+        ? parseFloat(datosIniciales.modalidad.montoEstimadoBs)
+        : undefined,
+      montoEstimadoDolar: datosIniciales?.modalidad?.montoEstimadoDolar
+        ? parseFloat(datosIniciales.modalidad.montoEstimadoDolar)
+        : undefined,
     },
   });
 
@@ -194,13 +241,13 @@ export function CrearExpedienteWizard() {
     goToStep(1);
   };
 
-  // ─── Paso 2 "Confirmar" — POST /expedientes/borrador ────────────
+  // ─── Paso 2 "Confirmar" — POST borrador o PATCH si ya existe ────
   const handleStep2Confirm = async () => {
     setIsLoading(true);
     try {
       const formData = datosBasicosForm.getValues();
 
-      // Si ya existe un expediente, lo editamos en lugar de crear otro
+      // Si ya existe un expediente (creación que retrocedió, o modo edición), usamos PATCH
       if (expedienteId) {
         await editarExpediente(expedienteId, {
           descripcionObjeto: formData.descripcionObjeto,
@@ -213,6 +260,7 @@ export function CrearExpedienteWizard() {
         });
         goToStep(3);
       } else {
+        // Modo creación: POST para crear el borrador
         const result = await crearExpedienteBorrador(formData, VALOR_UCAU_ACTUAL);
 
         if (!result?.id) {
@@ -232,7 +280,7 @@ export function CrearExpedienteWizard() {
     }
   };
 
-  // ─── Paso 3 "Crear Cronograma" — PATCH completo ─────────────────
+  // ─── Paso 3 "Siguiente" — PATCH completo + navegación ───────────
   const handleStep3Next = async (actores: ConfiguracionActoresFormValues) => {
     if (!expedienteId) {
       toast.error("No se encontró el ID del expediente. Vuelva al paso anterior.");
@@ -258,19 +306,30 @@ export function CrearExpedienteWizard() {
         fechaLlamadoParticipar: actores.fechaLlamadoParticipar,
       });
 
-      // Obtener el expediente actualizado (con cronograma generado por el backend)
+      // ── Modo edición: volver al detalle sin pasar al cronograma ──
+      if (modoEdicion) {
+        toast.success("Expediente actualizado correctamente.");
+        router.push(`/elaboracion-expediente/${expedienteId}`);
+        return;
+      }
+
+      // ── Modo creación: cargar cronograma del backend y avanzar ───
       const expActualizado = await obtenerExpediente(expedienteId);
-      const cronogramaGenerado = expActualizado.cronograma as CronogramaFormValues;
+      let cronogramaGenerado = expActualizado.cronograma as CronogramaFormValues;
 
       if (!cronogramaGenerado) {
         throw new Error("El servidor no devolvió el cronograma calculado.");
       }
 
-      setCronogramaData(cronogramaGenerado);
+      // Parche: sobrescribir con cascada lógica del frontend
+      const fechasLogicasFront = calcularFechasSugeridas(
+        actores.fechaLlamadoParticipar,
+        fd.tipoContratacion
+      );
+      cronogramaGenerado = { ...cronogramaGenerado, ...fechasLogicasFront };
 
-      // Transformar a eventos para el calendario visual
-      const events = cronogramaToEvents(cronogramaGenerado);
-      setCalendarEvents(events);
+      setCronogramaData(cronogramaGenerado);
+      setCalendarEvents(cronogramaToEvents(cronogramaGenerado));
 
       const fechaInicio = new Date(`${actores.fechaLlamadoParticipar}T00:00:00`);
       setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
@@ -289,9 +348,7 @@ export function CrearExpedienteWizard() {
     goToStep(3);
   };
 
-  // ─── Paso 4 "Guardar Cronograma" ─────────────────────────────────
-  // Recibe eventos editados o no, pero actualmente se guarda el cronograma calculado
-  // por simplificación del calendario, se mantiene cronogramaData.
+  // ─── Paso 4 "Guardar Cronograma" — PUT cronograma → detalle ──────
   const handleFinish = async () => {
     if (!expedienteId || !cronogramaData) {
       toast.error("Error interno: ID del expediente o cronograma perdidos.");
@@ -302,7 +359,8 @@ export function CrearExpedienteWizard() {
     try {
       await guardarCronograma(expedienteId, cronogramaData);
       toast.success("¡Cronograma guardado! Expediente creado exitosamente.");
-      router.push("/elaboracion-expediente");
+      // Redirigir al detalle del expediente recién creado
+      router.push(`/elaboracion-expediente/${expedienteId}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
     } finally {
@@ -314,53 +372,26 @@ export function CrearExpedienteWizard() {
   const handleEventDrop = (eventId: string, diffInDays: number) => {
     if (!cronogramaData || diffInDays === 0) return;
 
-    const addDays = (dateStr: string, days: number): string => {
-      const date = new Date(`${dateStr.split("T")[0]}T00:00:00`);
-      date.setDate(date.getDate() + days);
-      return date.toISOString().split("T")[0];
-    };
+    const tipo = datosBasicosForm.getValues("tipoContratacion");
+    const result = moverFechaCronograma(cronogramaData, eventId, diffInDays, tipo);
 
-    const isWeekend = (dateStr: string): boolean => {
-      const date = new Date(`${dateStr.split("T")[0]}T00:00:00`);
-      const dow = date.getDay();
-      return dow === 0 || dow === 6;
-    };
-
-    const newCronograma = { ...cronogramaData };
-
-    if (eventId === "rango-pliego") {
-      const pInicio = newCronograma[PLIEGO_INICIO] as string;
-      const pFin = newCronograma[PLIEGO_FIN] as string;
-      if (!pInicio || !pFin) return;
-
-      const newInicio = addDays(pInicio, diffInDays);
-      const newFin = addDays(pFin, diffInDays);
-
-      if (isWeekend(newInicio) || isWeekend(newFin)) {
-        toast.error("Las fechas del Pliego no pueden caer en fin de semana.");
-        return;
-      }
-
-      (newCronograma as Record<string, unknown>)[PLIEGO_INICIO] = newInicio + "T00:00:00.000Z";
-      (newCronograma as Record<string, unknown>)[PLIEGO_FIN] = newFin + "T00:00:00.000Z";
-    } else {
-      const currentVal = (newCronograma as Record<string, unknown>)[eventId] as string;
-      if (!currentVal) return;
-
-      const newVal = addDays(currentVal, diffInDays);
-      if (isWeekend(newVal)) {
-        toast.error("La fecha no puede caer en fin de semana.");
-        return;
-      }
-      (newCronograma as Record<string, unknown>)[eventId] = newVal + "T00:00:00.000Z";
+    if (!result.success) {
+      if (result.errorMsg) toast.error(result.errorMsg);
+      return;
     }
 
-    setCronogramaData(newCronograma);
-    setCalendarEvents(cronogramaToEvents(newCronograma as Record<string, unknown>));
+    if (result.warningMsg) {
+      toast.warning(result.warningMsg, { duration: 8000 });
+    }
+
+    if (result.newCronograma) {
+      setCronogramaData(result.newCronograma as CronogramaFormValues);
+      setCalendarEvents(cronogramaToEvents(result.newCronograma as Record<string, unknown>));
+    }
   };
 
   // ─── Render ───────────────────────────────────────────────────────
-  const { title, description } = STEP_META[currentStep - 1];
+  const { title, description } = STEP_META[currentStep - 1] ?? STEP_META[0];
 
   return (
     <Card className="mx-auto w-full max-w-4xl shadow-sm border-0 mb-16">
@@ -395,7 +426,8 @@ export function CrearExpedienteWizard() {
           <ConfiguracionActoresStep onFinish={handleStep3Next} isLoading={isLoading} />
         )}
 
-        {currentStep === 4 && (
+        {/* Paso 4 solo se muestra en modo creación */}
+        {currentStep === 4 && !modoEdicion && (
           <PlanificacionStep
             events={calendarEvents}
             initialMonth={calendarInitialMonth}
