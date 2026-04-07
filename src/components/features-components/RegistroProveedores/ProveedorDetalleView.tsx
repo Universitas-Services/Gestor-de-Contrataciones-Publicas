@@ -19,6 +19,7 @@ import {
   FileSearch,
 } from "lucide-react";
 import { IoPersonSharp } from "react-icons/io5";
+import { IoIosBriefcase, IoIosHammer, IoIosPrint } from "react-icons/io";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -116,6 +117,13 @@ export function ProveedorDetalleView({ id }: { id: string }) {
     return "0%";
   };
 
+  const getSpecialtyIcon = (area: string) => {
+    const a = area?.toUpperCase();
+    if (a === "OBRAS") return <IoIosHammer className="w-20 h-20 text-tipo-obras" />;
+    if (a === "BIENES") return <IoIosPrint className="w-20 h-20 text-tipo-bienes" />;
+    return <IoIosBriefcase className="w-20 h-20 text-tipo-servicios" />;
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -139,9 +147,7 @@ export function ProveedorDetalleView({ id }: { id: string }) {
       {/* HEADER BLOCK */}
       <Card className="p-6 rounded-xl border border-border bg-white shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          <div className="w-28 h-28 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200">
-            <Building2 className="w-12 h-12 text-navy/40" />
-          </div>
+          <div className="flex-shrink-0">{getSpecialtyIcon(provider.areaEspecialidad)}</div>
 
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
@@ -370,7 +376,7 @@ export function ProveedorDetalleView({ id }: { id: string }) {
         </div>
 
         {/* LADO DERECHO */}
-        <div className="lg:col-span-1 flex flex-col gap-6 w-full">
+        <div className="lg:col-span-1 flex flex-col gap-4 w-full">
           <h2 className="text-lg font-extrabold text-navy">Proveedor verificado</h2>
           <Card className="p-5 rounded-xl border-border shadow-sm flex flex-col bg-white">
             <div className="flex justify-between items-start mb-6">
@@ -397,13 +403,13 @@ export function ProveedorDetalleView({ id }: { id: string }) {
             )}
           </Card>
 
-          <h2 className="text-lg font-extrabold text-navy mt-2">Documentación para validación</h2>
+          <h2 className="text-lg font-extrabold text-navy">Documentación para validación</h2>
           <div className="flex flex-col gap-3">
             {provider.documentos && provider.documentos.length > 0 ? (
               provider.documentos.map((doc) => (
                 <Card
                   key={doc.id}
-                  className="p-3.5 rounded-xl border-border shadow-sm flex items-center gap-3 hover:border-navy transition-colors cursor-pointer group bg-white"
+                  className="p-5 rounded-xl border-border shadow-sm flex items-center gap-4 hover:border-navy transition-colors cursor-pointer group bg-white"
                   onClick={() => {
                     setSelectedDocument(doc);
                     setIsPreviewOpen(true);
@@ -429,21 +435,6 @@ export function ProveedorDetalleView({ id }: { id: string }) {
               </div>
             )}
           </div>
-
-          <h2 className="text-lg font-extrabold text-navy mt-2">Ubicación</h2>
-          <Card className="p-5 rounded-xl border-border shadow-sm bg-white">
-            <div className="w-full h-32 bg-slate-50 rounded-lg flex items-center justify-center mb-4 text-slate-300 border border-slate-100">
-              <MapPin className="w-8 h-8 opacity-40" />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-bold text-navy text-sm">
-                {provider.municipio}, {provider.estado}
-              </span>
-              <span className="text-xs text-muted-foreground italic">
-                {provider.parroquia} • Venezuela
-              </span>
-            </div>
-          </Card>
         </div>
       </div>
 

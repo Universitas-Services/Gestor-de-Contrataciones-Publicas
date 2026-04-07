@@ -85,7 +85,6 @@ const TIPOS_DOCUMENTO = [
   { value: "doc_estados_financieros", label: "Resumen informativo RNC" },
   { value: "doc_solvencia_laboral", label: "Solvencia Laboral" },
   { value: "doc_licencia_municipal", label: "Licencia de funcionamiento Municipal" },
-  { value: "doc_otro", label: "Otro" },
 ] as const;
 
 interface NuevoProveedorFormProps {
@@ -113,7 +112,7 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
   const [phoneBody, setPhoneBody] = useState("");
 
   // Estado Local para Documentos
-  const [tipoDocActual, setTipoDocActual] = useState("doc_rif");
+  const [tipoDocActual, setTipoDocActual] = useState("");
   const [obsActual, setObsActual] = useState("");
 
   const [documentos, setDocumentos] = useState<
@@ -1213,6 +1212,15 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                       </SelectContent>
                     </Select>
                   </FormItem>
+
+                  {/* Mensaje Informativo sobre Límite de Tamaño */}
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-6 shadow-sm">
+                    <AlertCircle className="h-4 w-4 text-blue-600 shrink-0" />
+                    <p className="text-xs text-blue-800 font-medium leading-tight">
+                      <strong>Nota importante:</strong> La suma total de los 7 archivos a cargar no
+                      puede exceder <strong>1 MB</strong>.
+                    </p>
+                  </div>
 
                   {/* Dropzone Simulada */}
                   <div
