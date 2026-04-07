@@ -2,9 +2,11 @@
  * Tipos para el módulo de Elaboración de Expediente de Selección de Contratista
  */
 
-// ─── Enums / Union Types ────────────────────────────────────────────
+// ─── Enums / Union Types (alineados con backend) ────────────────────
 
 export type TipoContratacion = "Bienes" | "Servicios" | "Obras";
+
+export type TipoContratacionBackend = "OBRAS" | "BIENES" | "SERVICIOS";
 
 export type FaseExpediente = "Fase 1" | "Fase 2" | "Fase 3" | "Fase 4";
 
@@ -14,6 +16,14 @@ export type ModalidadContratacion =
   | "Consulta de Precios"
   | "Concurso Cerrado";
 
+// ─── Mapeo display ↔ backend ────────────────────────────────────────
+
+export const TIPO_CONTRATACION_MAP: Record<TipoContratacionBackend, TipoContratacion> = {
+  OBRAS: "Obras",
+  BIENES: "Bienes",
+  SERVICIOS: "Servicios",
+};
+
 // ─── Interfaces ─────────────────────────────────────────────────────
 
 export interface Expediente {
@@ -21,13 +31,14 @@ export interface Expediente {
   nomenclatura: string;
   objetoContrato: string;
   tipo: TipoContratacion;
-  modalidad: ModalidadContratacion;
+  modalidad: string;
   progreso: number; // 0-100
   fase: FaseExpediente;
 }
 
 // ─── Form Types ─────────────────────────────────────────────────────
 
+/** Legacy form type – kept for backward compat, prefer Zod inferred types */
 export interface DatosBasicosForm {
   objetoProcedimiento: string;
   nomenclatura: string;
@@ -38,7 +49,7 @@ export interface DatosBasicosForm {
 
 export interface AnalisisModalidad {
   objetoProceso: string;
-  tipoContratacion: TipoContratacion;
+  tipoContratacion: string;
   montoUCAU: number;
   montoBs: number;
   montoDolares: number;
@@ -51,4 +62,11 @@ export interface ConfiguracionActoresForm {
   comisionContrataciones: string;
   unidadUsuaria: string;
   fechaLlamado: Date | null;
+}
+
+// ─── Actor option types (para los selects del Paso 3) ───────────────
+
+export interface ActorOption {
+  value: string;
+  label: string;
 }

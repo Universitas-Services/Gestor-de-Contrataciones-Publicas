@@ -18,20 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
-import { TIPOS_CONTRATACION_OPTIONS } from "@/lib/mocks/expedientesMock";
-import type { DatosBasicosForm } from "@/types/expediente.types";
+import { TIPOS_CONTRATACION_OPTIONS } from "@/lib/schemas/expedienteSchema";
+import type { DatosBasicosFormValues } from "@/lib/schemas/expedienteSchema";
 
 interface DatosBasicosStepProps {
-  form: UseFormReturn<DatosBasicosForm>;
-  onNext: () => void;
+  form: UseFormReturn<DatosBasicosFormValues>;
+  onNext: (data: DatosBasicosFormValues) => void;
+  isLoading?: boolean;
 }
 
-export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
+export function DatosBasicosStep({ form, onNext, isLoading = false }: DatosBasicosStepProps) {
   const handleNext = async () => {
     const isValid = await form.trigger();
     if (isValid) {
-      onNext();
+      onNext(form.getValues());
     }
   };
 
@@ -47,7 +49,7 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
         <div className="mb-8">
           <FormField
             control={form.control}
-            name="objetoProcedimiento"
+            name="descripcionObjeto"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-heading-dark font-bold font-inter text-base">
@@ -73,7 +75,7 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
         <div className="mb-8">
           <FormField
             control={form.control}
-            name="nomenclatura"
+            name="codigoNomenclatura"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-heading-dark font-bold font-inter text-base">
@@ -132,7 +134,7 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
         <div className="mb-8">
           <FormField
             control={form.control}
-            name="montoBs"
+            name="montoEstimadoBs"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-heading-dark font-bold font-inter text-base">
@@ -144,10 +146,17 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
                 </p>
                 <FormControl>
                   <Input
-                    {...field}
-                    value={field.value || ""}
-                    type="text"
-                    inputMode="numeric"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      field.onChange(val === "" ? undefined : parseFloat(val));
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                     className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-1/3 lg:w-1/4"
                   />
                 </FormControl>
@@ -161,7 +170,7 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
         <div className="mb-8">
           <FormField
             control={form.control}
-            name="montoDivisas"
+            name="montoEstimadoDolar"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-heading-dark font-bold font-inter text-base">
@@ -172,10 +181,17 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
                 </p>
                 <FormControl>
                   <Input
-                    {...field}
-                    value={field.value || ""}
-                    type="text"
-                    inputMode="numeric"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      field.onChange(val === "" ? undefined : parseFloat(val));
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                     className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-1/3 lg:w-1/4"
                   />
                 </FormControl>
@@ -190,9 +206,17 @@ export function DatosBasicosStep({ form, onNext }: DatosBasicosStepProps) {
           <Button
             type="button"
             onClick={handleNext}
+            disabled={isLoading}
             className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
           >
-            Siguiente
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              "Siguiente"
+            )}
           </Button>
         </div>
       </form>

@@ -1,5 +1,3 @@
-export type EventColor = "blue" | "red" | "green" | "orange" | "yellow" | "purple" | "gray";
-
 export interface IEvent {
   id: string;
   title: string;
@@ -7,5 +5,11 @@ export interface IEvent {
   startDate: string;
   /** ISO date string: "2026-03-07" */
   endDate: string;
-  color: EventColor;
+  /**
+   * CSS variable suffix — e.g. "cal-disponibilidad".
+   * Used as: var(--color-<colorVar>)
+   */
+  colorVar: string;
+  /** If true, the event cannot be moved via drag and drop */
+  readonly?: boolean;
 }

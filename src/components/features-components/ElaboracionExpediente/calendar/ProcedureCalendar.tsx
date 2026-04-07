@@ -10,9 +10,10 @@ interface ProcedureCalendarProps {
   events: IEvent[];
   /** Starting month to display. Defaults to current month. */
   initialMonth?: Date;
+  onEventDrop?: (eventId: string, diffInDays: number) => void;
 }
 
-export function ProcedureCalendar({ events, initialMonth }: ProcedureCalendarProps) {
+export function ProcedureCalendar({ events, initialMonth, onEventDrop }: ProcedureCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState<Date>(initialMonth ?? new Date());
 
   const handlePrevMonth = () => setCurrentMonth((m) => subMonths(m, 1));
@@ -25,7 +26,7 @@ export function ProcedureCalendar({ events, initialMonth }: ProcedureCalendarPro
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
       />
-      <CalendarGrid currentMonth={currentMonth} events={events} />
+      <CalendarGrid currentMonth={currentMonth} events={events} onEventDrop={onEventDrop} />
     </div>
   );
 }
