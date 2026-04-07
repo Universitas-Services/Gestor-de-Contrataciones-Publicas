@@ -141,6 +141,20 @@ export function DocumentoPreviewDialog({
         {/* Header */}
         <DialogHeader className="shrink-0 flex-row items-center justify-between border-b px-6 py-4 space-y-0">
           <div className="flex items-center gap-3">
+            <Button
+              onClick={handleDescargar}
+              disabled={isLoading || isDownloading}
+              size="icon"
+              variant="ghost"
+              className="text-navy hover:bg-navy/10 shrink-0"
+              title="Descargar documento"
+            >
+              {isDownloading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Download className="w-5 h-5" />
+              )}
+            </Button>
             <div className="w-9 h-9 rounded-lg bg-navy/10 flex items-center justify-center shrink-0">
               <FileText className="w-5 h-5 text-navy" />
             </div>
@@ -153,22 +167,6 @@ export function DocumentoPreviewDialog({
               </DialogDescription>
             </div>
           </div>
-
-          <Button
-            onClick={handleDescargar}
-            disabled={isLoading || isDownloading}
-            size="sm"
-            className="bg-navy hover:bg-navy-hover text-white gap-2 shrink-0"
-          >
-            {isDownloading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">
-              {isDownloading ? "Descargando..." : "Descargar"}
-            </span>
-          </Button>
         </DialogHeader>
 
         {/* Body */}
