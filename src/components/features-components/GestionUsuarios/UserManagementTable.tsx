@@ -201,7 +201,7 @@ export function UserManagementTable({ enteId }: UserManagementTableProps) {
                       <TableRow
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
-                        className="hover:bg-slate-100 cursor-pointer data-[state=selected]:bg-slate-200/50 border-slate-100 transition-colors"
+                        className="hover:bg-slate-100 data-[state=selected]:bg-slate-200/50 border-slate-100 transition-colors"
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} className="px-4 py-2.5">
