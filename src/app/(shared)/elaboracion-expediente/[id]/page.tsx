@@ -21,7 +21,7 @@ export default async function ExpedienteDetallePage({ params }: Props) {
   }
 
   return (
-    <div className="w-full max-w-full mx-auto flex flex-col items-start p-0">
+    <div className="w-full min-w-0 max-w-full mx-auto flex flex-col items-start p-0 overflow-x-hidden">
       <ExpedienteDetalle data={expediente} />
     </div>
   );

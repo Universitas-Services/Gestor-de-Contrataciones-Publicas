@@ -31,11 +31,15 @@ export function Breadcrumbs() {
   }
 
   // Función para formatear nombres de ruta
-  const formatSegment = (segment: string): string => {
-    // Si el segmento es un UUID o un ID largo de proveedor, mostrar "Perfil del proveedor"
+  const formatSegment = (segment: string, index: number, segments: string[]): string => {
+    // Si el segmento es un UUID o un ID largo de proveedor, determinar según el contexto
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     // También chequear si es el segmento después de registro-proveedores
     if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
+      // Verificamos el segmento anterior para determinar el contexto
+      if (index > 0 && segments[index - 1] === "elaboracion-expediente") {
+        return "Detalle de Expediente";
+      }
       return "Perfil del proveedor";
     }
 
@@ -48,7 +52,7 @@ export function Breadcrumbs() {
   // Construir breadcrumbs
   const breadcrumbs = segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const label = formatSegment(segment);
+    const label = formatSegment(segment, index, segments);
     const isLast = index === segments.length - 1;
 
     return {
