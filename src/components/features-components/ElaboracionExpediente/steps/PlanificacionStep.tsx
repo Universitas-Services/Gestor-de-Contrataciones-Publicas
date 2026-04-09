@@ -35,7 +35,7 @@ const LEGEND_ITEMS: { label: string; colorVar: string }[] = [
 function ProcedureLegend() {
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
-      <div className="grid grid-cols-5 gap-x-6 gap-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-3">
         {LEGEND_ITEMS.map((item) => (
           <div key={item.colorVar} className="flex items-start gap-2 min-w-0">
             {/* Círculo sólido con el color del CSS var */}

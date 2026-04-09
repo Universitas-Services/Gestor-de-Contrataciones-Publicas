@@ -261,15 +261,8 @@ export function ExpedienteDetalle({ data }: Props) {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-16">
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        {/* ── Breadcrumbs ── */}
-        <nav className="flex items-center gap-1 text-sm text-slate-500 font-inter">
-          <Link href="/elaboracion-expediente" className="hover:text-navy transition-colors">
-            Expedientes
-          </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-slate-700 font-medium">Detalle de Expediente</span>
-        </nav>
+      <div className="w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+        {/* Breadcrumbs removidos a favor del Layout global */}
 
         <h1 className="text-[28px] font-bold text-heading-dark font-inter leading-tight">
           Información de expediente
@@ -319,38 +312,38 @@ export function ExpedienteDetalle({ data }: Props) {
           </CardContent>
         </Card>
 
-        {/* ── Tabs — letras azules siempre, solo barra inferior en la activa, sin recuadro ── */}
-        <Tabs defaultValue="fase-0" className="w-full">
-          {/* border-b-2 actúa como la barra azul separadora de todo el bloque */}
-          <TabsList className="w-full justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
-            {FASES.map((fase, i) => (
-              <TabsTrigger
-                key={i}
-                value={`fase-${i}`}
-                className={[
-                  /* layout & reset */
-                  "relative rounded-none px-4 py-3 text-sm font-medium bg-transparent transition-colors",
-                  /* letras siempre azules navy */
-                  "text-navy",
-                  /* barra de selección: pseudo-elemento abajo de la pestaña activa */
-                  "after:absolute after:bottom-[-2px] after:left-0 after:right-0 after:h-[3px] after:bg-navy after:opacity-0",
-                  "data-[state=active]:after:opacity-100",
-                  /* sin recuadro, sin sombra, sin fondo */
-                  "shadow-none data-[state=active]:shadow-none",
-                  "data-[state=active]:bg-transparent",
-                  "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
-                ].join(" ")}
-              >
-                {fase}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
+        <div className="w-full">
+          <Tabs defaultValue="fase-0" className="w-full">
+            {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
+            <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
+              {FASES.map((fase, i) => (
+                <TabsTrigger
+                  key={i}
+                  value={`fase-${i}`}
+                  className={[
+                    /* layout & reset */
+                    "relative rounded-none px-1 sm:px-2 py-2 text-[12px] sm:text-[13px] font-medium transition-colors whitespace-nowrap",
+                    /* inactivos */
+                    "text-navy bg-transparent hover:bg-slate-100/50",
+                    /* activo: bloque azul sólido con letras blancas, alineado a la base */
+                    "data-[state=active]:bg-navy data-[state=active]:text-white",
+                    /* para ocultar la línea de abajo en el activo (opcional) pero como está sobre la línea, el bg solid lo cubre */
+                    "shadow-none data-[state=active]:shadow-none",
+                    "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                  ].join(" ")}
+                >
+                  {fase}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
 
         {/* ── Grid Principal ── */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Objeto del Procedimiento (2/3) */}
-          <Card className="col-span-2 border border-slate-200 shadow-sm">
+          <Card className="col-span-1 lg:col-span-2 border border-slate-200 shadow-sm">
             <CardHeader className="pb-2 pt-5 px-6">
               <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
                 Objeto del Procedimiento
@@ -444,7 +437,7 @@ export function ExpedienteDetalle({ data }: Props) {
           </Card>
 
           {/* Comisión de Contrataciones — solo miembros principales */}
-          <Card className="col-span-3 border border-slate-200 shadow-sm">
+          <Card className="col-span-1 lg:col-span-3 border border-slate-200 shadow-sm">
             <CardHeader className="pb-2 pt-5 px-6">
               <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter flex items-center gap-2">
                 <Users className="w-4 h-4" /> Comisión de Contrataciones
