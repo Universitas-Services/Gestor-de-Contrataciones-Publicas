@@ -5,6 +5,7 @@ import type { EnteResponse, EnteUpdatePayload } from "@/types/ente.types";
 import type {
   CreateUserPayload,
   CreateUserResponse,
+  User,
   UserListResponse,
 } from "@/types/user-management.types";
 
@@ -141,18 +142,16 @@ export const crearUsuarioEnte = async (
 };
 
 /**
- * GET /entes/{id}/usuarios
- * Obtiene el listado paginado de usuarios de un Ente.
+ * GET /entes/gestion/mis-usuarios
+ * Obtiene el listado paginado de usuarios operativos de un Ente (ADMIN_ENTE).
+ * No requiere ID del ente, se obtiene del token.
  */
-export const listarUsuariosEnte = async (
-  enteId: string,
-  params: {
-    page?: number;
-    limit?: number;
-    rol?: string;
-    busqueda?: string;
-  }
-): Promise<UserListResponse> => {
+export const listarUsuariosEnte = async (params: {
+  page?: number;
+  limit?: number;
+  rol?: string;
+  busqueda?: string;
+}): Promise<UserListResponse> => {
   const token = await getServerToken();
   const queryParams = new URLSearchParams();
 
@@ -161,7 +160,7 @@ export const listarUsuariosEnte = async (
   if (params.rol) queryParams.append("rol", params.rol);
   if (params.busqueda) queryParams.append("busqueda", params.busqueda);
 
-  const response = await fetch(`${API_URL}/entes/${enteId}/usuarios?${queryParams.toString()}`, {
+  const response = await fetch(`${API_URL}/entes/gestion/mis-usuarios?${queryParams.toString()}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -175,4 +174,54 @@ export const listarUsuariosEnte = async (
   }
 
   return response.json() as Promise<UserListResponse>;
+};
+
+/**
+ * GET /entes/gestion/mis-usuarios/{usuarioId}
+ * Obtiene la información detallada de un usuario operativo específico.
+ */
+export const obtenerUsuarioOperativo = async (usuarioId: string): Promise<User> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/gestion/mis-usuarios/${usuarioId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener detalles del usuario");
+  }
+
+  return response.json() as Promise<User>;
+};
+
+/**
+ * PATCH /entes/gestion/mis-usuarios/{usuarioId}
+ * Actualiza los datos de un usuario operativo.
+ */
+export const actualizarUsuarioOperativo = async (
+  usuarioId: string,
+  payload: Partial<CreateUserPayload>
+): Promise<User> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/gestion/mis-usuarios/${usuarioId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar el usuario");
+  }
+
+  return response.json() as Promise<User>;
 };

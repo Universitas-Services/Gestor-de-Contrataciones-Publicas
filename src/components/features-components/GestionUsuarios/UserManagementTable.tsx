@@ -40,11 +40,7 @@ import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface UserManagementTableProps {
-  enteId: string;
-}
-
-export function UserManagementTable({ enteId }: UserManagementTableProps) {
+export function UserManagementTable() {
   const [data, setData] = React.useState<User[]>([]);
   const [metadata, setMetadata] = React.useState<PaginationMetadata | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -69,7 +65,7 @@ export function UserManagementTable({ enteId }: UserManagementTableProps) {
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
-      const response = await listarUsuariosEnte(enteId, {
+      const response = await listarUsuariosEnte({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         busqueda: debouncedSearchQuery,
@@ -82,7 +78,7 @@ export function UserManagementTable({ enteId }: UserManagementTableProps) {
     } finally {
       setLoading(false);
     }
-  }, [enteId, pagination.pageIndex, pagination.pageSize, debouncedSearchQuery, roleFilter]);
+  }, [pagination.pageIndex, pagination.pageSize, debouncedSearchQuery, roleFilter]);
 
   React.useEffect(() => {
     fetchData();

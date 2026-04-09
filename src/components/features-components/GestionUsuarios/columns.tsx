@@ -109,7 +109,7 @@ export const columns: ColumnDef<User>[] = [
             asChild
             className="h-8 w-8 text-slate-600 hover:text-slate-900"
           >
-            <Link href={`/admin_ente/gestion-datos/usuarios/${user.id}/editar`}>
+            <Link href={`/admin_ente/gestion-datos/usuarios/${user.id}`}>
               <Pencil className="h-5 w-5" />
             </Link>
           </Button>

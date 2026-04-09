@@ -12,7 +12,7 @@ export default async function UsuariosPage() {
 
   return (
     <div className="p-8">
-      <UserManagementTable enteId={session.enteId} />
+      <UserManagementTable />
     </div>
   );
 }
