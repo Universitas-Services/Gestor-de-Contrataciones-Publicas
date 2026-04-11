@@ -1,6 +1,6 @@
 "use server";
 
-import { getServerToken } from "@/lib/auth/session";
+import { getServerToken, getSessionCookie } from "@/lib/auth/session";
 import type { EnteResponse, EnteUpdatePayload } from "@/types/ente.types";
 import type {
   CreateUserPayload,
@@ -224,4 +224,69 @@ export const actualizarUsuarioOperativo = async (
   }
 
   return response.json() as Promise<User>;
+};
+
+/**
+ * GET /session -> EnteId
+ * Obtiene el ID del Ente del usuario actualmente autenticado desde la sesión.
+ */
+export const obtenerMiEnteId = async (): Promise<string | null> => {
+  const session = await getSessionCookie();
+  return session?.enteId ?? null;
+};
+
+/**
+ * PATCH /entes/{id}/usuarios/{usuarioId}
+ * Actualiza la información de un usuario asociado a un Ente específico.
+ * Endpoint solicitado: /entes/{id}/usuarios/{usuarioId}
+ */
+export const actualizarUsuarioEnte = async (
+  enteId: string,
+  usuarioId: string,
+  payload: Partial<CreateUserPayload>
+): Promise<User> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/usuarios/${usuarioId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar el usuario del Ente");
+  }
+
+  return response.json() as Promise<User>;
+};
+
+/**
+ * DELETE /entes/{id}/usuarios/{usuarioId}
+ * Realiza un borrado lógico (desactivación) de un usuario perteneciente al Ente.
+ * Endpoint solicitado: /entes/{id}/usuarios/{usuarioId}
+ */
+export const eliminarUsuarioEnte = async (
+  enteId: string,
+  usuarioId: string
+): Promise<{ message: string }> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/usuarios/${usuarioId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al eliminar el usuario");
+  }
+
+  return { message: "Usuario eliminado correctamente" };
 };
