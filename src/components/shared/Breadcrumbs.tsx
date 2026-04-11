@@ -34,8 +34,11 @@ export function Breadcrumbs() {
   const formatSegment = (segment: string, index: number, segments: string[]): string => {
     // Si el segmento es un UUID o un ID largo de proveedor, determinar según el contexto
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    // También chequear si es el segmento después de registro-proveedores
     if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
+      // Si el segmento anterior es 'usuarios', mostrar 'Editar usuario'
+      if (index > 0 && segments[index - 1] === "usuarios") {
+        return "Editar usuario";
+      }
       // Verificamos el segmento anterior para determinar el contexto
       if (index > 0 && segments[index - 1] === "elaboracion-expediente") {
         return "Detalle de Expediente";
@@ -78,7 +81,7 @@ export function Breadcrumbs() {
         <BreadcrumbSeparator />
 
         {/* Segmentos de la ruta */}
-        {breadcrumbs.map((breadcrumb, index) => (
+        {breadcrumbs.map((breadcrumb) => (
           <Fragment key={breadcrumb.href}>
             <BreadcrumbItem>
               {breadcrumb.isLast ? (
