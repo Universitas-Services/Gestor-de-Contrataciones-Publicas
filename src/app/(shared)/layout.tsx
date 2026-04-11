@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Header } from "@/components/shared/Header";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
@@ -15,7 +16,13 @@ export const metadata: Metadata = {
  */
 export default async function SharedDashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
-  const authenticatedUser = user!;
+
+  // Si la sesión expiró o no existe, redirigir al login
+  if (!user) {
+    redirect("/login");
+  }
+
+  const authenticatedUser = user;
 
   return (
     <DashboardLayout

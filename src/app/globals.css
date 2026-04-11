@@ -119,6 +119,19 @@
   --color-fase-4: var(--fase-4);
   --color-progress-bar: var(--progress-bar);
   --color-card-accent-border: var(--card-accent-border);
+
+  /* Calendar specific colors */
+  --color-cal-disponibilidad: var(--cal-disponibilidad);
+  --color-cal-modificaciones: var(--cal-modificaciones);
+  --color-cal-recepcion: var(--cal-recepcion);
+  --color-cal-notificacion: var(--cal-notificacion);
+  --color-cal-garantias: var(--cal-garantias);
+  --color-cal-solicitud-aclaratorias: var(--cal-solicitud-aclaratorias);
+  --color-cal-respuesta-aclaratorias: var(--cal-respuesta-aclaratorias);
+  --color-cal-adjudicacion: var(--cal-adjudicacion);
+  --color-cal-evaluacion: var(--cal-evaluacion);
+  --color-cal-firma: var(--cal-firma);
+  --color-cal-llamado: var(--cal-llamado);
 }
 
 :root {
@@ -238,6 +251,19 @@
   --indigo: oklch(0.5854 0.2041 277.12);
   --slate-bg: oklch(0.9842 0.0034 247.86);
   --border-light: oklch(0.9219 0 89.88);
+
+  /* Calendar semantic colors */
+  --cal-disponibilidad: oklch(0.66 0.2 45);
+  --cal-modificaciones: oklch(0.39 0.17 337);
+  --cal-recepcion: oklch(0.5 0.22 263);
+  --cal-notificacion: oklch(0.85 0.19 119);
+  --cal-garantias: oklch(0.54 0.29 295);
+  --cal-solicitud-aclaratorias: oklch(0.62 0.13 227);
+  --cal-respuesta-aclaratorias: oklch(0.48 0.2 14);
+  --cal-adjudicacion: oklch(0.82 0.18 141);
+  --cal-evaluacion: oklch(0.56 0.25 24);
+  --cal-firma: oklch(0.66 0.18 144);
+  --cal-llamado: oklch(0.55 0.03 250);
 }
 
 @layer base {
@@ -246,6 +272,6 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }

@@ -271,7 +271,7 @@ export function ListadoUsuarios() {
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
                   Estructura
                 </th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
                   Fecha de registro
                 </th>

@@ -1,10 +1,7 @@
 "use server";
 
 import { getServerToken } from "@/lib/auth/session";
-import {
-  ComisionContratacionesFormValues,
-  MiembroFormValues,
-} from "@/lib/schemas/comisionContratacionesSchema";
+import { ComisionContratacionesFormValues } from "@/lib/schemas/comisionContratacionesSchema";
 import { revalidatePath } from "next/cache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -56,6 +53,28 @@ export const registrarComisionContrataciones = async (
 
   revalidatePath("/gestion-datos/estructura-organizativa");
   return response.json() as Promise<ComisionContratacionesResponse>;
+};
+
+/**
+ * GET /comision-contrataciones
+ * Lista todas las Comisiones de Contrataciones del Ente actual.
+ */
+export const listarComisionesContrataciones = async (): Promise<Record<string, unknown>[]> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/comision-contrataciones`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al listar las Comisiones de Contrataciones");
+  }
+  return response.json();
 };
 
 /**
