@@ -307,6 +307,7 @@ export function ConfiguracionActoresStep({
                       onSelect={(date) => {
                         if (date) field.onChange(format(date, "yyyy-MM-dd"));
                       }}
+                      disabled={(date) => date.getDay() === 0 || date.getDay() === 6}
                       locale={es}
                       initialFocus
                     />
