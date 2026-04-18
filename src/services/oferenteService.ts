@@ -1,0 +1,73 @@
+"use server";
+
+import { getServerToken } from "@/lib/auth/session";
+import { revalidatePath } from "next/cache";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export interface RegistrarOferentePayload {
+  expedienteId: string;
+  proveedorId?: string | null;
+  rifProveedorOferente: string;
+  nombreProveedorOferente: string;
+  nombreRepLegalOferente: string;
+  cedulaRepLegalOferente: string;
+  datosRegistroMercantilProveedorOferente: string;
+  numeroSobresEntregados: number;
+  montoOfertaBs: number;
+}
+
+/**
+ * POST /ofertas-presentadas
+ * Registra una nueva oferta presentada por un oferente para un expediente.
+ */
+export const registrarOferente = async (payload: RegistrarOferentePayload): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/ofertas-presentadas`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al registrar la oferta del oferente"
+    );
+  }
+
+  revalidatePath("/elaboracion-expediente");
+  return response.json();
+};
+
+/**
+ * GET /ofertas-presentadas/expediente/{expedienteId}
+ * Obtiene la lista de ofertas presentadas para un expediente específico.
+ */
+export const listarOferentes = async (expedienteId: string): Promise<any[]> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/ofertas-presentadas/expediente/${expedienteId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al obtener la lista de oferentes"
+    );
+  }
+
+  return response.json();
+};

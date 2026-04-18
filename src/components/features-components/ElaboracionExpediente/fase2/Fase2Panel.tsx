@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { BsEye } from "react-icons/bs";
 import {
@@ -36,6 +36,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import { type Adquirente, type Oferente } from "@/types/expediente.types";
+import { registrarAdquirente } from "@/services/adquirenteService";
+import { registrarOferente, listarOferentes } from "@/services/oferenteService";
 import type { AdquirenteFormValues, OferenteFormValues } from "@/lib/schemas/fase2Schema";
 import { AdquirenteSheet } from "./AdquirenteSheet";
 import { OferenteSheet } from "./OferenteSheet";
@@ -58,7 +60,11 @@ const DOCUMENTOS_INICIALES: DocumentoItem[] = [
 
 // ─── Componente Principal ───────────────────────────────────────────
 
-export function Fase2Panel() {
+interface Fase2PanelProps {
+  expedienteId: string;
+}
+
+export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   // ── Estado de Adquirentes ──
   const [adquirentes, setAdquirentes] = useState<Adquirente[]>([]);
   const [adquirenteSheetOpen, setAdquirenteSheetOpen] = useState(false);
@@ -72,9 +78,44 @@ export function Fase2Panel() {
   const [oferenteEditando, setOferenteEditando] = useState<Oferente | null>(null);
   const [deleteOferenteOpen, setDeleteOferenteOpen] = useState(false);
   const [oferenteToDelete, setOferenteToDelete] = useState<string | null>(null);
+  const [loadingOferentes, setLoadingOferentes] = useState(false);
 
   // ── Estado de Documentos ──
   const [documentos, setDocumentos] = useState<DocumentoItem[]>(DOCUMENTOS_INICIALES);
+
+  // ── Efecto: Cargar datos dinámicos ──
+  useEffect(() => {
+    if (!expedienteId) return;
+
+    const fetchOferentes = async () => {
+      setLoadingOferentes(true);
+      try {
+        const data = await listarOferentes(expedienteId);
+        // Mapear campos de backend a frontend
+        const mapped: Oferente[] = data.map((item: any) => ({
+          id: item.id,
+          nombreEmpresa: item.nombreProveedorOferente,
+          rif: item.rifProveedorOferente,
+          representanteLegal: item.nombreRepLegalOferente,
+          cedula: item.cedulaRepLegalOferente,
+          registroMercantil: item.datosRegistroMercantilProveedorOferente || "—",
+          montoOferta: item.montoOfertaBs
+            ? new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(
+                item.montoOfertaBs
+              )
+            : "—",
+        }));
+        setOferentes(mapped);
+      } catch (error) {
+        console.error("Error al cargar oferentes:", error);
+        toast.error("No se pudo cargar la lista de oferentes");
+      } finally {
+        setLoadingOferentes(false);
+      }
+    };
+
+    fetchOferentes();
+  }, [expedienteId]);
 
   // ── Helpers de formato ──
   function formatDate(iso: string): string {
@@ -84,17 +125,35 @@ export function Fase2Panel() {
   }
 
   // ── Handlers de Adquirentes ──
-  const handleAddAdquirente = (data: AdquirenteFormValues) => {
-    const newAdq: Adquirente = {
-      id: `adq-${Date.now()}`,
-      fecha: data.fechaAdquisicion.split("T")[0],
-      empresa: data.nombreEmpresa,
-      domicilioFiscal: data.domicilioFiscal,
-      telefono: data.telefono,
-      correo: data.correo,
-      deposito: data.referenciaDeposito || "—",
-    };
-    setAdquirentes((prev) => [...prev, newAdq]);
+  const handleAddAdquirente = async (data: AdquirenteFormValues) => {
+    try {
+      // 1. Llamada al backend
+      const response = await registrarAdquirente({
+        expedienteId,
+        fechaAdquisicion: data.fechaAdquisicion.split("T")[0],
+        nombreProveedorAdquiriente: data.nombreEmpresa,
+        direccionFiscalProveedorAdquirente: data.domicilioFiscal,
+        telefonoProveedorAdquirente: data.telefono,
+        correoProveedorAdquirente: data.correo,
+        datosPagoPliego: data.referenciaDeposito || "—",
+      });
+
+      // 2. Actualización local (con datos devueltos por el backend si es posible)
+      // Nota: Si el backend devuelve el objeto creado, lo usamos. Si no, usamos el local.
+      const newAdq: Adquirente = {
+        id: response?.id || `adq-${Date.now()}`,
+        fecha: data.fechaAdquisicion.split("T")[0],
+        empresa: data.nombreEmpresa,
+        domicilioFiscal: data.domicilioFiscal,
+        telefono: data.telefono,
+        correo: data.correo,
+        deposito: data.referenciaDeposito || "—",
+      };
+      setAdquirentes((prev) => [...prev, newAdq]);
+      toast.success("Adquirente registrado exitosamente");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al registrar adquirente");
+    }
   };
 
   const handleDeleteAdquirente = () => {
@@ -107,17 +166,40 @@ export function Fase2Panel() {
   };
 
   // ── Handlers de Oferentes ──
-  const handleAddOferente = (data: OferenteFormValues) => {
-    const newOfe: Oferente = {
-      id: `ofe-${Date.now()}`,
-      nombreEmpresa: data.nombreEmpresa,
-      rif: data.rif,
-      representanteLegal: data.representanteLegal,
-      cedula: data.cedulaRepresentante,
-      registroMercantil: data.registroMercantil || "—",
-      montoOferta: data.montoOferta,
-    };
-    setOferentes((prev) => [...prev, newOfe]);
+  const handleAddOferente = async (data: OferenteFormValues) => {
+    try {
+      // 1. Limpieza y conversión de datos numéricos
+      const sobresNum = parseInt(data.cantidadSobres, 10) || 0;
+      // Convertir monto: "150.000,50" -> 150000.50
+      const montoNum = parseFloat(data.montoOferta.replace(/\./g, "").replace(",", ".")) || 0;
+
+      // 2. Llamada al backend
+      const response = await registrarOferente({
+        expedienteId,
+        rifProveedorOferente: data.rif,
+        nombreProveedorOferente: data.nombreEmpresa,
+        nombreRepLegalOferente: data.representanteLegal,
+        cedulaRepLegalOferente: data.cedulaRepresentante,
+        datosRegistroMercantilProveedorOferente: data.registroMercantil || "—",
+        numeroSobresEntregados: sobresNum,
+        montoOfertaBs: montoNum,
+      });
+
+      // 3. Actualización local
+      const newOfe: Oferente = {
+        id: response?.id || `ofe-${Date.now()}`,
+        nombreEmpresa: data.nombreEmpresa,
+        rif: data.rif,
+        representanteLegal: data.representanteLegal,
+        cedula: data.cedulaRepresentante,
+        registroMercantil: data.registroMercantil || "—",
+        montoOferta: data.montoOferta,
+      };
+      setOferentes((prev) => [...prev, newOfe]);
+      toast.success("Oferente registrado exitosamente");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al registrar oferente");
+    }
   };
 
   const handleDeleteOferente = () => {
@@ -165,20 +247,20 @@ export function Fase2Panel() {
               + Añadir Adquirentes
             </Button>
           </CardHeader>
-          <CardContent className="p-0 flex-1 flex flex-col">
-            <Table>
+          <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+            <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-b border-border">
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px]">
+                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[15%]">
                     Fecha
                   </TableHead>
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px]">
+                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[45%]">
                     Empresa
                   </TableHead>
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px]">
+                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[25%]">
                     Deposito
                   </TableHead>
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px]">
+                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[15%]">
                     Acciones
                   </TableHead>
                 </TableRow>
@@ -196,13 +278,13 @@ export function Fase2Panel() {
                 ) : (
                   adquirentes.map((adq) => (
                     <TableRow key={adq.id} className="border-b border-border hover:bg-slate-50/50">
-                      <TableCell className="text-[15px] font-semibold text-color-subtitulos text-center py-4">
+                      <TableCell className="text-[13px] font-semibold text-color-subtitulos text-center py-3 px-2 whitespace-normal break-words leading-tight">
                         {formatDate(adq.fecha)}
                       </TableCell>
-                      <TableCell className="text-[15px] font-semibold text-color-titulos text-center py-4">
+                      <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 whitespace-normal break-all leading-tight">
                         {adq.empresa}
                       </TableCell>
-                      <TableCell className="text-[15px] font-semibold text-color-titulos text-center py-4 tabular-nums">
+                      <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 tabular-nums whitespace-normal break-all leading-tight">
                         {adq.deposito}
                       </TableCell>
                       <TableCell className="text-center py-4">
@@ -382,33 +464,44 @@ export function Fase2Panel() {
             + Añadir Oferentes
           </Button>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-hidden">
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="hover:bg-transparent border-b border-border">
-                <TableHead className="text-color-titulos font-bold h-12 text-[15px]">
-                  Nombre empresa
+                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[18%]">
+                  Empresa
                 </TableHead>
-                <TableHead className="text-color-titulos font-bold h-12 text-[15px]">RIF</TableHead>
-                <TableHead className="text-color-titulos font-bold h-12 text-[15px]">
-                  Representante Legal
+                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[12%]">
+                  RIF
                 </TableHead>
-                <TableHead className="text-color-titulos font-bold h-12 text-[15px]">
+                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
+                  Rep. Legal
+                </TableHead>
+                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[11%]">
                   Cédula
                 </TableHead>
-                <TableHead className="text-color-titulos font-bold h-12 text-[15px]">
-                  Registro Mercantil
+                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[19%]">
+                  Reg. Mercantil
                 </TableHead>
-                <TableHead className="text-color-titulos font-bold h-12 text-[15px]">
+                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
                   Monto oferta
                 </TableHead>
-                <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px]">
+                <TableHead className="text-color-titulos font-bold px-2 text-center h-10 text-[11px] w-[10%]">
                   Acciones
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {oferentes.length === 0 ? (
+              {loadingOferentes ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground italic py-12">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                      <p>Cargando oferentes...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : oferentes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground italic py-12">
                     No hay oferentes registrados.
@@ -417,22 +510,22 @@ export function Fase2Panel() {
               ) : (
                 oferentes.map((ofe) => (
                   <TableRow key={ofe.id} className="border-b border-border hover:bg-slate-50/50">
-                    <TableCell className="text-[14px] font-semibold text-color-titulos py-4">
+                    <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
                       {ofe.nombreEmpresa}
                     </TableCell>
-                    <TableCell className="text-[14px] font-semibold text-color-subtitulos font-mono py-4">
+                    <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
                       {ofe.rif}
                     </TableCell>
-                    <TableCell className="text-[14px] font-semibold text-color-subtitulos py-4">
+                    <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
                       {ofe.representanteLegal}
                     </TableCell>
-                    <TableCell className="text-[14px] font-semibold text-color-subtitulos font-mono py-4">
+                    <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
                       {ofe.cedula}
                     </TableCell>
-                    <TableCell className="text-[14px] font-semibold text-color-subtitulos py-4">
+                    <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
                       {ofe.registroMercantil}
                     </TableCell>
-                    <TableCell className="text-[14px] font-semibold text-color-titulos py-4 tabular-nums">
+                    <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 tabular-nums text-center whitespace-normal break-all leading-tight">
                       {ofe.montoOferta}
                     </TableCell>
                     <TableCell className="text-center py-4">

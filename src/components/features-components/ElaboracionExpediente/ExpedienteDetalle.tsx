@@ -530,7 +530,7 @@ export function ExpedienteDetalle({ data }: Props) {
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
             <TabsContent value="fase-2" className="mt-6">
-              <Fase2Panel />
+              <Fase2Panel expedienteId={data.id} />
             </TabsContent>
           </Tabs>
         </div>
