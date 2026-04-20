@@ -89,6 +89,7 @@ export interface Oferente {
   representanteLegal: string;
   cedula: string;
   registroMercantil: string;
+  cantidadSobres?: string;
   montoOferta: string;
 }
 

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, MinusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -28,6 +29,14 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { adquirenteSchema, type AdquirenteFormValues } from "@/lib/schemas/fase2Schema";
 
@@ -60,19 +69,38 @@ export function AdquirenteSheet({
     mode: "onChange",
   });
 
+  const [telefonoPrefijo, setTelefonoPrefijo] = useState("0414");
+  const [telefonoNumero, setTelefonoNumero] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+
+  const telefonoCompleto = form.watch("telefono");
+
   useEffect(() => {
     if (open) {
       form.reset({
-        fechaAdquisicion: "",
-        nombreEmpresa: "",
-        domicilioFiscal: "",
-        telefono: "",
-        correo: "",
-        referenciaDeposito: "",
-        ...defaultValues,
+        fechaAdquisicion: defaultValues?.fechaAdquisicion || "",
+        nombreEmpresa: defaultValues?.nombreEmpresa || "",
+        domicilioFiscal: defaultValues?.domicilioFiscal || "",
+        telefono: defaultValues?.telefono || "",
+        correo: defaultValues?.correo || "",
+        referenciaDeposito: defaultValues?.referenciaDeposito || "",
       });
+      if (mode === "crear") {
+        setTelefonoPrefijo("0414");
+        setTelefonoNumero("");
+      }
+      setIsEditing(mode === "crear");
     }
-  }, [open, defaultValues, form]);
+  }, [open, defaultValues, form, mode]);
+
+  useEffect(() => {
+    if (mode !== "crear") return;
+    if (telefonoPrefijo && telefonoNumero.length === 7) {
+      form.setValue("telefono", `${telefonoPrefijo}-${telefonoNumero}`, { shouldValidate: true });
+    } else {
+      form.setValue("telefono", "");
+    }
+  }, [telefonoPrefijo, telefonoNumero, form, mode]);
 
   const handleFormSubmit = (data: AdquirenteFormValues) => {
     onSubmit(data);
@@ -175,13 +203,14 @@ export function AdquirenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="Nombre de la empresa"
+                              maxLength={150}
                             />
                           )}
                         </div>
@@ -206,13 +235,14 @@ export function AdquirenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="Domicilio fiscal"
+                              maxLength={250}
                             />
                           )}
                         </div>
@@ -223,35 +253,90 @@ export function AdquirenteSheet({
                 />
 
                 {/* Teléfono */}
-                <FormField
-                  control={form.control}
-                  name="telefono"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="font-bold text-color-titulos text-[11px]">
-                        Indique el número telefónico de contacto de la empresa que adquiere el
-                        pliego de condiciones.
-                      </FormLabel>
-                      <p className="text-[10px] text-muted-foreground italic">
-                        Artículos 66.29 LCP; 32.13 RLCP; 28 NORMAS DE CONTROL INTERNO SUNAI.
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <FormLabel className="font-bold text-color-titulos text-[11px] block">
+                      Indique el número telefónico de contacto de la empresa que adquiere el pliego
+                      de condiciones.
+                    </FormLabel>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Artículos 66.29 LCP; 32.13 RLCP; 28 NORMAS DE CONTROL INTERNO SUNAI.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Select value={telefonoPrefijo} onValueChange={setTelefonoPrefijo}>
+                        <SelectTrigger className="w-[85px] h-[32px] border border-border bg-white text-[11px]">
+                          <SelectValue placeholder="0414" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0414">0414</SelectItem>
+                          <SelectItem value="0424">0424</SelectItem>
+                          <SelectItem value="0412">0412</SelectItem>
+                          <SelectItem value="0416">0416</SelectItem>
+                          <SelectItem value="0426">0426</SelectItem>
+                          <SelectItem value="0212">0212</SelectItem>
+                          <SelectItem value="0241">0241</SelectItem>
+                          <SelectItem value="0251">0251</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="text-slate-400 font-bold px-1 flex items-center">
+                        <MinusIcon className="h-4 w-4" />
+                      </div>
+
+                      <InputOTP
+                        maxLength={7}
+                        value={telefonoNumero}
+                        onChange={(val) => setTelefonoNumero(val)}
+                        pattern={REGEXP_ONLY_DIGITS}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot
+                            index={0}
+                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                          <InputOTPSlot
+                            index={1}
+                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                          <InputOTPSlot
+                            index={2}
+                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                          <InputOTPSlot
+                            index={3}
+                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                          <InputOTPSlot
+                            index={4}
+                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                          <InputOTPSlot
+                            index={5}
+                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                          <InputOTPSlot
+                            index={6}
+                            className="rounded-r-md border-r shadow-none h-[32px] w-7 text-[11px]"
+                          />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    {form.formState.errors.telefono && (
+                      <p className="text-sm font-medium text-destructive">
+                        {form.formState.errors.telefono.message}
                       </p>
-                      <FormControl>
-                        <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
-                            field.value || "-"
-                          ) : (
-                            <input
-                              {...field}
-                              className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
-                              placeholder="0001-020-316"
-                            />
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <FormLabel className="font-bold text-color-titulos text-[11px] block">
+                      Número telefónico de contacto de la empresa
+                    </FormLabel>
+                    <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
+                      {telefonoCompleto || "-"}
+                    </div>
+                  </div>
+                )}
 
                 {/* Correo electrónico */}
                 <FormField
@@ -268,13 +353,14 @@ export function AdquirenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="ejemplo: bob@gmail.com"
+                              maxLength={100}
                             />
                           )}
                         </div>
@@ -299,13 +385,14 @@ export function AdquirenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="0001-020-316"
+                              maxLength={20}
                             />
                           )}
                         </div>
@@ -322,18 +409,42 @@ export function AdquirenteSheet({
           <div className="p-8 pt-6 flex justify-end gap-3 pb-12 mt-auto border-t border-slate-100 bg-slate-50/50">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              type="button"
+              onClick={() => {
+                if (isEditing && mode === "editar") {
+                  setIsEditing(false);
+                } else {
+                  onOpenChange(false);
+                }
+              }}
               className="font-semibold flex-1 h-11 rounded-md"
             >
               Cancelar
             </Button>
-            {mode === "crear" && (
+            {mode === "editar" && !isEditing && (
               <Button
-                type="submit"
-                form="adquirente-form"
+                key="btn-editar"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsEditing(true);
+                }}
                 className="bg-navy hover:bg-navy-hover text-white font-semibold flex-1 h-11 rounded-md"
               >
-                Guardar adquirente
+                Editar
+              </Button>
+            )}
+            {(mode === "crear" || (mode === "editar" && isEditing)) && (
+              <Button
+                key="btn-guardar"
+                type="submit"
+                form="adquirente-form"
+                onClick={(e) => {
+                  // Prevenir cualquier bubble si el browser hace algo raro, el submit se hace por el form id
+                }}
+                className="bg-navy hover:bg-navy-hover text-white font-semibold flex-1 h-11 rounded-md"
+              >
+                {mode === "crear" ? "Guardar adquirente" : "Guardar cambios"}
               </Button>
             )}
           </div>

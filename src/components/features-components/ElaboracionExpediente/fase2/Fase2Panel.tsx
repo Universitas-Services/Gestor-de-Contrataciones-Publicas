@@ -36,8 +36,20 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import { type Adquirente, type Oferente } from "@/types/expediente.types";
-import { registrarAdquirente } from "@/services/adquirenteService";
-import { registrarOferente, listarOferentes } from "@/services/oferenteService";
+import {
+  registrarAdquirente,
+  listarAdquirentes,
+  obtenerAdquirente,
+  editarAdquirente,
+  eliminarAdquirente,
+} from "@/services/adquirenteService";
+import {
+  registrarOferente,
+  listarOferentes,
+  obtenerOferente,
+  editarOferente,
+  eliminarOferente,
+} from "@/services/oferenteService";
 import type { AdquirenteFormValues, OferenteFormValues } from "@/lib/schemas/fase2Schema";
 import { AdquirenteSheet } from "./AdquirenteSheet";
 import { OferenteSheet } from "./OferenteSheet";
@@ -71,6 +83,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   const [adquirenteEditando, setAdquirenteEditando] = useState<Adquirente | null>(null);
   const [deleteAdquirenteOpen, setDeleteAdquirenteOpen] = useState(false);
   const [adquirenteToDelete, setAdquirenteToDelete] = useState<string | null>(null);
+  const [loadingAdquirentes, setLoadingAdquirentes] = useState(false);
 
   // ── Estado de Oferentes ──
   const [oferentes, setOferentes] = useState<Oferente[]>([]);
@@ -83,38 +96,63 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   // ── Estado de Documentos ──
   const [documentos, setDocumentos] = useState<DocumentoItem[]>(DOCUMENTOS_INICIALES);
 
+  // ── Funciones de carga ──
+  const loadOferentes = async () => {
+    if (!expedienteId) return;
+    setLoadingOferentes(true);
+    try {
+      const data = await listarOferentes(expedienteId);
+      const mapped: Oferente[] = data.map((item: any) => ({
+        id: item.id,
+        nombreEmpresa: item.nombreProveedorOferente,
+        rif: item.rifProveedorOferente,
+        representanteLegal: item.nombreRepLegalOferente,
+        cedula: item.cedulaRepLegalOferente,
+        registroMercantil: item.datosRegistroMercantilProveedorOferente || "—",
+        cantidadSobres: item.numeroSobresEntregados ? String(item.numeroSobresEntregados) : "0",
+        montoOferta: item.montoOfertaBs
+          ? new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(
+              item.montoOfertaBs
+            )
+          : "—",
+      }));
+      setOferentes(mapped);
+    } catch (error) {
+      console.error("Error al cargar oferentes:", error);
+      toast.error("No se pudo cargar la lista de oferentes");
+    } finally {
+      setLoadingOferentes(false);
+    }
+  };
+
+  const loadAdquirentes = async () => {
+    if (!expedienteId) return;
+    setLoadingAdquirentes(true);
+    try {
+      const data = await listarAdquirentes(expedienteId);
+      const mapped: Adquirente[] = data.map((item: any) => ({
+        id: item.id,
+        fecha: item.fechaAdquisicion,
+        empresa: item.nombreProveedorAdquiriente,
+        domicilioFiscal: item.direccionFiscalProveedorAdquiriente,
+        telefono: item.telefonoProveedorAdquiriente,
+        correo: item.correoProveedorAdquiriente,
+        deposito: item.datosPagoPliego || "—",
+      }));
+      setAdquirentes(mapped);
+    } catch (error) {
+      console.error("Error al cargar adquirentes:", error);
+      toast.error("No se pudo cargar la lista de adquirentes");
+    } finally {
+      setLoadingAdquirentes(false);
+    }
+  };
+
   // ── Efecto: Cargar datos dinámicos ──
   useEffect(() => {
-    if (!expedienteId) return;
-
-    const fetchOferentes = async () => {
-      setLoadingOferentes(true);
-      try {
-        const data = await listarOferentes(expedienteId);
-        // Mapear campos de backend a frontend
-        const mapped: Oferente[] = data.map((item: any) => ({
-          id: item.id,
-          nombreEmpresa: item.nombreProveedorOferente,
-          rif: item.rifProveedorOferente,
-          representanteLegal: item.nombreRepLegalOferente,
-          cedula: item.cedulaRepLegalOferente,
-          registroMercantil: item.datosRegistroMercantilProveedorOferente || "—",
-          montoOferta: item.montoOfertaBs
-            ? new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(
-                item.montoOfertaBs
-              )
-            : "—",
-        }));
-        setOferentes(mapped);
-      } catch (error) {
-        console.error("Error al cargar oferentes:", error);
-        toast.error("No se pudo cargar la lista de oferentes");
-      } finally {
-        setLoadingOferentes(false);
-      }
-    };
-
-    fetchOferentes();
+    loadOferentes();
+    loadAdquirentes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expedienteId]);
 
   // ── Helpers de formato ──
@@ -127,8 +165,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   // ── Handlers de Adquirentes ──
   const handleAddAdquirente = async (data: AdquirenteFormValues) => {
     try {
-      // 1. Llamada al backend
-      const response = await registrarAdquirente({
+      const payload = {
         expedienteId,
         fechaAdquisicion: data.fechaAdquisicion.split("T")[0],
         nombreProveedorAdquiriente: data.nombreEmpresa,
@@ -136,45 +173,46 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
         telefonoProveedorAdquirente: data.telefono,
         correoProveedorAdquirente: data.correo,
         datosPagoPliego: data.referenciaDeposito || "—",
-      });
-
-      // 2. Actualización local (con datos devueltos por el backend si es posible)
-      // Nota: Si el backend devuelve el objeto creado, lo usamos. Si no, usamos el local.
-      const newAdq: Adquirente = {
-        id: response?.id || `adq-${Date.now()}`,
-        fecha: data.fechaAdquisicion.split("T")[0],
-        empresa: data.nombreEmpresa,
-        domicilioFiscal: data.domicilioFiscal,
-        telefono: data.telefono,
-        correo: data.correo,
-        deposito: data.referenciaDeposito || "—",
       };
-      setAdquirentes((prev) => [...prev, newAdq]);
-      toast.success("Adquirente registrado exitosamente");
+
+      if (adquirenteEditando) {
+        await editarAdquirente(adquirenteEditando.id, {
+          ...payload,
+          proveedorId: null,
+        });
+        toast.success("Adquirente actualizado exitosamente");
+      } else {
+        await registrarAdquirente(payload);
+        toast.success("Adquirente registrado exitosamente");
+      }
+
+      loadAdquirentes();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al registrar adquirente");
+      toast.error(error instanceof Error ? error.message : "Error al guardar adquirente");
     }
   };
 
-  const handleDeleteAdquirente = () => {
+  const handleDeleteAdquirente = async () => {
     if (adquirenteToDelete) {
-      setAdquirentes((prev) => prev.filter((a) => a.id !== adquirenteToDelete));
-      toast.success("Adquirente eliminado");
-      setAdquirenteToDelete(null);
-      setDeleteAdquirenteOpen(false);
+      try {
+        await eliminarAdquirente(adquirenteToDelete);
+        toast.success("Adquirente eliminado");
+        setAdquirenteToDelete(null);
+        setDeleteAdquirenteOpen(false);
+        loadAdquirentes();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Error al eliminar adquirente");
+      }
     }
   };
 
   // ── Handlers de Oferentes ──
   const handleAddOferente = async (data: OferenteFormValues) => {
     try {
-      // 1. Limpieza y conversión de datos numéricos
       const sobresNum = parseInt(data.cantidadSobres, 10) || 0;
-      // Convertir monto: "150.000,50" -> 150000.50
       const montoNum = parseFloat(data.montoOferta.replace(/\./g, "").replace(",", ".")) || 0;
 
-      // 2. Llamada al backend
-      const response = await registrarOferente({
+      const payload = {
         expedienteId,
         rifProveedorOferente: data.rif,
         nombreProveedorOferente: data.nombreEmpresa,
@@ -183,31 +221,36 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
         datosRegistroMercantilProveedorOferente: data.registroMercantil || "—",
         numeroSobresEntregados: sobresNum,
         montoOfertaBs: montoNum,
-      });
-
-      // 3. Actualización local
-      const newOfe: Oferente = {
-        id: response?.id || `ofe-${Date.now()}`,
-        nombreEmpresa: data.nombreEmpresa,
-        rif: data.rif,
-        representanteLegal: data.representanteLegal,
-        cedula: data.cedulaRepresentante,
-        registroMercantil: data.registroMercantil || "—",
-        montoOferta: data.montoOferta,
       };
-      setOferentes((prev) => [...prev, newOfe]);
-      toast.success("Oferente registrado exitosamente");
+
+      if (oferenteEditando) {
+        await editarOferente(oferenteEditando.id, {
+          ...payload,
+          proveedorId: null,
+        });
+        toast.success("Oferente actualizado exitosamente");
+      } else {
+        await registrarOferente(payload);
+        toast.success("Oferente registrado exitosamente");
+      }
+
+      loadOferentes();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al registrar oferente");
+      toast.error(error instanceof Error ? error.message : "Error al guardar oferente");
     }
   };
 
-  const handleDeleteOferente = () => {
+  const handleDeleteOferente = async () => {
     if (oferenteToDelete) {
-      setOferentes((prev) => prev.filter((o) => o.id !== oferenteToDelete));
-      toast.success("Oferente eliminado");
-      setOferenteToDelete(null);
-      setDeleteOferenteOpen(false);
+      try {
+        await eliminarOferente(oferenteToDelete);
+        toast.success("Oferente eliminado");
+        setOferenteToDelete(null);
+        setDeleteOferenteOpen(false);
+        loadOferentes();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Error al eliminar oferente");
+      }
     }
   };
 
@@ -266,7 +309,19 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {adquirentes.length === 0 ? (
+                {loadingAdquirentes ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center text-muted-foreground italic py-12"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                        <p>Cargando adquirentes...</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : adquirentes.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
@@ -291,9 +346,25 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                         <div className="flex items-center justify-center gap-3">
                           <button
                             className="text-slate-500 hover:text-navy transition-colors"
-                            onClick={() => {
-                              setAdquirenteEditando(adq);
-                              setAdquirenteSheetOpen(true);
+                            onClick={async () => {
+                              try {
+                                const detallado = await obtenerAdquirente(adq.id);
+                                setAdquirenteEditando({
+                                  id: detallado.id,
+                                  fecha: detallado.fechaAdquisicion,
+                                  empresa: detallado.nombreProveedorAdquiriente,
+                                  domicilioFiscal: detallado.direccionFiscalProveedorAdquirente,
+                                  telefono: detallado.telefonoProveedorAdquirente,
+                                  correo: detallado.correoProveedorAdquirente,
+                                  deposito:
+                                    detallado.datosPagoPliego && detallado.datosPagoPliego !== "—"
+                                      ? detallado.datosPagoPliego
+                                      : "",
+                                });
+                                setAdquirenteSheetOpen(true);
+                              } catch (e) {
+                                toast.error("Error al obtener detalles del adquirente");
+                              }
                             }}
                           >
                             <BsEye className="w-[18px] h-[18px]" />
@@ -532,9 +603,26 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                       <div className="flex items-center justify-center gap-3">
                         <button
                           className="text-slate-500 hover:text-navy transition-colors"
-                          onClick={() => {
-                            setOferenteEditando(ofe);
-                            setOferenteSheetOpen(true);
+                          onClick={async () => {
+                            try {
+                              const detallado = await obtenerOferente(ofe.id);
+                              setOferenteEditando({
+                                id: detallado.id,
+                                nombreEmpresa: detallado.nombreProveedorOferente,
+                                rif: detallado.rifProveedorOferente,
+                                representanteLegal: detallado.nombreRepLegalOferente,
+                                cedula: detallado.cedulaRepLegalOferente,
+                                registroMercantil:
+                                  detallado.datosRegistroMercantilProveedorOferente || "—",
+                                cantidadSobres: detallado.numeroSobresEntregados
+                                  ? String(detallado.numeroSobresEntregados)
+                                  : "0",
+                                montoOferta: String(detallado.montoOfertaBs),
+                              });
+                              setOferenteSheetOpen(true);
+                            } catch (e) {
+                              toast.error("Error al obtener detalles del oferente");
+                            }
                           }}
                         >
                           <BsEye className="w-[18px] h-[18px]" />
@@ -646,6 +734,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                 representanteLegal: oferenteEditando.representanteLegal,
                 cedulaRepresentante: oferenteEditando.cedula,
                 registroMercantil: oferenteEditando.registroMercantil,
+                cantidadSobres: oferenteEditando.cantidadSobres,
                 montoOferta: oferenteEditando.montoOferta,
               }
             : undefined

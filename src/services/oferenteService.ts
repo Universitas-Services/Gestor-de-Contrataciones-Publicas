@@ -71,3 +71,79 @@ export const listarOferentes = async (expedienteId: string): Promise<any[]> => {
 
   return response.json();
 };
+
+/**
+ * GET /ofertas-presentadas/{id}
+ * Obtiene los detalles de un oferente
+ */
+export const obtenerOferente = async (id: string): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/ofertas-presentadas/${id}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener detalles del oferente");
+  }
+
+  return response.json();
+};
+
+/**
+ * PATCH /ofertas-presentadas/{id}
+ * Actualiza un oferente existente.
+ */
+export const editarOferente = async (
+  id: string,
+  payload: Partial<RegistrarOferentePayload>
+): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/ofertas-presentadas/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ?? "Error al editar el oferente"
+    );
+  }
+
+  revalidatePath("/elaboracion-expediente");
+  return response.json();
+};
+
+/**
+ * DELETE /ofertas-presentadas/{id}
+ * Elimina un oferente.
+ */
+export const eliminarOferente = async (id: string): Promise<void> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/ofertas-presentadas/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ?? "Error al eliminar el oferente"
+    );
+  }
+
+  revalidatePath("/elaboracion-expediente");
+};

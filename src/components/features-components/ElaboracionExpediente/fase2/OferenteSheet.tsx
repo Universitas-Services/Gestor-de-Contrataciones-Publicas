@@ -74,19 +74,19 @@ export function OferenteSheet({
   // ── Sugerencias del autocomplete ──
   const [sugerencias, setSugerencias] = useState<ProveedorBusqueda[]>([]);
   const [showSugerencias, setShowSugerencias] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Reset form when sheet opens
   useEffect(() => {
     if (open) {
       form.reset({
-        rif: "",
-        nombreEmpresa: "",
-        representanteLegal: "",
-        cedulaRepresentante: "",
-        registroMercantil: "",
-        cantidadSobres: "",
-        montoOferta: "",
-        ...defaultValues,
+        rif: defaultValues?.rif || "",
+        nombreEmpresa: defaultValues?.nombreEmpresa || "",
+        representanteLegal: defaultValues?.representanteLegal || "",
+        cedulaRepresentante: defaultValues?.cedulaRepresentante || "",
+        registroMercantil: defaultValues?.registroMercantil || "",
+        cantidadSobres: defaultValues?.cantidadSobres || "",
+        montoOferta: defaultValues?.montoOferta || "",
       });
 
       if (mode === "crear") {
@@ -96,6 +96,7 @@ export function OferenteSheet({
         setSugerencias([]);
         setShowSugerencias(false);
       }
+      setIsEditing(mode === "crear");
     }
   }, [open, defaultValues, form, mode]);
 
@@ -180,8 +181,8 @@ export function OferenteSheet({
                 className="space-y-6"
                 id="oferente-form"
               >
-                {/* ── RIF con InputOTP (modo crear) / Campo de solo lectura (modo editar) ── */}
-                {mode === "crear" ? (
+                {/* ── RIF con InputOTP (modo crear o editar) / Campo de solo lectura ── */}
+                {isEditing ? (
                   <div className="space-y-2">
                     <FormLabel className="font-bold text-color-titulos text-[11px] block">
                       Indique el RIF. de la empresa oferente.
@@ -319,13 +320,14 @@ export function OferenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="Nombre de la empresa"
+                              maxLength={150}
                             />
                           )}
                         </div>
@@ -349,13 +351,14 @@ export function OferenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="Nombre y Apellido"
+                              maxLength={150}
                             />
                           )}
                         </div>
@@ -379,13 +382,27 @@ export function OferenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
+                              onChange={(e) => {
+                                let val = e.target.value.toUpperCase();
+                                val = val.replace(/[^VE0-9]/g, "");
+                                if (val.length > 0) {
+                                  let firstChar = val.charAt(0);
+                                  if (firstChar !== "V" && firstChar !== "E") {
+                                    firstChar = "V";
+                                  }
+                                  const numbers = val.substring(1).replace(/[^0-9]/g, "");
+                                  val = `${firstChar}-${numbers}`;
+                                }
+                                field.onChange(val);
+                              }}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="V-00000000"
+                              maxLength={10}
                             />
                           )}
                         </div>
@@ -410,13 +427,14 @@ export function OferenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="Registro Mercantil..."
+                              maxLength={250}
                             />
                           )}
                         </div>
@@ -440,7 +458,7 @@ export function OferenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
@@ -448,6 +466,8 @@ export function OferenteSheet({
                               type="number"
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="N° de sobres"
+                              maxLength={5}
+                              max={99999}
                             />
                           )}
                         </div>
@@ -472,13 +492,14 @@ export function OferenteSheet({
                       </p>
                       <FormControl>
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {mode === "editar" ? (
+                          {!isEditing ? (
                             field.value || "-"
                           ) : (
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
                               placeholder="Bs. 0,00"
+                              maxLength={50}
                             />
                           )}
                         </div>
@@ -495,18 +516,39 @@ export function OferenteSheet({
           <div className="p-8 pt-6 flex justify-end gap-3 pb-12 mt-auto border-t border-slate-100 bg-slate-50/50">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              type="button"
+              onClick={() => {
+                if (isEditing && mode === "editar") {
+                  setIsEditing(false);
+                } else {
+                  onOpenChange(false);
+                }
+              }}
               className="font-semibold flex-1 h-11 rounded-md"
             >
               Cancelar
             </Button>
-            {mode === "crear" && (
+            {mode === "editar" && !isEditing && (
               <Button
+                key="btn-editar"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsEditing(true);
+                }}
+                className="bg-navy hover:bg-navy-hover text-white font-semibold flex-1 h-11 rounded-md"
+              >
+                Editar
+              </Button>
+            )}
+            {(mode === "crear" || (mode === "editar" && isEditing)) && (
+              <Button
+                key="btn-guardar"
                 type="submit"
                 form="oferente-form"
                 className="bg-navy hover:bg-navy-hover text-white font-semibold flex-1 h-11 rounded-md"
               >
-                Guardar oferente
+                {mode === "crear" ? "Guardar oferente" : "Guardar cambios"}
               </Button>
             )}
           </div>
