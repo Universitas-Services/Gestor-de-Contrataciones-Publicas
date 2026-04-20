@@ -41,7 +41,7 @@ interface OferenteSheetProps {
   onOpenChange: (open: boolean) => void;
   defaultValues?: Partial<OferenteFormValues>;
   mode?: "crear" | "editar";
-  onSubmit: (data: OferenteFormValues) => void;
+  onSubmit: (data: OferenteFormValues, esNuevoProveedor: boolean) => void;
 }
 
 export function OferenteSheet({
@@ -69,6 +69,7 @@ export function OferenteSheet({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const isSelectingRef = useRef(false);
+  const [isProveedorSeleccionado, setIsProveedorSeleccionado] = useState(false);
 
   // ── Sugerencias del autocomplete ──
   const [sugerencias, setSugerencias] = useState<ProveedorBusqueda[]>([]);
@@ -92,6 +93,7 @@ export function OferenteSheet({
         setSearchTerm("");
         setSugerencias([]);
         setShowSugerencias(false);
+        setIsProveedorSeleccionado(false);
       }
       setIsEditing(mode === "crear");
     }
@@ -149,6 +151,8 @@ export function OferenteSheet({
         shouldValidate: true,
       });
 
+      setIsProveedorSeleccionado(true);
+
       setSugerencias([]);
       setShowSugerencias(false);
       toast.success("Datos del proveedor autocargados");
@@ -163,10 +167,7 @@ export function OferenteSheet({
   };
 
   const handleFormSubmit = (data: OferenteFormValues) => {
-    onSubmit(data);
-    toast.success(
-      mode === "crear" ? "Oferente registrado exitosamente" : "Oferente actualizado exitosamente"
-    );
+    onSubmit(data, !isProveedorSeleccionado && mode === "crear");
     onOpenChange(false);
   };
 
@@ -222,12 +223,30 @@ export function OferenteSheet({
                           value={searchTerm}
                           onChange={(e) => {
                             isSelectingRef.current = false; // El usuario editó manualmente
-                            const val = e.target.value.toUpperCase();
+                            setIsProveedorSeleccionado(false);
+
+                            let val = e.target.value.toUpperCase();
+                            // Limitar a J, G, números y guiones
+                            val = val.replace(/[^JG0-9-]/g, "");
+
+                            if (val.length > 0) {
+                              // La primera letra debe ser J o G estrictamente
+                              if (val[0] !== "J" && val[0] !== "G") {
+                                val = "";
+                              } else {
+                                // El resto solo puede ser números o guiones (evitando dobles guiones)
+                                let rest = val.slice(1).replace(/[^0-9-]/g, "");
+                                rest = rest.replace(/-+/g, "-");
+                                val = val[0] + rest;
+                              }
+                            }
+
                             setSearchTerm(val);
                             form.setValue("rif", val, { shouldValidate: true });
                           }}
                           placeholder="Ejemplo: G-12345678-9"
                           className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
+                          maxLength={13}
                         />
                         {isSearching && (
                           <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin flex-shrink-0 ml-2" />

@@ -260,3 +260,33 @@ export async function descargarDocumentoProveedor(
   const arrayBuffer = await response.arrayBuffer();
   return { data: new Uint8Array(arrayBuffer), fileName };
 }
+
+/**
+ * POST /proveedores/registro-rapido
+ * Registra un proveedor de forma rápida durante la elaboración del expediente.
+ */
+export async function registrarProveedorRapido(data: {
+  rif: string;
+  nombre: string;
+  nombreRepLegal: string;
+  cedulaRepLegal: string;
+  datosRegistroMercantil: string;
+}) {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/proveedores/registro-rapido`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al realizar el registro rápido del proveedor");
+  }
+
+  return response.json();
+}

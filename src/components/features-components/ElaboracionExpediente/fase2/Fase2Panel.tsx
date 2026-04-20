@@ -50,10 +50,19 @@ import {
   editarOferente,
   eliminarOferente,
 } from "@/services/oferenteService";
+import { registrarProveedorRapido } from "@/services/proveedores.service";
 import type { AdquirenteFormValues, OferenteFormValues } from "@/lib/schemas/fase2Schema";
 import { AdquirenteSheet } from "./AdquirenteSheet";
 import { OferenteSheet } from "./OferenteSheet";
 import { ConfirmarEliminacionDialog } from "./ConfirmarEliminacionDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ─── Documentos del Procedimiento (estático) ────────────────────────
 
@@ -92,6 +101,10 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   const [deleteOferenteOpen, setDeleteOferenteOpen] = useState(false);
   const [oferenteToDelete, setOferenteToDelete] = useState<string | null>(null);
   const [loadingOferentes, setLoadingOferentes] = useState(false);
+
+  // ── Modal de proveedor guardado rápidamente ──
+  const [showProviderWarning, setShowProviderWarning] = useState(false);
+  const [registroRapidoRif, setRegistroRapidoRif] = useState("");
 
   // ── Estado de Documentos ──
   const [documentos, setDocumentos] = useState<DocumentoItem[]>(DOCUMENTOS_INICIALES);
@@ -207,7 +220,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   };
 
   // ── Handlers de Oferentes ──
-  const handleAddOferente = async (data: OferenteFormValues) => {
+  const handleAddOferente = async (data: OferenteFormValues, isNewProvider: boolean) => {
     try {
       const sobresNum = parseInt(data.cantidadSobres, 10) || 0;
       const montoNum = parseFloat(data.montoOferta.replace(/\./g, "").replace(",", ".")) || 0;
@@ -230,6 +243,26 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
         });
         toast.success("Oferente actualizado exitosamente");
       } else {
+        // Lógica de registro rápido de proveedor
+        if (isNewProvider) {
+          try {
+            await registrarProveedorRapido({
+              rif: data.rif,
+              nombre: data.nombreEmpresa,
+              nombreRepLegal: data.representanteLegal,
+              cedulaRepLegal: data.cedulaRepresentante,
+              datosRegistroMercantil: data.registroMercantil || "—",
+            });
+            // Mostrar modal de advertencia al final
+            setRegistroRapidoRif(data.rif);
+            setShowProviderWarning(true);
+          } catch (rapidoErr: any) {
+            // Si el proveedor ya existía pero el usuario no lo clickeó (por error 409 etc),
+            // podemos continuar el registro de oferente con tranquilidad.
+            console.warn("Aviso al registrar proveedor rápido:", rapidoErr);
+          }
+        }
+
         await registrarOferente(payload);
         toast.success("Oferente registrado exitosamente");
       }
@@ -756,6 +789,33 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
         onConfirm={handleDeleteOferente}
         tipo="oferente"
       />
+
+      {/* Modal especial de Registro Rápido */}
+      <Dialog open={showProviderWarning} onOpenChange={setShowProviderWarning}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-navy font-bold">Registro Rápido Exitoso</DialogTitle>
+            <DialogDescription className="text-slate-500 mt-3 pt-2">
+              Se ha detectado que el RIF <strong className="text-navy">{registroRapidoRif}</strong>{" "}
+              no existía en nuestro sistema. Lo hemos añadido a la base de datos de{" "}
+              <strong>Proveedores</strong> de forma rápida para poder registrar la oferta con éxito.
+              <br />
+              <br />
+              Por favor, recuerde dirigirse posteriormente al{" "}
+              <strong className="text-navy">Módulo de Proveedores</strong> para completar
+              exhaustivamente el perfil de esta empresa.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              onClick={() => setShowProviderWarning(false)}
+              className="bg-navy hover:bg-navy/90 text-white font-bold w-full"
+            >
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

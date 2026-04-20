@@ -37,7 +37,7 @@ export const oferenteSchema = z.object({
   rif: z
     .string()
     .min(1, { message: "El RIF es requerido" })
-    .regex(/^[JGVEP]-\d{8}-?\d?$/, "Formato de RIF inválido (Ej: J-12345678-9)"),
+    .regex(/^[JG]-\d{7,9}-\d$/, "Formato de RIF inválido (Ej: G-12345678-9)"),
   nombreEmpresa: z
     .string()
     .min(3, { message: "El nombre de la empresa debe tener al menos 3 caracteres" })
