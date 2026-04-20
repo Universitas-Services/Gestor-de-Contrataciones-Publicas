@@ -23,7 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getProveedores, getProveedorById } from "@/services/proveedores.service";
 
 import { oferenteSchema, type OferenteFormValues } from "@/lib/schemas/fase2Schema";
 import { type ProveedorBusqueda } from "@/types/expediente.types";
@@ -65,11 +66,9 @@ export function OferenteSheet({
     mode: "onChange",
   });
 
-  // ── Estado del InputOTP para RIF (solo en modo crear) ──
-  const [rifTipo, setRifTipo] = useState("G");
-  const [rifCuerpo, setRifCuerpo] = useState("");
-  const [rifVerificador, setRifVerificador] = useState("");
-  const rifVerificadorRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const isSelectingRef = useRef(false);
 
   // ── Sugerencias del autocomplete ──
   const [sugerencias, setSugerencias] = useState<ProveedorBusqueda[]>([]);
@@ -90,9 +89,7 @@ export function OferenteSheet({
       });
 
       if (mode === "crear") {
-        setRifTipo("G");
-        setRifCuerpo("");
-        setRifVerificador("");
+        setSearchTerm("");
         setSugerencias([]);
         setShowSugerencias(false);
       }
@@ -100,40 +97,69 @@ export function OferenteSheet({
     }
   }, [open, defaultValues, form, mode]);
 
-  // ── Concatenar fragmentos del RIF al form (solo en modo crear) ──
+  // ── Autocomplete Debounce Logic ──
   useEffect(() => {
     if (mode !== "crear") return;
-    if (rifTipo && rifCuerpo.length === 8 && rifVerificador.length === 1) {
-      const rifCompleto = `${rifTipo}-${rifCuerpo}-${rifVerificador}`;
-      form.setValue("rif", rifCompleto, { shouldValidate: true });
-    } else {
-      form.setValue("rif", "");
-    }
-  }, [rifTipo, rifCuerpo, rifVerificador, form, mode]);
 
-  // ── Búsqueda de sugerencias al escribir el cuerpo del RIF ──
-  useEffect(() => {
-    // Logic disabled until real provider endpoint is available
-    setSugerencias([]);
-    setShowSugerencias(false);
-  }, [rifTipo, rifCuerpo, mode]);
+    if (!searchTerm || searchTerm.length < 3) {
+      setSugerencias([]);
+      setShowSugerencias(false);
+      return;
+    }
+
+    if (isSelectingRef.current) {
+      return;
+    }
+
+    setIsSearching(true);
+    const handler = setTimeout(async () => {
+      try {
+        const response = await getProveedores({ rif: searchTerm, limit: 10 });
+        const list = Array.isArray(response) ? response : response?.data || response?.items || [];
+        if (list.length > 0) {
+          setSugerencias(list);
+          setShowSugerencias(true);
+        } else {
+          setSugerencias([]);
+          setShowSugerencias(false);
+        }
+      } catch (error) {
+        console.error("Error buscando proveedores:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm, mode]);
 
   // ── Autocompletar al seleccionar una sugerencia ──
-  const handleSeleccionarSugerencia = (proveedor: ProveedorBusqueda) => {
-    const parts = proveedor.rif.split("-");
-    if (parts.length >= 2) {
-      setRifTipo(parts[0]);
-      setRifCuerpo(parts[1]);
-      if (parts[2]) setRifVerificador(parts[2]);
+  const handleSeleccionarSugerencia = async (proveedor: ProveedorBusqueda) => {
+    try {
+      isSelectingRef.current = true;
+      // Llamamos endpoint para prellenar todo
+      const detallado = await getProveedorById(proveedor.id);
+
+      setSearchTerm(detallado.rif);
+      form.setValue("rif", detallado.rif, { shouldValidate: true });
+      form.setValue("nombreEmpresa", detallado.nombre, { shouldValidate: true });
+      form.setValue("representanteLegal", detallado.nombreRepLegal, { shouldValidate: true });
+      form.setValue("cedulaRepresentante", detallado.cedulaRepLegal, { shouldValidate: true });
+      form.setValue("registroMercantil", detallado.datosRegistroMercantil || "—", {
+        shouldValidate: true,
+      });
+
+      setSugerencias([]);
+      setShowSugerencias(false);
+      toast.success("Datos del proveedor autocargados");
+
+      setTimeout(() => {
+        isSelectingRef.current = false;
+      }, 500);
+    } catch (e) {
+      toast.error("Error obteniendo detalles completos del proveedor");
+      isSelectingRef.current = false;
     }
-    form.setValue("rif", proveedor.rif, { shouldValidate: true });
-    form.setValue("nombreEmpresa", proveedor.nombre, { shouldValidate: true });
-    form.setValue("representanteLegal", proveedor.nombreRepLegal, { shouldValidate: true });
-    form.setValue("cedulaRepresentante", proveedor.cedulaRepLegal, { shouldValidate: true });
-    form.setValue("registroMercantil", proveedor.datosRegistroMercantil, { shouldValidate: true });
-    setSugerencias([]);
-    setShowSugerencias(false);
-    toast.success("Datos del proveedor autocargados");
   };
 
   const handleFormSubmit = (data: OferenteFormValues) => {
@@ -190,82 +216,23 @@ export function OferenteSheet({
                     <p className="text-[10px] text-muted-foreground italic">
                       Artículos 91, 92 LCP; 96 RLCP; 18.4 LOPA; 5 NORMAS DE CONTROL INTERNO SUNAI.
                     </p>
-                    <div className="flex items-center gap-2">
-                      <Select value={rifTipo} onValueChange={setRifTipo}>
-                        <SelectTrigger className="w-[70px] h-[32px] border border-border bg-white text-[11px]">
-                          <SelectValue placeholder="G" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="G">G</SelectItem>
-                          <SelectItem value="J">J</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <InputOTP
-                        maxLength={8}
-                        value={rifCuerpo}
-                        onChange={(val) => {
-                          setRifCuerpo(val);
-                          if (val.length === 8) {
-                            rifVerificadorRef.current?.focus();
-                          }
-                        }}
-                        pattern={REGEXP_ONLY_DIGITS}
-                      >
-                        <InputOTPGroup>
-                          <InputOTPSlot
-                            index={0}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={1}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={2}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={3}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={4}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={5}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={6}
-                            className="border-r-0 shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                          <InputOTPSlot
-                            index={7}
-                            className="rounded-r-md border-r shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                        </InputOTPGroup>
-                      </InputOTP>
-
-                      <div className="text-slate-400 font-bold px-1 flex items-center">
-                        <MinusIcon className="h-4 w-4" />
+                    <div className="relative">
+                      <div className="border border-slate-300 bg-white px-3 py-1.5 rounded-md w-full min-h-[32px] flex items-center">
+                        <input
+                          value={searchTerm}
+                          onChange={(e) => {
+                            isSelectingRef.current = false; // El usuario editó manualmente
+                            const val = e.target.value.toUpperCase();
+                            setSearchTerm(val);
+                            form.setValue("rif", val, { shouldValidate: true });
+                          }}
+                          placeholder="Ejemplo: G-12345678-9"
+                          className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
+                        />
+                        {isSearching && (
+                          <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin flex-shrink-0 ml-2" />
+                        )}
                       </div>
-
-                      <InputOTP
-                        ref={rifVerificadorRef}
-                        maxLength={1}
-                        value={rifVerificador}
-                        onChange={(val) => setRifVerificador(val)}
-                        pattern={REGEXP_ONLY_DIGITS}
-                      >
-                        <InputOTPGroup>
-                          <InputOTPSlot
-                            index={0}
-                            className="rounded-md border-l shadow-none h-[32px] w-7 text-[11px]"
-                          />
-                        </InputOTPGroup>
-                      </InputOTP>
                     </div>
 
                     {/* Sugerencias de proveedores */}
