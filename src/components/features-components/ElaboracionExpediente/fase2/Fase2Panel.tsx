@@ -51,10 +51,18 @@ import {
   eliminarOferente,
 } from "@/services/oferenteService";
 import { registrarProveedorRapido } from "@/services/proveedores.service";
+import {
+  obtenerStatusDocumentos,
+  generarDocumento,
+  previewDocumento,
+  descargarDocumento,
+  type DocumentoStatus,
+} from "@/services/generadorDocumentosService";
 import type { AdquirenteFormValues, OferenteFormValues } from "@/lib/schemas/fase2Schema";
 import { AdquirenteSheet } from "./AdquirenteSheet";
 import { OferenteSheet } from "./OferenteSheet";
 import { ConfirmarEliminacionDialog } from "./ConfirmarEliminacionDialog";
+import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 import {
   Dialog,
   DialogContent,
@@ -64,20 +72,24 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// ─── Documentos del Procedimiento (estático) ────────────────────────
+// ─── Documentos del Procedimiento (Fase 2) ──────────────────────────
 
-interface DocumentoItem {
-  id: string;
-  nombre: string;
-  generado: boolean;
-  procesando: boolean;
-}
+/** Tipos de documento que interesan en la Fase 2 */
+const FASE2_DOC_TYPES = ["REGISTRO_ADQUIRENTES", "ACTA_RECEPCION", "ACTA_APERTURA"];
 
-const DOCUMENTOS_INICIALES: DocumentoItem[] = [
-  { id: "doc-1", nombre: "Registro de adquirentes del pliego", generado: false, procesando: false },
-  { id: "doc-2", nombre: "Actas de recepción de sobre", generado: false, procesando: false },
-  { id: "doc-3", nombre: "Acta de apertura de sobre", generado: false, procesando: false },
-];
+/** Mapeo de tipo de documento → segmento del endpoint de generación */
+const TIPO_TO_ENDPOINT: Record<string, string> = {
+  REGISTRO_ADQUIRENTES: "registro-adquirentes",
+  ACTA_RECEPCION: "acta-recepcion-sobres",
+  ACTA_APERTURA: "acta-apertura-sobres",
+};
+
+/** Icono izquierdo por tipo de documento */
+const TIPO_TO_ICON: Record<string, "receipt" | "clipboard"> = {
+  REGISTRO_ADQUIRENTES: "receipt",
+  ACTA_RECEPCION: "clipboard",
+  ACTA_APERTURA: "receipt",
+};
 
 // ─── Componente Principal ───────────────────────────────────────────
 
@@ -106,8 +118,16 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   const [showProviderWarning, setShowProviderWarning] = useState(false);
   const [registroRapidoRif, setRegistroRapidoRif] = useState("");
 
-  // ── Estado de Documentos ──
-  const [documentos, setDocumentos] = useState<DocumentoItem[]>(DOCUMENTOS_INICIALES);
+  // ── Modal de visualización DOCX ──
+  const [previewDocOpen, setPreviewDocOpen] = useState(false);
+  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
+  const [previewDocTitle, setPreviewDocTitle] = useState("");
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
+  const [procesandoDoc, setProcesandoDoc] = useState<Record<string, boolean>>({});
+
+  // ── Estado de Documentos (dinámico desde backend) ──
+  const [documentos, setDocumentos] = useState<DocumentoStatus[]>([]);
 
   // ── Funciones de carga ──
   const loadOferentes = async () => {
@@ -161,10 +181,24 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
     }
   };
 
+  // ── Carga de estado de documentos ──
+  const loadDocumentos = async () => {
+    if (!expedienteId) return;
+    try {
+      const allDocs = await obtenerStatusDocumentos(expedienteId);
+      // Filtrar solo los 3 documentos de Fase 2
+      const fase2Docs = allDocs.filter((d) => FASE2_DOC_TYPES.includes(d.tipo));
+      setDocumentos(fase2Docs);
+    } catch (error) {
+      console.error("Error al cargar estado de documentos:", error);
+    }
+  };
+
   // ── Efecto: Cargar datos dinámicos ──
   useEffect(() => {
     loadOferentes();
     loadAdquirentes();
+    loadDocumentos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expedienteId]);
 
@@ -287,16 +321,76 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
     }
   };
 
-  // ── Handler de Documentos (simulado) ──
-  const handleGenerarDocumento = (docId: string) => {
-    // Simular procesamiento
-    setDocumentos((prev) => prev.map((d) => (d.id === docId ? { ...d, procesando: true } : d)));
-    setTimeout(() => {
-      setDocumentos((prev) =>
-        prev.map((d) => (d.id === docId ? { ...d, procesando: false, generado: true } : d))
-      );
+  // ── Handlers de Documentos ──
+  const handleGenerarDocumento = async (tipo: string) => {
+    const endpoint = TIPO_TO_ENDPOINT[tipo];
+    if (!endpoint || !expedienteId) return;
+
+    setProcesandoDoc((prev) => ({ ...prev, [tipo]: true }));
+    try {
+      await generarDocumento(endpoint, expedienteId);
       toast.success("Documento generado exitosamente");
-    }, 2000);
+      // Refrescar estado real desde el backend
+      await loadDocumentos();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al generar documento");
+    } finally {
+      setProcesandoDoc((prev) => ({ ...prev, [tipo]: false }));
+    }
+  };
+
+  const handlePreviewDocumento = async (doc: DocumentoStatus) => {
+    const endpoint = TIPO_TO_ENDPOINT[doc.tipo];
+    if (!endpoint || !expedienteId) return;
+
+    // Clonar exactamente el patrón de ManualButtons.handlePreview
+    setIsPreviewing(true);
+    setPreviewDocOpen(true);
+    try {
+      const result = await previewDocumento(endpoint, expedienteId);
+      setPreviewDocUrl(result.urlArchivo);
+      setPreviewDocTitle(result.tituloDocumento || doc.label);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Error al obtener la previsualización";
+      toast.error(message);
+      setPreviewDocOpen(false);
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleDownloadDocumento = async (doc: DocumentoStatus) => {
+    const endpoint = TIPO_TO_ENDPOINT[doc.tipo];
+    if (!endpoint || !expedienteId) return;
+
+    setIsDownloading((prev) => ({ ...prev, [doc.tipo]: true }));
+    try {
+      const { data, fileName } = await descargarDocumento(endpoint, expedienteId);
+
+      // Crear Blob a partir del Uint8Array recibido del servidor (patrón manualService)
+      const blob = new Blob([new Uint8Array(data)], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      // Disparar la descarga programáticamente
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+
+      // Limpiar
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Documento descargado exitosamente");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al descargar documento");
+    } finally {
+      setIsDownloading((prev) => ({ ...prev, [doc.tipo]: false }));
+    }
   };
 
   return (
@@ -490,22 +584,22 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
           <CardContent className="px-6 pb-6 flex-1 flex flex-col">
             <div className="space-y-8 mt-2">
               {documentos.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between gap-2">
+                <div key={doc.tipo} className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-4 flex-1">
                     <div className="w-[46px] h-[46px] rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
-                      {doc.id === "doc-1" || doc.id === "doc-3" ? (
-                        <IoReceiptOutline className="w-[22px] h-[22px] text-slate-700" />
-                      ) : (
+                      {TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
                         <FaRegClipboard className="w-[20px] h-[20px] text-slate-700" />
+                      ) : (
+                        <IoReceiptOutline className="w-[22px] h-[22px] text-slate-700" />
                       )}
                     </div>
                     <p className="text-[14px] font-bold text-color-titulos leading-tight max-w-[130px]">
-                      {doc.nombre}
+                      {doc.label}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-4 flex-shrink-0">
-                    {doc.procesando ? (
+                    {procesandoDoc[doc.tipo] ? (
                       <div className="flex items-center justify-center w-[22px] h-[22px]">
                         <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
                       </div>
@@ -515,6 +609,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                         <button
                           className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           disabled={!doc.generado}
+                          onClick={() => handlePreviewDocumento(doc)}
                         >
                           <IoEyeOutline className="w-[26px] h-[26px]" />
                         </button>
@@ -522,15 +617,22 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                         {/* Descargar */}
                         <button
                           className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          disabled={!doc.generado}
+                          disabled={!doc.generado || isDownloading[doc.tipo]}
+                          onClick={() => handleDownloadDocumento(doc)}
                         >
-                          <IoDownloadOutline className="w-[24px] h-[24px]" />
+                          {isDownloading[doc.tipo] ? (
+                            <div className="w-[24px] h-[24px] flex items-center justify-center">
+                              <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          ) : (
+                            <IoDownloadOutline className="w-[24px] h-[24px]" />
+                          )}
                         </button>
 
                         {/* Generar / Regenerar */}
                         <button
                           className="text-[#334155] hover:text-navy transition-colors"
-                          onClick={() => handleGenerarDocumento(doc.id)}
+                          onClick={() => handleGenerarDocumento(doc.tipo)}
                         >
                           {doc.generado ? (
                             <BsArrowClockwise className="w-[20px] h-[20px]" />
@@ -794,15 +896,15 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
       <Dialog open={showProviderWarning} onOpenChange={setShowProviderWarning}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-navy font-bold">Registro Rápido Exitoso</DialogTitle>
+            <DialogTitle className="text-navy font-bold">Registro rápido exitoso</DialogTitle>
             <DialogDescription className="text-slate-500 mt-3 pt-2">
               Se ha detectado que el RIF <strong className="text-navy">{registroRapidoRif}</strong>{" "}
               no existía en nuestro sistema. Lo hemos añadido a la base de datos de{" "}
-              <strong>Proveedores</strong> de forma rápida para poder registrar la oferta con éxito.
+              <strong>proveedores</strong> de forma rápida para poder registrar la oferta con éxito.
               <br />
               <br />
               Por favor, recuerde dirigirse posteriormente al{" "}
-              <strong className="text-navy">Módulo de Proveedores</strong> para completar
+              <strong className="text-navy">módulo de proveedores</strong> para completar
               exhaustivamente el perfil de esta empresa.
             </DialogDescription>
           </DialogHeader>
@@ -816,6 +918,20 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ManualPreviewDialog
+        open={previewDocOpen}
+        onOpenChange={(open) => {
+          setPreviewDocOpen(open);
+          if (!open && previewDocUrl) {
+            URL.revokeObjectURL(previewDocUrl);
+            setPreviewDocUrl(null);
+            setPreviewDocTitle("");
+          }
+        }}
+        urlArchivo={previewDocUrl}
+        tituloManual={previewDocTitle}
+        isLoading={isPreviewing}
+      />
     </div>
   );
 }
