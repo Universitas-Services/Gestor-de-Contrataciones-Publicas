@@ -600,6 +600,22 @@ export function ListadoUsuarios() {
                               {selectedUserDetails.datosDesignacionComision || "-"}
                             </div>
                           </div>
+                          <div className="space-y-1">
+                            <Label className="text-color-boton-2 font-bold text-[11px] block">
+                              Correo electrónico
+                            </Label>
+                            <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
+                              {selectedUserDetails.correoElectronico || "-"}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-color-boton-2 font-bold text-[11px] block">
+                              Teléfono
+                            </Label>
+                            <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
+                              {selectedUserDetails.telefono || "-"}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Miembros de la Comisión */}
