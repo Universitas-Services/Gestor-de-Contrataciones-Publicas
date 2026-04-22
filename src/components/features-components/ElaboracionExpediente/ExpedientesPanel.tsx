@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { obtenerExpedientes, eliminarExpediente } from "@/services/expedienteService";
 import type { ExpedienteListItem } from "@/services/expedienteService";
 
@@ -438,8 +439,8 @@ function ExpedienteRow({
         isEven ? "bg-slate-50/50" : "bg-white"
       }`;
 
-  return (
-    <tr className={rowBase}>
+  const rowContent = (
+    <>
       {/* Checkbox – deshabilitado si ANULADO */}
       <td className="px-4 py-3">
         <Checkbox
@@ -552,6 +553,27 @@ function ExpedienteRow({
           )}
         </div>
       </td>
-    </tr>
+    </>
   );
+
+  if (isAnulado) {
+    return (
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <tr className={rowBase}>{rowContent}</tr>
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-800 text-white max-w-[250px] text-center border-slate-700 py-2.5 shadow-lg relative z-50">
+            <p className="font-semibold text-[13px]">Expediente no disponible</p>
+            <p className="text-slate-300 text-xs mt-1 leading-snug">
+              Este expediente se encuentra anulado. Por favor, acuda a soporte técnico si desea
+              recuperarlo.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return <tr className={rowBase}>{rowContent}</tr>;
 }

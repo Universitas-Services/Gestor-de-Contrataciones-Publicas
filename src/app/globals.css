@@ -174,7 +174,7 @@
   --role-admin-ente-foreground: oklch(1 0 0);
 
   /* Supervisor - Verde (validación, seguridad) */
-  --role-supervisor: oklch(0.6 0.15 145);
+  --role-supervisor: oklch(0.7653 0.165 119.86);
   --role-supervisor-foreground: oklch(1 0 0);
 
   /* Visualizador - Gris/Plata (neutralidad, observación) */
@@ -199,9 +199,9 @@
   --dropzone-border: oklch(0.75 0.019 212);
   --dropzone-bg: oklch(0.76 0.01 230 / 0.1);
   --section-docs: oklch(0.68 0.16 222);
-  --success: oklch(0.7253 0.1868 149.3);
-  --success-bg: oklch(0.9817 0.0175 151.28);
-  --success-text: oklch(0.527 0.1359 150.01);
+  --success: oklch(0.7653 0.165 119.86);
+  --success-bg: oklch(0.96 0.04 119.86);
+  --success-text: oklch(0.45 0.12 119.86);
 
   /* Conocenos */
   --conocenos-bg: oklch(0.96 0.012 245);
@@ -217,9 +217,9 @@
   --tipo-servicios: oklch(0.4084 0.0433 256.14);
   --tipo-servicios-bg: oklch(0.9161 0.023 250.8);
   --tipo-servicios-border: oklch(0.6841 0.0411 252.08);
-  --vigente: oklch(0.527 0.1359 150.01);
-  --vigente-bg: oklch(0.8745 0.1494 150.1);
-  --vigente-border: oklch(0.6257 0.1663 149.65);
+  --vigente: oklch(0.7653 0.165 119.86);
+  --vigente-bg: oklch(0.96 0.04 119.86);
+  --vigente-border: oklch(0.65 0.12 119.86);
   --vencido: oklch(0.4414 0.1526 35.65);
   --vencido-bg: oklch(0.9522 0.057 79.62);
   --vencido-border: oklch(0.7003 0.2048 50.05);
@@ -229,14 +229,14 @@
   --rechazado: oklch(0.4825 0.1999 27.25);
   --rechazado-bg: oklch(0.9694 0.0191 21.4);
   --rechazado-border: oklch(0.8826 0.0769 20.4);
-  --patrimonio: oklch(0.6257 0.1663 149.65);
+  --patrimonio: oklch(0.7653 0.165 119.86);
 
   /* Expediente - Fases */
   --fase-1: oklch(0.7 0.015 260);
   --fase-2: oklch(0.75 0.16 85);
   --fase-3: oklch(0.65 0.17 145);
   --fase-4: oklch(0.4 0.08 255);
-  --progress-bar: oklch(0.65 0.17 145);
+  --progress-bar: oklch(0.7653 0.165 119.86);
   --card-accent-border: oklch(0.5 0.13 250);
 
   /* Hardcoded color refactor */

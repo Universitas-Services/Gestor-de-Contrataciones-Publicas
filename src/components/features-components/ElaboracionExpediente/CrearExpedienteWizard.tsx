@@ -11,6 +11,7 @@ import { DatosBasicosStep } from "./steps/DatosBasicosStep";
 import { AnalisisModalidadStep } from "./steps/AnalisisModalidadStep";
 import { ConfiguracionActoresStep } from "./steps/ConfiguracionActoresStep";
 import { PlanificacionStep } from "./steps/PlanificacionStep";
+import { StepProgressBar } from "./steps/StepProgressBar";
 import {
   datosBasicosSchema,
   VALOR_UCAU_ACTUAL,
@@ -405,6 +406,12 @@ export function CrearExpedienteWizard({
       </CardHeader>
 
       <CardContent className="px-10 pt-8 pb-10">
+        <StepProgressBar
+          currentStep={currentStep}
+          totalSteps={modoEdicion ? 3 : 4}
+          modoEdicion={modoEdicion}
+        />
+
         {currentStep === 1 && (
           <DatosBasicosStep
             form={datosBasicosForm}
