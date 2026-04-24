@@ -1,7 +1,8 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { Fase1Form } from "@/components/features-components/ElaboracionExpediente/fase-1/Fase1Form";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { obtenerEnte } from "@/services/enteService";
 import { obtenerExpediente } from "@/services/expedienteService";
 
 interface Props {
@@ -20,9 +21,20 @@ export default async function Fase1Page({ params }: Props) {
     notFound();
   }
 
+  let direccionEnteDefault = "";
+
+  if (user.enteId) {
+    try {
+      const ente = await obtenerEnte(user.enteId);
+      direccionEnteDefault = ente.direccionFiscal ?? "";
+    } catch {
+      direccionEnteDefault = "";
+    }
+  }
+
   return (
-    <div className="w-full min-w-0 max-w-full mx-auto flex flex-col items-start p-0 overflow-x-hidden">
-      <Fase1Form />
+    <div className="mx-auto flex w-full min-w-0 max-w-full flex-col items-start overflow-x-hidden p-0">
+      <Fase1Form expedienteId={id} direccionEnteDefault={direccionEnteDefault} />
     </div>
   );
 }

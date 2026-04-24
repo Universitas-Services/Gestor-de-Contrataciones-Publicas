@@ -26,6 +26,7 @@ import { Fase2Panel } from "./fase2/Fase2Panel";
 import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
 import type { CronogramaFormValues } from "@/lib/schemas/expedienteSchema";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import type { Fase1TabValue } from "@/types/fase1.types";
 import { guardarCronograma } from "@/services/expedienteService";
 import { isFechaEditable, moverFechaCronograma } from "@/lib/utils/cronogramaUtils";
 import type { IEvent } from "./calendar/types";
@@ -179,9 +180,10 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
 
 interface Props {
   data: ExpedienteResponse;
+  initialTab?: Fase1TabValue;
 }
 
-export function ExpedienteDetalle({ data }: Props) {
+export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -317,7 +319,7 @@ export function ExpedienteDetalle({ data }: Props) {
 
         {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
         <div className="w-full">
-          <Tabs defaultValue="fase-0" className="w-full">
+          <Tabs defaultValue={initialTab} className="w-full">
             {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
             <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
               {FASES.map((fase, i) => (
