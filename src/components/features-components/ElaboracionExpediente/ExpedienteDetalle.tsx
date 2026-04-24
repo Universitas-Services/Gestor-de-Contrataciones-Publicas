@@ -36,7 +36,7 @@ import { PlanificacionStep } from "./steps/PlanificacionStep";
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 const MODALIDAD_DISPLAY: Record<string, string> = {
-  LICITACION_PUBLICA: "Licitación Pública",
+  LICITACION_PUBLICA: "Concurso Abierto, Acto Único Apertura Única",
   CONCURSO_ABIERTO: "Concurso Abierto",
   CONCURSO_CERRADO: "Concurso Cerrado",
   CONSULTA_PRECIOS: "Consulta de Precios",
