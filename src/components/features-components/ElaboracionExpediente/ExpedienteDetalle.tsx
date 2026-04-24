@@ -3,9 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import Link from "next/link";
 import {
-  ChevronRight,
   Package,
   Wrench,
   HardHat,
@@ -22,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Fase1Panel } from "./fase-1/Fase1Panel";
 import { Fase2Panel } from "./fase2/Fase2Panel";
 
 import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
@@ -526,6 +525,10 @@ export function ExpedienteDetalle({ data }: Props) {
                   </Button>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="fase-1" className="mt-6">
+              <Fase1Panel expedienteId={data.id} />
             </TabsContent>
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
