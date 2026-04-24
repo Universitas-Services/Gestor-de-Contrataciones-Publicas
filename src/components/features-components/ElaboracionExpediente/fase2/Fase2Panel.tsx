@@ -14,6 +14,7 @@ import {
 } from "react-icons/io5";
 import { FaRegTrashAlt, FaRegClipboard } from "react-icons/fa";
 import { BsArrowClockwise } from "react-icons/bs";
+import { IoMdWarning } from "react-icons/io";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { type Adquirente, type Oferente } from "@/types/expediente.types";
 import {
@@ -54,6 +56,7 @@ import { registrarProveedorRapido } from "@/services/proveedores.service";
 import {
   obtenerStatusDocumentos,
   generarDocumento,
+  regenerarDocumento,
   previewDocumento,
   descargarDocumento,
   type DocumentoStatus,
@@ -234,6 +237,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
       }
 
       loadAdquirentes();
+      loadDocumentos();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar adquirente");
     }
@@ -247,6 +251,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
         setAdquirenteToDelete(null);
         setDeleteAdquirenteOpen(false);
         loadAdquirentes();
+        loadDocumentos();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Error al eliminar adquirente");
       }
@@ -302,6 +307,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
       }
 
       loadOferentes();
+      loadDocumentos();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar oferente");
     }
@@ -315,6 +321,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
         setOferenteToDelete(null);
         setDeleteOferenteOpen(false);
         loadOferentes();
+        loadDocumentos();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Error al eliminar oferente");
       }
@@ -330,12 +337,25 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
     try {
       await generarDocumento(endpoint, expedienteId);
       toast.success("Documento generado exitosamente");
-      // Refrescar estado real desde el backend
       await loadDocumentos();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al generar documento");
     } finally {
       setProcesandoDoc((prev) => ({ ...prev, [tipo]: false }));
+    }
+  };
+
+  const handleRegenerarDocumento = async (doc: DocumentoStatus) => {
+    if (!doc.documento?.id) return;
+    setProcesandoDoc((prev) => ({ ...prev, [doc.tipo]: true }));
+    try {
+      await regenerarDocumento(doc.documento.id);
+      toast.success("Documento regenerado exitosamente");
+      await loadDocumentos();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al regenerar documento");
+    } finally {
+      setProcesandoDoc((prev) => ({ ...prev, [doc.tipo]: false }));
     }
   };
 
@@ -583,68 +603,129 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
           </CardHeader>
           <CardContent className="px-6 pb-6 flex-1 flex flex-col">
             <div className="space-y-8 mt-2">
-              {documentos.map((doc) => (
-                <div key={doc.tipo} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-[46px] h-[46px] rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
-                      {TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
-                        <FaRegClipboard className="w-[20px] h-[20px] text-slate-700" />
+              {documentos.map((doc) => {
+                const desactualizado = doc.estaDesactualizado && doc.generado;
+                return (
+                  <div key={doc.tipo} className="flex items-center justify-between gap-2">
+                    {/* ── Icono + Label ── */}
+                    <div className="flex items-center gap-4 flex-1">
+                      {desactualizado ? (
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {/* Cuadro con animación cross-dissolve */}
+                              <div
+                                className="relative w-[46px] h-[46px] rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                                style={{
+                                  backgroundColor: "var(--doc-warning-bg)",
+                                  border: "1px solid var(--doc-warning-border)",
+                                }}
+                              >
+                                {/* Icono normal — se desvanece */}
+                                <span className="doc-icon-normal absolute inset-0 flex items-center justify-center">
+                                  {TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
+                                    <FaRegClipboard className="w-[20px] h-[20px] text-slate-600" />
+                                  ) : (
+                                    <IoReceiptOutline className="w-[22px] h-[22px] text-slate-600" />
+                                  )}
+                                </span>
+                                {/* Icono warning — aparece */}
+                                <span className="doc-icon-warning absolute inset-0 flex items-center justify-center">
+                                  <IoMdWarning
+                                    className="w-[22px] h-[22px]"
+                                    style={{ color: "var(--doc-warning)" }}
+                                  />
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="right"
+                              className="max-w-[200px] text-center text-xs"
+                            >
+                              Se detectaron cambios en la información. Haz clic para regenerar el
+                              documento.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
-                        <IoReceiptOutline className="w-[22px] h-[22px] text-slate-700" />
+                        <div className="w-[46px] h-[46px] rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
+                          {TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
+                            <FaRegClipboard className="w-[20px] h-[20px] text-slate-700" />
+                          ) : (
+                            <IoReceiptOutline className="w-[22px] h-[22px] text-slate-700" />
+                          )}
+                        </div>
+                      )}
+                      <p className="text-[14px] font-bold text-color-titulos leading-tight max-w-[130px]">
+                        {doc.label}
+                      </p>
+                    </div>
+
+                    {/* ── Botones de acción ── */}
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      {procesandoDoc[doc.tipo] ? (
+                        <div className="flex items-center justify-center w-[22px] h-[22px]">
+                          <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      ) : (
+                        <>
+                          {/* Visualizar */}
+                          <button
+                            className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            disabled={!doc.generado}
+                            onClick={() => handlePreviewDocumento(doc)}
+                          >
+                            <IoEyeOutline className="w-[26px] h-[26px]" />
+                          </button>
+
+                          {/* Descargar */}
+                          <button
+                            className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            disabled={!doc.generado || isDownloading[doc.tipo]}
+                            onClick={() => handleDownloadDocumento(doc)}
+                          >
+                            {isDownloading[doc.tipo] ? (
+                              <div className="w-[24px] h-[24px] flex items-center justify-center">
+                                <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                              </div>
+                            ) : (
+                              <IoDownloadOutline className="w-[24px] h-[24px]" />
+                            )}
+                          </button>
+
+                          {/* Generar (primera vez) / Regenerar (cuando desactualizado) / Icono inactivo */}
+                          {!doc.generado ? (
+                            // Primera generación — siempre activo
+                            <button
+                              className="text-[#334155] hover:text-navy transition-colors"
+                              onClick={() => handleGenerarDocumento(doc.tipo)}
+                            >
+                              <IoNewspaperOutline className="w-[24px] h-[24px]" />
+                            </button>
+                          ) : desactualizado ? (
+                            // Regenerar — activo solo cuando estaDesactualizado
+                            <button
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              onClick={() => handleRegenerarDocumento(doc)}
+                              title="Regenerar documento"
+                            >
+                              <BsArrowClockwise className="w-[20px] h-[20px]" />
+                            </button>
+                          ) : (
+                            // Ya generado y al día — botón deshabilitado
+                            <button
+                              className="text-[#334155] opacity-30 cursor-not-allowed"
+                              disabled
+                            >
+                              <BsArrowClockwise className="w-[20px] h-[20px]" />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
-                    <p className="text-[14px] font-bold text-color-titulos leading-tight max-w-[130px]">
-                      {doc.label}
-                    </p>
                   </div>
-
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    {procesandoDoc[doc.tipo] ? (
-                      <div className="flex items-center justify-center w-[22px] h-[22px]">
-                        <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    ) : (
-                      <>
-                        {/* Visualizar */}
-                        <button
-                          className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          disabled={!doc.generado}
-                          onClick={() => handlePreviewDocumento(doc)}
-                        >
-                          <IoEyeOutline className="w-[26px] h-[26px]" />
-                        </button>
-
-                        {/* Descargar */}
-                        <button
-                          className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          disabled={!doc.generado || isDownloading[doc.tipo]}
-                          onClick={() => handleDownloadDocumento(doc)}
-                        >
-                          {isDownloading[doc.tipo] ? (
-                            <div className="w-[24px] h-[24px] flex items-center justify-center">
-                              <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
-                            </div>
-                          ) : (
-                            <IoDownloadOutline className="w-[24px] h-[24px]" />
-                          )}
-                        </button>
-
-                        {/* Generar / Regenerar */}
-                        <button
-                          className="text-[#334155] hover:text-navy transition-colors"
-                          onClick={() => handleGenerarDocumento(doc.tipo)}
-                        >
-                          {doc.generado ? (
-                            <BsArrowClockwise className="w-[20px] h-[20px]" />
-                          ) : (
-                            <IoNewspaperOutline className="w-[24px] h-[24px]" />
-                          )}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
