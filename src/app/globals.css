@@ -119,6 +119,7 @@
   --color-fase-4: var(--fase-4);
   --color-progress-bar: var(--progress-bar);
   --color-card-accent-border: var(--card-accent-border);
+  --color-evaluado-bg: var(--evaluado-bg);
 
   /* Calendar specific colors */
   --color-cal-disponibilidad: var(--cal-disponibilidad);
@@ -238,6 +239,8 @@
   --fase-4: oklch(0.4 0.08 255);
   --progress-bar: oklch(0.7653 0.165 119.86);
   --card-accent-border: oklch(0.5 0.13 250);
+  /* Fase 3 — badge evaluado (#EBF8E1 en OKLCH) */
+  --evaluado-bg: oklch(0.963 0.048 145.77);
 
   /* Hardcoded color refactor */
   --heading-dark: oklch(0.2795 0.0368 260.03);

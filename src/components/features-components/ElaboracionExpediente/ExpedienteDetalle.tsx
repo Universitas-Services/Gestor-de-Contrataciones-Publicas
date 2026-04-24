@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Fase2Panel } from "./fase2/Fase2Panel";
+import { Fase3Panel } from "./fase3/Fase3Panel";
 
 import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
 import type { CronogramaFormValues } from "@/lib/schemas/expedienteSchema";
@@ -531,6 +532,11 @@ export function ExpedienteDetalle({ data }: Props) {
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
             <TabsContent value="fase-2" className="mt-6">
               <Fase2Panel expedienteId={data.id} />
+            </TabsContent>
+
+            {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
+            <TabsContent value="fase-3" className="mt-6">
+              <Fase3Panel expedienteId={data.id} />
             </TabsContent>
           </Tabs>
         </div>
