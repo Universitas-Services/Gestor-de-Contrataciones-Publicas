@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
+import { X } from "lucide-react";
 
 import { FASE1_FIELD_COPY } from "@/lib/constants/fase1";
 import {
@@ -10,24 +11,6 @@ import {
   type ProductoItemFormInputValues,
   type ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
 export interface ProductoItemSheetProps {
   open: boolean;
@@ -51,12 +34,19 @@ export function ProductoItemSheet({
       cantidadRequerida: "",
       precioUnitarioEstimado: "",
     },
-    mode: "onChange",
+    mode: "onSubmit",
   });
+
+  const {
+    reset,
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = form;
 
   useEffect(() => {
     if (open) {
-      form.reset({
+      reset({
         descripcionItem: "",
         codigoPartida: "",
         unidadMedida: "",
@@ -64,30 +54,46 @@ export function ProductoItemSheet({
         precioUnitarioEstimado: "",
       });
     }
-  }, [form, open]);
+  }, [open, reset]);
 
-  const handleSubmit = async (values: ProductoItemFormInputValues) => {
-    const parsedValues = productoItemSchema.parse(values);
-    await onSubmit(parsedValues);
+  const onSubmitForm = async (values: ProductoItemFormInputValues) => {
+    // Nota: Aunque el tipo sea InputValues, el zodResolver ya lo transformó a ProductoItemFormValues
+    await onSubmit(values as unknown as ProductoItemFormValues);
     onOpenChange(false);
   };
 
+  if (!open) return null;
+
   return (
-    <Sheet modal={false} open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full border-l bg-white p-0 overflow-y-auto sm:max-w-md md:max-w-[430px]"
+    <>
+      {/* Overlay oscuro de fondo */}
+      <div
+        className="fixed inset-0 z-50 bg-black/50 transition-opacity"
+        onClick={() => onOpenChange(false)}
+        aria-hidden="true"
+      />
+
+      {/* Contenedor del panel lateral (Sheet manual) */}
+      <div
+        className="fixed inset-y-0 right-0 z-50 w-full border-l bg-white p-0 overflow-y-auto sm:max-w-md md:max-w-[430px] shadow-lg animate-in slide-in-from-right duration-300"
+        role="dialog"
+        aria-modal="true"
       >
         <div className="flex h-full flex-col">
-          <SheetHeader className="border-b border-slate-100 p-8 pb-4">
-            <SheetTitle className="text-left text-2xl font-bold text-heading-dark">
-              Presupuesto base
-            </SheetTitle>
-            <SheetDescription className="text-left text-sm font-medium italic text-slate-500">
+          <div className="relative border-b border-slate-100 p-8 pb-4">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cerrar</span>
+            </button>
+            <h2 className="text-left text-2xl font-bold text-heading-dark">Presupuesto base</h2>
+            <p className="mt-1.5 text-left text-sm font-medium italic text-slate-500">
               Complete la información técnica, financiera y legal para generar automáticamente el
               Acta de Inicio, el Pliego de Condiciones y el Llamado a Participar.
-            </SheetDescription>
-          </SheetHeader>
+            </p>
+          </div>
 
           <div className="px-8 pt-6 pb-2">
             <h3 className="text-base font-bold text-[#215ea8]">Estructura del presupuesto base</h3>
@@ -95,137 +101,130 @@ export function ProductoItemSheet({
           </div>
 
           <div className="flex-1 px-8 py-4">
-            <Form {...form}>
-              <form
-                id="producto-item-form"
-                className="space-y-6"
-                onSubmit={form.handleSubmit(handleSubmit)}
-              >
-                <FormField
-                  control={form.control}
-                  name="descripcionItem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-bold text-heading-dark">
-                        {FASE1_FIELD_COPY.descripcionItem.label}
-                      </FormLabel>
-                      <FormDescription className="text-sm italic text-slate-500">
-                        {FASE1_FIELD_COPY.descripcionItem.description}
-                      </FormDescription>
-                      <FormControl>
-                        <Input {...field} className="h-11 rounded-md border-slate-300 bg-white" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <form
+              id="producto-item-form"
+              className="space-y-6"
+              onSubmit={handleSubmit(onSubmitForm)}
+            >
+              {/* Descripcion */}
+              <div className="space-y-2">
+                <label className="text-base font-bold text-heading-dark block">
+                  {FASE1_FIELD_COPY.descripcionItem.label}
+                </label>
+                <p className="text-sm italic text-slate-500">
+                  {FASE1_FIELD_COPY.descripcionItem.description}
+                </p>
+                <input
+                  type="text"
+                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  {...register("descripcionItem")}
                 />
+                {errors.descripcionItem && (
+                  <p className="text-sm font-medium text-red-500">
+                    {errors.descripcionItem.message}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="codigoPartida"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-bold text-heading-dark">
-                        {FASE1_FIELD_COPY.codigoPartida.label}
-                      </FormLabel>
-                      <FormDescription className="text-sm italic text-slate-500">
-                        {FASE1_FIELD_COPY.codigoPartida.description}
-                      </FormDescription>
-                      <FormControl>
-                        <Input {...field} className="h-11 rounded-md border-slate-300 bg-white" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Codigo Partida */}
+              <div className="space-y-2">
+                <label className="text-base font-bold text-heading-dark block">
+                  {FASE1_FIELD_COPY.codigoPartida.label}
+                </label>
+                <p className="text-sm italic text-slate-500">
+                  {FASE1_FIELD_COPY.codigoPartida.description}
+                </p>
+                <input
+                  type="text"
+                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  {...register("codigoPartida")}
                 />
+                {errors.codigoPartida && (
+                  <p className="text-sm font-medium text-red-500">{errors.codigoPartida.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="unidadMedida"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-bold text-heading-dark">
-                        {FASE1_FIELD_COPY.unidadMedida.label}
-                      </FormLabel>
-                      <FormDescription className="text-sm italic text-slate-500">
-                        {FASE1_FIELD_COPY.unidadMedida.description}
-                      </FormDescription>
-                      <FormControl>
-                        <Input {...field} className="h-11 rounded-md border-slate-300 bg-white" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Unidad Medida */}
+              <div className="space-y-2">
+                <label className="text-base font-bold text-heading-dark block">
+                  {FASE1_FIELD_COPY.unidadMedida.label}
+                </label>
+                <p className="text-sm italic text-slate-500">
+                  {FASE1_FIELD_COPY.unidadMedida.description}
+                </p>
+                <input
+                  type="text"
+                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  {...register("unidadMedida")}
                 />
+                {errors.unidadMedida && (
+                  <p className="text-sm font-medium text-red-500">{errors.unidadMedida.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="cantidadRequerida"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-bold text-heading-dark">
-                        {FASE1_FIELD_COPY.cantidadRequerida.label}
-                      </FormLabel>
-                      <FormDescription className="text-sm italic text-slate-500">
-                        {FASE1_FIELD_COPY.cantidadRequerida.description}
-                      </FormDescription>
-                      <FormControl>
-                        <Input
-                          value={field.value ?? ""}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          onChange={(event) => field.onChange(event.target.value)}
-                          className="h-11 rounded-md border-slate-300 bg-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Cantidad Requerida */}
+              <div className="space-y-2">
+                <label className="text-base font-bold text-heading-dark block">
+                  {FASE1_FIELD_COPY.cantidadRequerida.label}
+                </label>
+                <p className="text-sm italic text-slate-500">
+                  {FASE1_FIELD_COPY.cantidadRequerida.description}
+                </p>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  {...register("cantidadRequerida")}
                 />
+                {errors.cantidadRequerida && (
+                  <p className="text-sm font-medium text-red-500">
+                    {errors.cantidadRequerida.message}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="precioUnitarioEstimado"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-bold text-heading-dark">
-                        {FASE1_FIELD_COPY.precioUnitarioEstimado.label}
-                      </FormLabel>
-                      <FormDescription className="text-sm italic text-slate-500">
-                        {FASE1_FIELD_COPY.precioUnitarioEstimado.description}
-                      </FormDescription>
-                      <FormControl>
-                        <Input
-                          value={field.value ?? ""}
-                          inputMode="decimal"
-                          onChange={(event) => field.onChange(event.target.value)}
-                          className="h-11 rounded-md border-slate-300 bg-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Precio Unitario */}
+              <div className="space-y-2">
+                <label className="text-base font-bold text-heading-dark block">
+                  {FASE1_FIELD_COPY.precioUnitarioEstimado.label}
+                </label>
+                <p className="text-sm italic text-slate-500">
+                  {FASE1_FIELD_COPY.precioUnitarioEstimado.description}
+                </p>
+                <input
+                  inputMode="decimal"
+                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  {...register("precioUnitarioEstimado")}
                 />
-              </form>
-            </Form>
+                {errors.precioUnitarioEstimado && (
+                  <p className="text-sm font-medium text-red-500">
+                    {errors.precioUnitarioEstimado.message}
+                  </p>
+                )}
+              </div>
+            </form>
           </div>
 
           <div className="mt-auto flex justify-end gap-3 border-t border-slate-100 bg-slate-50/50 p-8 pb-10 pt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
+            >
               Cancelar
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
               form="producto-item-form"
               disabled={isSubmitting}
-              className="bg-navy text-white hover:bg-navy-hover"
+              className="inline-flex items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-[#1a4b86] disabled:opacity-50"
             >
               {isSubmitting ? "Guardando..." : "Guardar Item"}
-            </Button>
+            </button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </>
   );
 }

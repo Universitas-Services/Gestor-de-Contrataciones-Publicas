@@ -148,16 +148,24 @@ export function PresupuestoItemsTable({
   }, [currentPage, totalPages]);
 
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedItems = items.slice(startIndex, startIndex + pageSize);
+  const paginatedItems = React.useMemo(
+    () => items.slice(startIndex, startIndex + pageSize),
+    [items, startIndex, pageSize]
+  );
   const subtotal = items.reduce((sum, item) => sum + item.totalItems, 0);
   const iva = subtotal * FASE1_IVA_RATE;
   const totalPresupuesto = subtotal + iva;
+
+  const columns = React.useMemo(
+    () => buildColumns({ readOnly, onEdit, onDelete }),
+    [readOnly, onEdit, onDelete]
+  );
 
   // TanStack Table expone funciones no memoizables; este uso local del hook es esperado.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: paginatedItems,
-    columns: buildColumns({ readOnly, onEdit, onDelete }),
+    columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
