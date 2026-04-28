@@ -442,22 +442,39 @@ export function OferenteSheet({
                       <p className="text-[10px] text-muted-foreground italic">
                         Artículos 91, 92 LCP; 96 RLCP; 3 NORMAS DE CONTROL INTERNO SUNAI.
                       </p>
-                      <FormControl>
+                      {!isEditing ? (
                         <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {!isEditing ? (
-                            field.value || "-"
-                          ) : (
-                            <input
-                              {...field}
-                              type="number"
-                              className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
-                              placeholder="N° de sobres"
-                              maxLength={5}
-                              max={99999}
-                            />
-                          )}
+                          {field.value || "-"}
                         </div>
-                      </FormControl>
+                      ) : (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] h-auto shadow-none focus:ring-0">
+                              <SelectValue placeholder="Seleccione N° de sobres" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem
+                              value="0"
+                              className="text-[11px] font-medium text-slate-500"
+                            >
+                              0 sobres
+                            </SelectItem>
+                            <SelectItem
+                              value="1"
+                              className="text-[11px] font-medium text-slate-500"
+                            >
+                              1 sobre
+                            </SelectItem>
+                            <SelectItem
+                              value="2"
+                              className="text-[11px] font-medium text-slate-500"
+                            >
+                              2 sobres
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

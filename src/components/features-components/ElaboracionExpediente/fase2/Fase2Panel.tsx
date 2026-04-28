@@ -51,6 +51,7 @@ import {
   obtenerOferente,
   editarOferente,
   eliminarOferente,
+  iniciarEvaluacionFase3,
 } from "@/services/oferenteService";
 import { registrarProveedorRapido } from "@/services/proveedores.service";
 import {
@@ -302,8 +303,14 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
           }
         }
 
-        await registrarOferente(payload);
-        toast.success("Oferente registrado exitosamente");
+        const ofertaRegistrada = await registrarOferente(payload);
+
+        // Iniciar la evaluación de Fase 3 automáticamente
+        if (ofertaRegistrada?.id) {
+          await iniciarEvaluacionFase3({ ofertaId: ofertaRegistrada.id });
+        }
+
+        toast.success("Oferente registrado e inicializado exitosamente");
       }
 
       loadOferentes();

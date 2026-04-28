@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -185,6 +185,7 @@ interface Props {
 
 export function ExpedienteDetalle({ data }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -319,7 +320,18 @@ export function ExpedienteDetalle({ data }: Props) {
 
         {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
         <div className="w-full">
-          <Tabs defaultValue="fase-0" className="w-full">
+          {/* Map query ?tab=fase3 → "fase-3", default "fase-0" */}
+          <Tabs
+            defaultValue={(() => {
+              const tabParam = searchParams.get("tab");
+              if (tabParam) {
+                const match = tabParam.match(/fase(\d+)/);
+                if (match) return `fase-${match[1]}`;
+              }
+              return "fase-0";
+            })()}
+            className="w-full"
+          >
             {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
             <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
               {FASES.map((fase, i) => (

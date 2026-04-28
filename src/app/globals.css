@@ -48,6 +48,9 @@
   --color-role-admin-ente-foreground: var(--role-admin-ente-foreground);
   --color-role-supervisor: var(--role-supervisor);
   --color-role-supervisor-foreground: var(--role-supervisor-foreground);
+
+  --color-edificio-bg: var(--edificio-bg);
+  --color-edificio-icon: var(--edificio-icon);
   --color-role-visualizador: var(--role-visualizador);
   --color-role-visualizador-foreground: var(--role-visualizador-foreground);
   --color-role-ejecutor: var(--role-ejecutor);
@@ -138,7 +141,16 @@
   --color-cal-adjudicacion: var(--cal-adjudicacion);
   --color-cal-evaluacion: var(--cal-evaluacion);
   --color-cal-firma: var(--cal-firma);
+
+  /* Observacion (Fase 3 - Lista Cotejo) */
+  --color-obs-button: var(--obs-button);
+  --color-obs-bg: var(--obs-bg);
   --color-cal-llamado: var(--cal-llamado);
+
+  /* Motivo de Descalificación */
+  --color-motivo-bg: var(--motivo-bg);
+  --color-motivo-border: var(--motivo-border);
+  --color-motivo-icon: var(--motivo-icon);
 }
 
 :root {
@@ -247,11 +259,22 @@
   --card-accent-border: oklch(0.5 0.13 250);
   /* Fase 3 — badge evaluado (#EBF8E1 en OKLCH) */
   --evaluado-bg: oklch(0.963 0.048 145.77);
+  --obs-button: oklch(0.6131 0.1018 250.2);
+  --obs-bg: oklch(0.9575 0.0163 216.5);
+
+  /* Icono de Edificio (Oferente) - #B4C1CF */
+  --edificio-bg: oklch(0.795 0.027 248);
+  --edificio-icon: oklch(0.45 0.04 248);
 
   /* Documentos desactualizados — rojo claro */
   --doc-warning: oklch(0.628 0.2 25.33);
   --doc-warning-bg: oklch(0.971 0.025 22);
   --doc-warning-border: oklch(0.87 0.08 22);
+
+  /* Motivo de Descalificación */
+  --motivo-bg: oklch(0.45 0.18 27);
+  --motivo-border: oklch(0.85 0.05 27);
+  --motivo-icon: oklch(0.55 0.22 27);
 
   /* Proveedor incompleto — naranja muy claro */
   --proveedor-incompleto-bg: oklch(0.982 0.022 65);
