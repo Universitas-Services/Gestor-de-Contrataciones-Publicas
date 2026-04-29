@@ -282,3 +282,83 @@ export const obtenerEvaluacionFase3 = async (evaluacionId: string): Promise<any>
 
   return response.json();
 };
+
+/**
+ * GET /evaluacion-fase3/expediente/{expedienteId}/stats
+ * Obtiene las métricas de evaluación para un expediente.
+ */
+export const obtenerMetricasEvaluacionFase3 = async (expedienteId: string): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/evaluacion-fase3/expediente/${expedienteId}/stats`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al obtener las métricas de evaluación"
+    );
+  }
+
+  return response.json();
+};
+
+/**
+ * POST /evaluacion-fase3/informe/{expedienteId}
+ * Crear o actualizar el Informe de Recomendación.
+ */
+export const crearInformeRecomendacion = async (
+  expedienteId: string,
+  payload: any
+): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/evaluacion-fase3/informe/${expedienteId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al guardar el informe de recomendación"
+    );
+  }
+
+  return response.json();
+};
+
+/**
+ * GET /evaluacion-fase3/informe/{expedienteId}
+ * Obtener el Informe de Recomendación existente.
+ */
+export const obtenerInformeRecomendacion = async (expedienteId: string): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/evaluacion-fase3/informe/${expedienteId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json();
+};

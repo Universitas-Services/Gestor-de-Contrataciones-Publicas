@@ -21,6 +21,7 @@ import {
   evaluarSobre2Fase3,
   obtenerEvaluacionFase3,
 } from "@/services/oferenteService";
+import { generarListaCotejo } from "@/services/generadorDocumentosService";
 import { obtenerExpediente } from "@/services/expedienteService";
 
 interface Pregunta {
@@ -213,6 +214,12 @@ export default function Sobre2Page({
       };
 
       await evaluarSobre2Fase3(oferenteId, payload);
+
+      // Generar lista de cotejo tras descalificación (silencioso si falla)
+      await generarListaCotejo(id, oferenteId).catch(() => {
+        toast.warning("Descalificación guardada, pero la lista de cotejo no pudo generarse.");
+      });
+
       setShowModal(true);
     } catch (error: any) {
       toast.error(error.message || "Error al descalificar oferente");

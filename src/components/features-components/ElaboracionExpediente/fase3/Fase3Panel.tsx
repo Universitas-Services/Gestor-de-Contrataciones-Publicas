@@ -9,6 +9,7 @@ import { IoMdAttach, IoMdPlay, IoMdCheckboxOutline } from "react-icons/io";
 import { IoReceiptOutline } from "react-icons/io5";
 import { FaRegClipboard } from "react-icons/fa";
 import { LuPencil } from "react-icons/lu";
+import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,7 +27,16 @@ import {
   PaginationLink,
 } from "@/components/ui/pagination";
 
-import { listarEvaluacionesFase3 } from "@/services/oferenteService";
+import {
+  listarEvaluacionesFase3,
+  obtenerMetricasEvaluacionFase3,
+} from "@/services/oferenteService";
+import {
+  obtenerStatusDocumentos,
+  previewDocumento,
+  descargarDocumento,
+  type DocumentoStatus,
+} from "@/services/generadorDocumentosService";
 
 // ─── Tipos locales ────────────────────────────────────────────────────
 
@@ -37,7 +47,7 @@ interface ParticipanteEvaluacion {
   representanteLegal: string;
   rif: string;
   oferenteCalificado: boolean | null;
-  puntuacion: number | null;
+  prelacion: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -77,14 +87,70 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
   const [participantes, setParticipantes] = useState<ParticipanteEvaluacion[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState({
+    ofertasRecibidas: 0,
+    evaluadas: 0,
+    descalificadas: 0,
+    porEvaluar: 0,
+  });
+  const [informeGenerado, setInformeGenerado] = useState(false);
+  const [informeDoc, setInformeDoc] = useState<DocumentoStatus | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [previewDocOpen, setPreviewDocOpen] = useState(false);
+  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
+  const [previewDocTitle, setPreviewDocTitle] = useState("");
+
+  const loadInformeStatus = async () => {
+    if (!expedienteId) return;
+    try {
+      const allDocs = await obtenerStatusDocumentos(expedienteId);
+      const doc = allDocs.find((d) => d.tipo === "INFORME_RECOMENDACION") ?? null;
+      setInformeDoc(doc);
+      setInformeGenerado(doc?.generado === true);
+    } catch {
+      // silencioso
+    }
+  };
 
   // ── Carga de datos ──
   const loadParticipantes = async () => {
     if (!expedienteId) return;
     setLoading(true);
     try {
-      const raw = await listarEvaluacionesFase3(expedienteId);
-      const mapped: ParticipanteEvaluacion[] = raw
+      const [rawResponse, statsData] = await Promise.all([
+        listarEvaluacionesFase3(expedienteId).catch(() => null),
+        obtenerMetricasEvaluacionFase3(expedienteId).catch(() => null),
+      ]);
+
+      // Extraer array de evaluaciones sin importar el formato de respuesta
+      let evaluacionesList: any[] = [];
+      if (Array.isArray(rawResponse)) {
+        evaluacionesList = rawResponse;
+      } else if (rawResponse && typeof rawResponse === "object") {
+        const rawObj = rawResponse as any;
+        if (Array.isArray(rawObj.data)) {
+          evaluacionesList = rawObj.data;
+        } else if (Array.isArray(rawObj.evaluaciones)) {
+          evaluacionesList = rawObj.evaluaciones;
+        }
+      }
+
+      // Orden de prelación para ordenar de menor a mayor
+      const PRELACION_ORDER = [
+        "Primera Opción",
+        "Segunda Opción",
+        "Tercera Opción",
+        "Cuarta Opción",
+        "Quinta Opción",
+        "Sexta Opción",
+        "Séptima Opción",
+        "Octava Opción",
+        "Novena Opción",
+        "Décima Opción",
+      ];
+
+      const mapped: ParticipanteEvaluacion[] = evaluacionesList
         .map((item: any) => ({
           id: item.id,
           ofertaId: item.ofertaId,
@@ -92,12 +158,33 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
           representanteLegal: item.nombreRepLegalEvaluado ?? "—",
           rif: item.rifProveedorEvaluado ?? "—",
           oferenteCalificado: item.oferenteCalificado,
-          puntuacion: item.totalEvaluacion,
+          prelacion: item.posicionPrelacion,
         }))
-        .reverse();
+        .sort((a, b) => {
+          const idxA = a.prelacion ? PRELACION_ORDER.indexOf(a.prelacion) : -1;
+          const idxB = b.prelacion ? PRELACION_ORDER.indexOf(b.prelacion) : -1;
+          // Sin prelación van al final
+          if (idxA === -1 && idxB === -1) return 0;
+          if (idxA === -1) return 1;
+          if (idxB === -1) return -1;
+          return idxA - idxB;
+        });
       setParticipantes(mapped);
+
+      if (statsData) {
+        setStats({
+          ofertasRecibidas: statsData.ofertasRecibidas || 0,
+          evaluadas: statsData.evaluadas || 0,
+          descalificadas: statsData.descalificadas || 0,
+          porEvaluar: statsData.porEvaluar || 0,
+        });
+      }
+
+      if (!rawResponse) {
+        toast.error("Error al cargar la lista de evaluaciones");
+      }
     } catch (error) {
-      toast.error("Error al cargar participantes");
+      toast.error("Error al cargar datos de evaluación");
     } finally {
       setLoading(false);
     }
@@ -105,6 +192,8 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
 
   useEffect(() => {
     loadParticipantes();
+    loadInformeStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expedienteId]);
 
   // ── Paginación ──
@@ -115,13 +204,52 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
   );
 
   // ── Métricas ──
-  const totalPropuestas = participantes.length;
-  const evaluadas = participantes.filter((p) => p.oferenteCalificado === true).length;
-  const descalificadas = participantes.filter((p) => p.oferenteCalificado === false).length;
-  const pendientes = participantes.filter((p) => p.oferenteCalificado === null).length;
+  // Las métricas ahora se cargan desde el backend en el estado `stats`
 
   // ── Página de números a mostrar en paginación ──
   const pageNumbers = Array.from({ length: Math.min(totalPages, 4) }, (_, i) => i + 1);
+
+  const handlePreviewInforme = async () => {
+    if (!expedienteId) return;
+    setIsPreviewing(true);
+    setPreviewDocOpen(true);
+    try {
+      const result = await previewDocumento("informe-recomendacion", expedienteId);
+      setPreviewDocUrl(result.urlArchivo);
+      setPreviewDocTitle(result.tituloDocumento || "Informe de Recomendación");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Error al obtener la previsualización";
+      toast.error(message);
+      setPreviewDocOpen(false);
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleDownloadInforme = async () => {
+    if (!expedienteId) return;
+    setIsDownloading(true);
+    try {
+      const { data, fileName } = await descargarDocumento("informe-recomendacion", expedienteId);
+      const blob = new Blob([new Uint8Array(data)], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Documento descargado exitosamente");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al descargar documento");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -156,7 +284,7 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                     Estado Actual
                   </TableHead>
                   <TableHead className="text-color-titulos font-bold px-2 h-11 text-[11px] text-center w-[13%]">
-                    Puntuación
+                    Prelación
                   </TableHead>
                   <TableHead className="text-color-titulos font-bold px-2 h-11 text-[11px] text-center w-[13%]">
                     Evaluación
@@ -212,9 +340,9 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                         <BadgeEstado calificado={p.oferenteCalificado} />
                       </TableCell>
 
-                      {/* Puntuación */}
+                      {/* Prelación */}
                       <TableCell className="text-[10px] font-bold text-color-titulos text-center tabular-nums px-2 py-3">
-                        {p.puntuacion ?? "—"}
+                        {p.prelacion ?? "—"}
                       </TableCell>
 
                       {/* Evaluación — Iniciar o Editar */}
@@ -378,16 +506,16 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
               <TableBody>
                 <TableRow className="hover:bg-transparent">
                   <TableCell className="text-center py-3 text-[15px] font-bold text-color-titulos tabular-nums">
-                    {totalPropuestas}
+                    {stats.ofertasRecibidas}
                   </TableCell>
                   <TableCell className="text-center py-3 text-[15px] font-bold text-[var(--success-text)] tabular-nums">
-                    {evaluadas}
+                    {stats.evaluadas}
                   </TableCell>
                   <TableCell className="text-center py-3 text-[15px] font-bold text-[var(--danger)] tabular-nums">
-                    {descalificadas}
+                    {stats.descalificadas}
                   </TableCell>
                   <TableCell className="text-center py-3 text-[15px] font-bold text-[var(--pendiente-border)] tabular-nums">
-                    {pendientes}
+                    {stats.porEvaluar}
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -420,40 +548,54 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                   Informe de recomendaciones
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5 italic">
-                  Estado: Pendiente de revisión
+                  Estado: {informeGenerado ? "Generado" : "Pendiente de revisión"}
                 </p>
               </div>
 
               {/* Acciones */}
-              <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="flex flex-col gap-2 flex-shrink-0 items-end min-w-[120px]">
                 <button
-                  className="text-slate-500 hover:text-navy transition-colors"
-                  title="Generar informe"
-                  onClick={() => toast.info("Generación de informe próximamente.")}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-navy text-white hover:bg-navy-hover transition-colors font-semibold text-[11px] w-full"
+                  title={informeGenerado ? "Editar informe" : "Iniciar informe"}
+                  onClick={() => router.push(`/elaboracion-expediente/${expedienteId}/informe`)}
                 >
-                  <IoMdPlay className="w-[18px] h-[18px]" />
+                  <IoMdPlay className="w-[14px] h-[14px]" />
+                  {informeGenerado ? "Editar" : "Iniciar"}
                 </button>
-                <button
-                  className="text-slate-500 hover:text-navy transition-colors"
-                  title="Previsualizar informe"
-                  onClick={() => toast.info("Vista previa de informe próximamente.")}
-                >
-                  <BsEye className="w-[20px] h-[20px]" />
-                </button>
-                <button
-                  className="text-slate-500 hover:text-navy transition-colors"
-                  title="Descargar informe"
-                  onClick={() => toast.info("Descarga de informe próximamente.")}
-                >
-                  <IoDownloadOutline className="w-[20px] h-[20px]" />
-                </button>
-                <button
-                  className="text-slate-500 hover:text-navy transition-colors"
-                  title="Regenerar informe"
-                  onClick={() => toast.info("Regeneración de informe próximamente.")}
-                >
-                  <BsArrowClockwise className="w-[20px] h-[20px]" />
-                </button>
+
+                <div className="flex items-center justify-between w-full px-1">
+                  <button
+                    className={`transition-colors ${informeGenerado ? "text-slate-500 hover:text-navy" : "text-slate-300 cursor-not-allowed"}`}
+                    title="Previsualizar informe"
+                    disabled={!informeGenerado || isPreviewing}
+                    onClick={handlePreviewInforme}
+                  >
+                    {isPreviewing ? (
+                      <div className="w-[18px] h-[18px] border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <BsEye className="w-[18px] h-[18px]" />
+                    )}
+                  </button>
+                  <button
+                    className={`transition-colors ${informeGenerado ? "text-slate-500 hover:text-navy" : "text-slate-300 cursor-not-allowed"}`}
+                    title="Descargar informe"
+                    disabled={!informeGenerado || isDownloading}
+                    onClick={handleDownloadInforme}
+                  >
+                    {isDownloading ? (
+                      <div className="w-[18px] h-[18px] border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <IoDownloadOutline className="w-[18px] h-[18px]" />
+                    )}
+                  </button>
+                  <button
+                    className="text-slate-500 hover:text-navy transition-colors"
+                    title="Recargar estado"
+                    onClick={loadInformeStatus}
+                  >
+                    <BsArrowClockwise className="w-[18px] h-[18px]" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -464,6 +606,15 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Dialog de Previsualización ── */}
+      <ManualPreviewDialog
+        open={previewDocOpen}
+        onOpenChange={setPreviewDocOpen}
+        urlArchivo={previewDocUrl}
+        tituloManual={previewDocTitle}
+        isLoading={isPreviewing}
+      />
     </div>
   );
 }

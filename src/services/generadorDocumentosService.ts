@@ -112,6 +112,38 @@ export const generarDocumento = async (
 };
 
 /**
+ * POST /generador-documentos/generar/lista-cotejo/{expedienteId}/{evaluacionId}
+ * Genera el documento Lista de Cotejo para una evaluación específica.
+ */
+export const generarListaCotejo = async (
+  expedienteId: string,
+  evaluacionId: string
+): Promise<GenerarDocumentoResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(
+    `${API_URL}/generador-documentos/generar/lista-cotejo/${expedienteId}/${evaluacionId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as Record<string, string>)?.message ?? "Error al generar la lista de cotejo"
+    );
+  }
+
+  return response.json() as Promise<GenerarDocumentoResponse>;
+};
+
+/**
  * POST /generador-documentos/regenerar/{documentoId}
  * Regenera un documento ya existente usando su ID.
  * Solo debe llamarse cuando estaDesactualizado === true.

@@ -28,8 +28,15 @@ import {
   listarEvaluacionesFase3,
   evaluarSobre2Fase3,
   obtenerEvaluacionFase3,
+  obtenerMetricasEvaluacionFase3,
 } from "@/services/oferenteService";
 import { obtenerExpediente } from "@/services/expedienteService";
+import {
+  generarListaCotejo,
+  previewDocumento,
+  descargarDocumento,
+} from "@/services/generadorDocumentosService";
+import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 
 const OPCIONES_CRITERIOS = {
   Bienes: [
@@ -61,6 +68,28 @@ const getOpciones = (mod: string) => {
   return OPCIONES_CRITERIOS.Bienes;
 };
 
+// Ordinales en español para generar dinámicamente las opciones de prelación
+const ORDINALES = [
+  "Primera",
+  "Segunda",
+  "Tercera",
+  "Cuarta",
+  "Quinta",
+  "Sexta",
+  "Séptima",
+  "Octava",
+  "Novena",
+  "Décima",
+  "Undécima",
+  "Duodécima",
+  "Decimotercera",
+  "Decimocuarta",
+  "Decimoquinta",
+];
+
+const generarOpcionesPrelacion = (total: number): string[] =>
+  Array.from({ length: Math.min(total, ORDINALES.length) }, (_, i) => `${ORDINALES[i]} Opción`);
+
 interface CriterioEvaluado {
   id: string;
   nombre: string;
@@ -91,16 +120,28 @@ export default function MatrizEvaluacionPage({
 
   const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [opcionesPrelacion, setOpcionesPrelacion] = useState<string[]>([]);
+
+  // Preview / Descarga de lista de cotejo
+  const [listaCotejoGenerada, setListaCotejoGenerada] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [exp, oferentes, evaluacionData]: [any, any, any] = await Promise.all([
-          obtenerExpediente(id),
-          listarEvaluacionesFase3(id),
-          obtenerEvaluacionFase3(oferenteId).catch(() => null),
-        ]);
+        const [exp, oferentes, evaluacionData, statsData]: [any, any, any, any] = await Promise.all(
+          [
+            obtenerExpediente(id),
+            listarEvaluacionesFase3(id).catch(() => []),
+            obtenerEvaluacionFase3(oferenteId).catch(() => null),
+            obtenerMetricasEvaluacionFase3(id).catch(() => null),
+          ]
+        );
 
         let oferentesList: any[] = [];
         if (Array.isArray(oferentes)) {
@@ -174,6 +215,18 @@ export default function MatrizEvaluacionPage({
         if (evaluacionData?.posicionPrelacion) {
           setOrdenPrelacion(evaluacionData.posicionPrelacion);
         }
+
+        // Generar opciones de prelación dinámicas y filtrar las ya usadas
+        const totalOferentes = statsData?.ofertasRecibidas || oferentesList.length || 6;
+        const todasOpciones = generarOpcionesPrelacion(totalOferentes);
+
+        // Obtener posiciones ya ocupadas por OTROS oferentes
+        const prelacionesOcupadas = oferentesList
+          .filter((o: any) => String(o.id) !== String(oferenteId) && o.posicionPrelacion)
+          .map((o: any) => o.posicionPrelacion);
+
+        const disponibles = todasOpciones.filter((op) => !prelacionesOcupadas.includes(op));
+        setOpcionesPrelacion(disponibles);
       } catch (err) {
         toast.error("Error al cargar los datos");
       } finally {
@@ -252,6 +305,15 @@ export default function MatrizEvaluacionPage({
       };
 
       await evaluarSobre2Fase3(oferenteId, payload);
+
+      // Generar lista de cotejo al guardar evaluación calificada (silencioso si falla)
+      await generarListaCotejo(id, oferenteId).catch(() => {
+        toast.warning(
+          "Evaluación guardada, pero la lista de cotejo no pudo generarse automáticamente."
+        );
+      });
+      setListaCotejoGenerada(true);
+
       sessionStorage.removeItem(`sobre2_oferente_${oferenteId}`);
       setShowModal(true);
     } catch (error: any) {
@@ -264,6 +326,46 @@ export default function MatrizEvaluacionPage({
   const handleCerrarModal = () => {
     setShowModal(false);
     router.push(`/elaboracion-expediente/${id}?tab=fase3`);
+  };
+
+  const handlePreviewCotejo = async () => {
+    setIsPreviewing(true);
+    setPreviewOpen(true);
+    try {
+      const result = await previewDocumento("lista-cotejo", id);
+      setPreviewUrl(result.urlArchivo);
+      setPreviewTitle(result.tituloDocumento || "Lista de Cotejo");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Error al obtener la previsualización";
+      toast.error(message);
+      setPreviewOpen(false);
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleDownloadCotejo = async () => {
+    setIsDownloading(true);
+    try {
+      const { data, fileName } = await descargarDocumento("lista-cotejo", id);
+      const blob = new Blob([new Uint8Array(data)], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Lista de cotejo descargada exitosamente");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al descargar la lista de cotejo");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (loading) {
@@ -506,12 +608,11 @@ export default function MatrizEvaluacionPage({
                     <SelectValue placeholder="Seleccione opciones..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Primera opción">Primera opción</SelectItem>
-                    <SelectItem value="Segunda opción">Segunda opción</SelectItem>
-                    <SelectItem value="Tercera opción">Tercera opción</SelectItem>
-                    <SelectItem value="Cuarta opción">Cuarta opción</SelectItem>
-                    <SelectItem value="Quinta opción">Quinta opción</SelectItem>
-                    <SelectItem value="Sexta opción">Sexta opción</SelectItem>
+                    {opcionesPrelacion.map((opcion) => (
+                      <SelectItem key={opcion} value={opcion}>
+                        {opcion}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -545,6 +646,59 @@ export default function MatrizEvaluacionPage({
               "Guardar evaluación"
             )}
           </Button>
+
+          {/* Botones preview/descarga (disponibles tras guardar) */}
+          {listaCotejoGenerada && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePreviewCotejo}
+                disabled={isPreviewing}
+                className="inline-flex items-center gap-1.5 px-3 h-11 rounded-md border border-slate-200 text-slate-600 hover:text-navy hover:border-navy transition-colors text-[12px] font-semibold disabled:opacity-50"
+                title="Previsualizar lista de cotejo"
+              >
+                {isPreviewing ? (
+                  <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+                Previsualizar
+              </button>
+              <button
+                onClick={handleDownloadCotejo}
+                disabled={isDownloading}
+                className="inline-flex items-center gap-1.5 px-3 h-11 rounded-md border border-slate-200 text-slate-600 hover:text-navy hover:border-navy transition-colors text-[12px] font-semibold disabled:opacity-50"
+                title="Descargar lista de cotejo"
+              >
+                {isDownloading ? (
+                  <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                )}
+                Descargar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -572,6 +726,15 @@ export default function MatrizEvaluacionPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Previsualización de Lista de Cotejo */}
+      <ManualPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        urlArchivo={previewUrl}
+        tituloManual={previewTitle}
+        isLoading={isPreviewing}
+      />
     </div>
   );
 }
