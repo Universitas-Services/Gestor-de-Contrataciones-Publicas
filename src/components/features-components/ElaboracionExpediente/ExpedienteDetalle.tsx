@@ -530,7 +530,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
             </TabsContent>
 
             <TabsContent value="fase-1" className="mt-6">
-              <Fase1Panel expedienteId={data.id} />
+              <Fase1Panel expedienteId={data.id} fase1Creada={Boolean(data["fasePreparatoria"])} />
             </TabsContent>
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}

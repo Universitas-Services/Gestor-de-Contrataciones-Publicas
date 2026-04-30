@@ -5,7 +5,7 @@ import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tan
 import { Pencil, Plus, Trash2, WalletCards } from "lucide-react";
 
 import { FASE1_IVA_RATE } from "@/lib/constants/fase1";
-import type { PresupuestoItemRecord } from "@/types/fase1.types";
+import type { PresupuestoItemRecord, PresupuestoItemsTotals } from "@/types/fase1.types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface PresupuestoItemsTableProps {
   items: PresupuestoItemRecord[];
@@ -38,6 +39,13 @@ export interface PresupuestoItemsTableProps {
   emptyTitle?: string;
   emptyDescription?: string;
   pageSize?: number;
+  loading?: boolean;
+  serverPagination?: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
+  serverTotals?: PresupuestoItemsTotals;
 }
 
 function formatBs(value: number) {
@@ -125,6 +133,16 @@ function buildColumns({
   ];
 }
 
+const SKELETON_CELL_WIDTHS = [
+  "w-[85%]",
+  "w-[70%]",
+  "w-[60%]",
+  "w-[55%]",
+  "w-[65%]",
+  "w-[68%]",
+  "w-[48px]",
+] as const;
+
 export function PresupuestoItemsTable({
   items,
   readOnly = false,
@@ -137,29 +155,42 @@ export function PresupuestoItemsTable({
   emptyTitle = "Sin ítems cargados",
   emptyDescription = "Agregue al menos un producto para construir el presupuesto base.",
   pageSize = 5,
+  loading = false,
+  serverPagination,
+  serverTotals,
 }: PresupuestoItemsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const isServerMode = Boolean(serverPagination);
+  const totalPages = isServerMode
+    ? Math.max(1, serverPagination?.totalPages ?? 1)
+    : Math.max(1, Math.ceil(items.length / pageSize));
+  const resolvedCurrentPage = isServerMode
+    ? Math.max(1, serverPagination?.currentPage ?? 1)
+    : currentPage;
 
   useEffect(() => {
-    if (currentPage > totalPages) {
+    if (!isServerMode && currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, isServerMode, totalPages]);
 
-  const startIndex = (currentPage - 1) * pageSize;
+  const startIndex = (resolvedCurrentPage - 1) * pageSize;
   const paginatedItems = React.useMemo(
-    () => items.slice(startIndex, startIndex + pageSize),
-    [items, startIndex, pageSize]
+    () => (isServerMode ? items : items.slice(startIndex, startIndex + pageSize)),
+    [isServerMode, items, startIndex, pageSize]
   );
-  const subtotal = items.reduce((sum, item) => sum + item.totalItems, 0);
-  const iva = subtotal * FASE1_IVA_RATE;
-  const totalPresupuesto = subtotal + iva;
+  const subtotal = isServerMode
+    ? (serverTotals?.subtotal ?? 0)
+    : items.reduce((sum, item) => sum + item.totalItems, 0);
+  const iva = isServerMode ? (serverTotals?.montoIva ?? 0) : subtotal * FASE1_IVA_RATE;
+  const totalPresupuesto = isServerMode ? (serverTotals?.montoTotal ?? 0) : subtotal + iva;
 
   const columns = React.useMemo(
     () => buildColumns({ readOnly, onEdit, onDelete }),
     [readOnly, onEdit, onDelete]
   );
+  const fillerRowCount =
+    !loading && paginatedItems.length > 0 ? Math.max(0, pageSize - paginatedItems.length) : 0;
 
   // TanStack Table expone funciones no memoizables; este uso local del hook es esperado.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -214,22 +245,59 @@ export function PresupuestoItemsTable({
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
+            {loading ? (
+              Array.from({ length: pageSize }).map((_, rowIndex) => (
+                <TableRow key={`skeleton-row-${rowIndex}`} className="hover:bg-transparent">
+                  {table.getVisibleLeafColumns().map((column, columnIndex) => (
                     <TableCell
-                      key={cell.id}
-                      className="px-4 py-4 align-top text-sm text-slate-700 first:pl-6 last:pr-6"
+                      key={`skeleton-cell-${rowIndex}-${column.id}`}
+                      className="px-4 py-4 align-top first:pl-6 last:pr-6"
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {columnIndex === table.getVisibleLeafColumns().length - 1 ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded-sm" />
+                          <Skeleton className="h-4 w-4 rounded-sm" />
+                        </div>
+                      ) : (
+                        <Skeleton
+                          className={`h-5 ${SKELETON_CELL_WIDTHS[columnIndex] ?? "w-full"}`}
+                        />
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
+            ) : table.getRowModel().rows.length > 0 ? (
+              <>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className="px-4 py-4 align-top text-sm text-slate-700 first:pl-6 last:pr-6"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+
+                {Array.from({ length: fillerRowCount }).map((_, index) => (
+                  <TableRow key={`filler-row-${index}`} aria-hidden="true">
+                    {table.getVisibleLeafColumns().map((column) => (
+                      <TableCell
+                        key={`filler-cell-${index}-${column.id}`}
+                        className="px-4 py-4 text-sm first:pl-6 last:pr-6"
+                      >
+                        &nbsp;
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </>
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7} className="px-6 py-10 text-center">
+                <TableCell colSpan={7} className="h-[281px] px-6 py-10 text-center align-middle">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-slate-600">{emptyTitle}</p>
                     <p className="text-sm text-slate-500">{emptyDescription}</p>
@@ -291,11 +359,20 @@ export function PresupuestoItemsTable({
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
-                  aria-disabled={currentPage === 1}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  aria-disabled={resolvedCurrentPage === 1 || loading}
+                  className={
+                    resolvedCurrentPage === 1 || loading ? "pointer-events-none opacity-50" : ""
+                  }
                   onClick={(event) => {
                     event.preventDefault();
-                    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+                    if (resolvedCurrentPage <= 1 || loading) return;
+
+                    if (isServerMode) {
+                      serverPagination?.onPageChange(resolvedCurrentPage - 1);
+                      return;
+                    }
+
+                    setCurrentPage((prev) => prev - 1);
                   }}
                 />
               </PaginationItem>
@@ -307,9 +384,16 @@ export function PresupuestoItemsTable({
                   <PaginationItem key={page}>
                     <PaginationLink
                       href="#"
-                      isActive={page === currentPage}
+                      isActive={page === resolvedCurrentPage}
                       onClick={(event) => {
                         event.preventDefault();
+                        if (loading || page === resolvedCurrentPage) return;
+
+                        if (isServerMode) {
+                          serverPagination?.onPageChange(page);
+                          return;
+                        }
+
                         setCurrentPage(page);
                       }}
                     >
@@ -322,11 +406,22 @@ export function PresupuestoItemsTable({
               <PaginationItem>
                 <PaginationNext
                   href="#"
-                  aria-disabled={currentPage === totalPages}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  aria-disabled={resolvedCurrentPage === totalPages || loading}
+                  className={
+                    resolvedCurrentPage === totalPages || loading
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
                   onClick={(event) => {
                     event.preventDefault();
-                    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+                    if (resolvedCurrentPage >= totalPages || loading) return;
+
+                    if (isServerMode) {
+                      serverPagination?.onPageChange(resolvedCurrentPage + 1);
+                      return;
+                    }
+
+                    setCurrentPage((prev) => prev + 1);
                   }}
                 />
               </PaginationItem>

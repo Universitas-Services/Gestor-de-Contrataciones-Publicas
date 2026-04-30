@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,20 +9,24 @@ import { toast } from "sonner";
 
 import {
   FASE1_STEP_FIELDS,
-  FASE1_STEPS,
   FASE1_WIZARD_DESCRIPTION,
   FASE1_WIZARD_TITLE,
 } from "@/lib/constants/fase1";
+import { normalizeCrearPresupuestoItemResponse } from "@/lib/utils/fase1Presupuesto";
 import {
   fase1FormSchema,
   type Fase1FormInputValues,
   type Fase1PayloadFormValues,
   type ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
-import { crearPresupuestoItem, guardarFasePreparatoria } from "@/services/fase1Service";
+import {
+  actualizarFasePreparatoria,
+  crearPresupuestoItem,
+  guardarFasePreparatoria,
+} from "@/services/fase1Service";
 import type {
   CrearOActualizarFase1Payload,
-  CrearPresupuestoItemResponse,
+  FasePreparatoriaDetalleResponse,
   PresupuestoItemRecord,
 } from "@/types/fase1.types";
 import {
@@ -45,9 +49,26 @@ import { Paso3ParametrosLegalesStep } from "./steps/Paso3ParametrosLegalesStep";
 import { Paso4LlamadoPublicoStep } from "./steps/Paso4LlamadoPublicoStep";
 import { Paso5ObservacionesStep } from "./steps/Paso5ObservacionesStep";
 
+type Fase1WizardStepId =
+  | "definicion"
+  | "presupuesto"
+  | "parametrosLegales"
+  | "llamadoPublico"
+  | "observaciones";
+
+interface Fase1WizardStep {
+  id: Fase1WizardStepId;
+  fields: readonly string[];
+  render: () => ReactNode;
+}
+
 export interface Fase1FormProps {
   expedienteId: string;
   direccionEnteDefault?: string;
+  initialFasePreparatoria: FasePreparatoriaDetalleResponse | null;
+  hasPersistedItems: boolean;
+  isEditMode: boolean;
+  initialFase1IdFromQuery?: string;
 }
 
 function scrollToTop() {
@@ -59,35 +80,97 @@ function buildFechaIso(fechaActaInicio: string) {
   return `${fechaActaInicio}T00:00:00.000Z`;
 }
 
-function toNumber(value: unknown, fallback: number) {
-  if (typeof value === "number" && !Number.isNaN(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-  return fallback;
+function toFormString(value: number | string | undefined | null) {
+  if (value == null) return "";
+  return String(value);
 }
 
-function buildPresupuestoItemRecord(
-  input: ProductoItemFormValues,
-  response: CrearPresupuestoItemResponse
-): PresupuestoItemRecord {
-  const cantidadRequerida = toNumber(response.cantidadRequerida, input.cantidadRequerida);
-  const precioUnitarioEstimado = toNumber(
-    response.precioUnitarioEstimado,
-    input.precioUnitarioEstimado
-  );
-  const totalItems = toNumber(response.totalItems, cantidadRequerida * precioUnitarioEstimado);
+function buildDefaultValues({
+  direccionEnteDefault,
+  fasePreparatoria,
+}: {
+  direccionEnteDefault: string;
+  fasePreparatoria: FasePreparatoriaDetalleResponse | null;
+}): Fase1FormInputValues {
+  if (!fasePreparatoria) {
+    return {
+      datosActoAutorizacionInicio: "",
+      fechaActaInicio: "",
+      detallesTecnicosCalidad: "",
+      alcanceCantidadesObra: "",
+      justificacionVentajas: "",
+      origenCrsRegistro: undefined,
+      diasValidezOferta: "",
+      autoridadAclaratorias: "",
+      normativaLegal: "",
+      diasVigenciaGarantiaExtension: "",
+      objetivosEspecificos1: "",
+      objetivosEspecificos2: "",
+      objetivosEspecificos3: "",
+      direccionRetiroPliego: direccionEnteDefault,
+      horarioRetiroPliego: "",
+      pliegoGratuito: undefined,
+      costoPliegoBs: "",
+      bancoPagoPliego: "",
+      cuentaPagoPliego: "",
+      titularPagoPliego: "",
+      horaActoRecepAper: "",
+      condicionPlurianual: "",
+      viabilidadContratoMarco: "",
+    };
+  }
+
+  const shouldClearPaymentFields = fasePreparatoria.pliegoGratuito === true;
 
   return {
-    id: response.id ?? crypto.randomUUID(),
-    descripcionItem: response.descripcionItem ?? input.descripcionItem,
-    codigoPartida: response.codigoPartida ?? input.codigoPartida,
-    unidadMedida: response.unidadMedida ?? input.unidadMedida,
-    cantidadRequerida,
-    precioUnitarioEstimado,
-    totalItems,
+    datosActoAutorizacionInicio: fasePreparatoria.datosActoAutorizacionInicio,
+    fechaActaInicio: fasePreparatoria.fechaActaInicio.split("T")[0] ?? "",
+    detallesTecnicosCalidad: fasePreparatoria.detallesTecnicosCalidad,
+    alcanceCantidadesObra: fasePreparatoria.alcanceCantidadesObra,
+    justificacionVentajas: fasePreparatoria.justificacionVentajas,
+    origenCrsRegistro: fasePreparatoria.origenCrsRegistro,
+    diasValidezOferta: toFormString(fasePreparatoria.diasValidezOferta),
+    autoridadAclaratorias: fasePreparatoria.autoridadAclaratorias,
+    normativaLegal: fasePreparatoria.normativaLegal,
+    diasVigenciaGarantiaExtension: toFormString(fasePreparatoria.diasVigenciaGarantiaExtension),
+    objetivosEspecificos1: fasePreparatoria.objetivosEspecificos1,
+    objetivosEspecificos2: fasePreparatoria.objetivosEspecificos2,
+    objetivosEspecificos3: fasePreparatoria.objetivosEspecificos3,
+    direccionRetiroPliego: fasePreparatoria.direccionRetiroPliego || direccionEnteDefault,
+    horarioRetiroPliego: fasePreparatoria.horarioRetiroPliego,
+    pliegoGratuito: fasePreparatoria.pliegoGratuito,
+    costoPliegoBs: shouldClearPaymentFields ? "" : toFormString(fasePreparatoria.costoPliegoBs),
+    bancoPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.bancoPagoPliego ?? ""),
+    cuentaPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.cuentaPagoPliego ?? ""),
+    titularPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.titularPagoPliego ?? ""),
+    horaActoRecepAper: fasePreparatoria.horaActoRecepAper,
+    condicionPlurianual: fasePreparatoria.condicionPlurianual,
+    viabilidadContratoMarco: fasePreparatoria.viabilidadContratoMarco,
   };
+}
+
+function getLlamadoPublicoFields(pliegoGratuito: boolean | undefined) {
+  const baseFields = [
+    "objetivosEspecificos1",
+    "objetivosEspecificos2",
+    "objetivosEspecificos3",
+    "direccionRetiroPliego",
+    "horarioRetiroPliego",
+    "pliegoGratuito",
+    "horaActoRecepAper",
+  ] as const;
+
+  if (pliegoGratuito === false) {
+    return [
+      ...baseFields,
+      "costoPliegoBs",
+      "bancoPagoPliego",
+      "cuentaPagoPliego",
+      "titularPagoPliego",
+    ] as const;
+  }
+
+  return baseFields;
 }
 
 function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payload {
@@ -127,7 +210,13 @@ function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payl
   return payload;
 }
 
-export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1FormProps) {
+export function Fase1Form({
+  expedienteId,
+  direccionEnteDefault = "",
+  initialFasePreparatoria,
+  hasPersistedItems,
+  isEditMode,
+}: Fase1FormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [items, setItems] = useState<PresupuestoItemRecord[]>([]);
@@ -136,39 +225,79 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [isSavingPhase, setIsSavingPhase] = useState(false);
 
+  const showBudgetStep = !isEditMode && !hasPersistedItems;
+  const defaultValues = useMemo(
+    () =>
+      buildDefaultValues({
+        direccionEnteDefault,
+        fasePreparatoria: initialFasePreparatoria,
+      }),
+    [direccionEnteDefault, initialFasePreparatoria]
+  );
+
   const form = useForm<Fase1FormInputValues>({
     resolver: zodResolver(fase1FormSchema) as unknown as Resolver<Fase1FormInputValues>,
     mode: "onTouched",
     shouldUnregister: false,
-    defaultValues: {
-      datosActoAutorizacionInicio: "",
-      fechaActaInicio: "",
-      detallesTecnicosCalidad: "",
-      alcanceCantidadesObra: "",
-      justificacionVentajas: "",
-      origenCrsRegistro: undefined,
-      diasValidezOferta: "",
-      autoridadAclaratorias: "",
-      normativaLegal: "",
-      diasVigenciaGarantiaExtension: "",
-      objetivosEspecificos1: "",
-      objetivosEspecificos2: "",
-      objetivosEspecificos3: "",
-      direccionRetiroPliego: direccionEnteDefault,
-      horarioRetiroPliego: "",
-      pliegoGratuito: undefined,
-      costoPliegoBs: "",
-      bancoPagoPliego: "",
-      cuentaPagoPliego: "",
-      titularPagoPliego: "",
-      horaActoRecepAper: "",
-      condicionPlurianual: "",
-      viabilidadContratoMarco: "",
-    },
+    defaultValues,
   });
+  const pliegoGratuito = form.watch("pliegoGratuito");
+
+  const visibleSteps = useMemo<Fase1WizardStep[]>(
+    () => [
+      {
+        id: "definicion",
+        fields: FASE1_STEP_FIELDS[1],
+        render: () => <Paso1DefinicionStep form={form} />,
+      },
+      ...(showBudgetStep
+        ? [
+            {
+              id: "presupuesto" as const,
+              fields: FASE1_STEP_FIELDS[2],
+              render: () => <Paso2PresupuestoStep items={items} onAddItem={handleOpenItemSheet} />,
+            },
+          ]
+        : []),
+      {
+        id: "parametrosLegales",
+        fields: FASE1_STEP_FIELDS[3],
+        render: () => <Paso3ParametrosLegalesStep form={form} />,
+      },
+      {
+        id: "llamadoPublico",
+        fields: getLlamadoPublicoFields(pliegoGratuito),
+        render: () => <Paso4LlamadoPublicoStep form={form} />,
+      },
+      {
+        id: "observaciones",
+        fields: FASE1_STEP_FIELDS[5],
+        render: () => <Paso5ObservacionesStep form={form} />,
+      },
+    ],
+    [form, items, pliegoGratuito, showBudgetStep]
+  );
+
+  const totalSteps = visibleSteps.length;
+  const currentStepConfig = visibleSteps[currentStep - 1] ?? visibleSteps[0];
+  const isLastStep = currentStep === totalSteps;
+  const finalButtonLabel = isEditMode ? "Guardar cambios" : "Generar documentos";
+
+  function goToStep(step: number) {
+    setCurrentStep(step);
+    scrollToTop();
+  }
+
+  function handleOpenItemSheet() {
+    window.setTimeout(() => {
+      setIsSheetOpen(true);
+    }, 0);
+  }
 
   const validateStep = async () => {
-    if (currentStep === 2) {
+    if (!currentStepConfig) return false;
+
+    if (currentStepConfig.id === "presupuesto") {
       if (items.length === 0) {
         toast.error("Debe agregar al menos un ítem para continuar.");
         return false;
@@ -177,17 +306,11 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
       return true;
     }
 
-    const fields = FASE1_STEP_FIELDS[currentStep as keyof typeof FASE1_STEP_FIELDS];
-    if (!fields.length) return true;
+    if (!currentStepConfig.fields.length) return true;
 
-    return form.trigger(fields as Parameters<typeof form.trigger>[0], {
+    return form.trigger(currentStepConfig.fields as Parameters<typeof form.trigger>[0], {
       shouldFocus: true,
     });
-  };
-
-  const goToStep = (step: number) => {
-    setCurrentStep(step);
-    scrollToTop();
   };
 
   const handleBack = () => {
@@ -195,17 +318,11 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
     goToStep(currentStep - 1);
   };
 
-  const handleOpenItemSheet = () => {
-    window.setTimeout(() => {
-      setIsSheetOpen(true);
-    }, 0);
-  };
-
   const handleNext = async () => {
     const isValid = await validateStep();
     if (!isValid) return;
 
-    if (currentStep === FASE1_STEPS.length) {
+    if (isLastStep) {
       setIsConfirmOpen(true);
       return;
     }
@@ -218,9 +335,10 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
 
     try {
       const response = await crearPresupuestoItem(expedienteId, values);
-      const newItem = buildPresupuestoItemRecord(values, response);
+      const newItem = normalizeCrearPresupuestoItemResponse(response, values);
 
       setItems((prev) => [...prev, newItem]);
+      setIsSheetOpen(false);
       toast.success("Ítem agregado al presupuesto base.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar el ítem.");
@@ -231,9 +349,14 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
   };
 
   const handleFinalSubmit = async () => {
-    if (items.length === 0) {
+    if (showBudgetStep && items.length === 0) {
       setIsConfirmOpen(false);
-      setCurrentStep(2);
+
+      const budgetStepIndex = visibleSteps.findIndex((step) => step.id === "presupuesto");
+      if (budgetStepIndex >= 0) {
+        setCurrentStep(budgetStepIndex + 1);
+      }
+
       toast.error("Debe agregar al menos un ítem antes de finalizar.");
       scrollToTop();
       return;
@@ -250,8 +373,16 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
 
     try {
       const payload = buildPayload(fase1FormSchema.parse(form.getValues()));
-      await guardarFasePreparatoria(expedienteId, payload);
-      toast.success("La Fase 1 fue guardada correctamente.");
+      if (isEditMode) {
+        await actualizarFasePreparatoria(expedienteId, payload);
+      } else {
+        await guardarFasePreparatoria(expedienteId, payload);
+      }
+      toast.success(
+        isEditMode
+          ? "La Fase 1 fue actualizada correctamente."
+          : "La Fase 1 fue guardada correctamente."
+      );
       router.push(`/elaboracion-expediente/${expedienteId}?tab=fase-1`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar la Fase 1.");
@@ -260,22 +391,8 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
     }
   };
 
-  const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 1:
-        return <Paso1DefinicionStep form={form} />;
-      case 2:
-        return <Paso2PresupuestoStep items={items} onAddItem={handleOpenItemSheet} />;
-      case 3:
-        return <Paso3ParametrosLegalesStep form={form} />;
-      case 4:
-        return <Paso4LlamadoPublicoStep form={form} />;
-      case 5:
-        return <Paso5ObservacionesStep form={form} />;
-      default:
-        return <Paso1DefinicionStep form={form} />;
-    }
-  };
+  const renderCurrentStep = () =>
+    currentStepConfig?.render() ?? <Paso1DefinicionStep form={form} />;
 
   return (
     <div className="min-h-screen w-full pb-16">
@@ -299,10 +416,10 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
                   <div className="border-t border-slate-200 bg-white px-5 py-6 md:px-8">
                     <Fase1WizardFooter
                       currentStep={currentStep}
-                      totalSteps={FASE1_STEPS.length}
+                      totalSteps={totalSteps}
                       onBack={handleBack}
                       onNext={handleNext}
-                      nextLabel={currentStep === FASE1_STEPS.length ? "Finalizar" : "Siguiente"}
+                      nextLabel={isLastStep ? finalButtonLabel : "Siguiente"}
                       isLoading={isSavingPhase}
                       backDisabled={currentStep === 1}
                     />
@@ -348,7 +465,7 @@ export function Fase1Form({ expedienteId, direccionEnteDefault = "" }: Fase1Form
               disabled={isSavingPhase}
               className="min-w-[280px] bg-navy text-white hover:bg-navy-hover"
             >
-              {isSavingPhase ? "Procesando..." : "Generar documentos"}
+              {isSavingPhase ? "Procesando..." : finalButtonLabel}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

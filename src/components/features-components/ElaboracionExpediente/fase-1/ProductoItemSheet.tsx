@@ -59,7 +59,6 @@ export function ProductoItemSheet({
   const onSubmitForm = async (values: ProductoItemFormInputValues) => {
     // Nota: Aunque el tipo sea InputValues, el zodResolver ya lo transformó a ProductoItemFormValues
     await onSubmit(values as unknown as ProductoItemFormValues);
-    onOpenChange(false);
   };
 
   if (!open) return null;
