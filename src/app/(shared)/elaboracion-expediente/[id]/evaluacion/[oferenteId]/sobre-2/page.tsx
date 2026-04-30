@@ -215,10 +215,12 @@ export default function Sobre2Page({
 
       await evaluarSobre2Fase3(oferenteId, payload);
 
-      // Generar lista de cotejo tras descalificación (silencioso si falla)
-      await generarListaCotejo(id, oferenteId).catch(() => {
-        toast.warning("Descalificación guardada, pero la lista de cotejo no pudo generarse.");
-      });
+      // Generar lista de cotejo tras descalificación
+      await generarListaCotejo(id, oferenteId)
+        .then(() => toast.success("Lista de cotejo generada correctamente."))
+        .catch(() =>
+          toast.warning("Descalificación guardada, pero la lista de cotejo no pudo generarse.")
+        );
 
       setShowModal(true);
     } catch (error: any) {
