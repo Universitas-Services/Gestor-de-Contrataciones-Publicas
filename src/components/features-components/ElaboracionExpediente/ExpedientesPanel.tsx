@@ -429,7 +429,7 @@ function ExpedienteRow({
   const modSeleccion = expediente.modalidad?.modalidadSeleccion;
   const modalidadDisplay =
     modSeleccion === "LICITACION_PUBLICA"
-      ? "Concurso Abierto Acto Único / Apertura Única"
+      ? "Concurso Abierto, Acto Único Apertura Única"
       : modSeleccion || "—";
 
   // Estilos diferenciados para expedientes ANULADOS

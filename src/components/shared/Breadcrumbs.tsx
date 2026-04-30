@@ -23,7 +23,12 @@ export function Breadcrumbs() {
   const pathname = usePathname();
 
   // Dividir el pathname en segmentos
-  const segments = pathname.split("/").filter((segment) => segment !== "");
+  let segments = pathname.split("/").filter((segment) => segment !== "");
+
+  // Evitar migajas largas y rotas en flujos profundos de elaboración de expediente
+  if (segments[0] === "elaboracion-expediente" && segments.length > 2) {
+    segments = segments.slice(0, 2);
+  }
 
   // Si estamos en la raíz, no mostrar breadcrumbs
   if (segments.length === 0) {

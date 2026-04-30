@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Package,
@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Fase1Panel } from "./fase-1/Fase1Panel";
 import { Fase2Panel } from "./fase2/Fase2Panel";
+import { Fase3Panel } from "./fase3/Fase3Panel";
 
 import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
 import type { CronogramaFormValues } from "@/lib/schemas/expedienteSchema";
@@ -35,7 +36,7 @@ import { PlanificacionStep } from "./steps/PlanificacionStep";
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 const MODALIDAD_DISPLAY: Record<string, string> = {
-  LICITACION_PUBLICA: "Licitación Pública",
+  LICITACION_PUBLICA: "Concurso Abierto, Acto Único Apertura Única",
   CONCURSO_ABIERTO: "Concurso Abierto",
   CONCURSO_CERRADO: "Concurso Cerrado",
   CONSULTA_PRECIOS: "Consulta de Precios",
@@ -185,6 +186,7 @@ interface Props {
 
 export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -319,7 +321,18 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
 
         {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
         <div className="w-full">
-          <Tabs defaultValue={initialTab} className="w-full">
+          {/* Map query ?tab=fase3 → "fase-3", default "fase-0" */}
+          <Tabs
+            defaultValue={(() => {
+              const tabParam = searchParams.get("tab");
+              if (tabParam) {
+                const match = tabParam.match(/fase(\d+)/);
+                if (match) return `fase-${match[1]}`;
+              }
+              return "fase-0";
+            })()}
+            className="w-full"
+          >
             {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
             <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
               {FASES.map((fase, i) => (
@@ -536,6 +549,11 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
             <TabsContent value="fase-2" className="mt-6">
               <Fase2Panel expedienteId={data.id} />
+            </TabsContent>
+
+            {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
+            <TabsContent value="fase-3" className="mt-6">
+              <Fase3Panel expedienteId={data.id} />
             </TabsContent>
           </Tabs>
         </div>

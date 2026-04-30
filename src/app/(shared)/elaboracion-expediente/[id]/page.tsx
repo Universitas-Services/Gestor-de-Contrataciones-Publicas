@@ -1,6 +1,6 @@
-import { notFound, redirect } from "next/navigation";
-
 import { ExpedienteDetalle } from "@/components/features-components/ElaboracionExpediente/ExpedienteDetalle";
+import { redirect, notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { obtenerExpediente } from "@/services/expedienteService";
 import type { Fase1TabValue } from "@/types/fase1.types";
@@ -36,8 +36,16 @@ export default async function ExpedienteDetallePage({ params, searchParams }: Pr
   const initialTab = resolveInitialTab(resolvedSearchParams.tab);
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-full flex-col items-start overflow-x-hidden p-0">
-      <ExpedienteDetalle data={expediente} initialTab={initialTab} />
+    <div className="w-full min-w-0 max-w-full mx-auto flex flex-col items-start p-0 overflow-x-hidden">
+      <Suspense
+        fallback={
+          <div className="flex h-64 w-full items-center justify-center">
+            <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <ExpedienteDetalle data={expediente} />
+      </Suspense>
     </div>
   );
 }
