@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getServerToken } from "@/lib/auth/session";
 import { normalizePresupuestoItemsResponse } from "@/lib/utils/fase1Presupuesto";
 import type {
+  ActualizarPresupuestoItemPayload,
+  ActualizarPresupuestoItemResponse,
   CrearOActualizarFase1Payload,
   CrearPresupuestoItemPayload,
   CrearPresupuestoItemResponse,
@@ -58,6 +60,55 @@ export const crearPresupuestoItem = async (
 
   revalidatePath(`/elaboracion-expediente/${expedienteId}`);
   return result;
+};
+
+export const actualizarPresupuestoItem = async (
+  itemId: string,
+  expedienteId: string,
+  payload: ActualizarPresupuestoItemPayload
+): Promise<ActualizarPresupuestoItemResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/presupuesto-items/${itemId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await handleServerResponse<ActualizarPresupuestoItemResponse>(
+    response,
+    "Error al actualizar el item de presupuesto"
+  );
+
+  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  return result;
+};
+
+export const eliminarPresupuestoItem = async (
+  itemId: string,
+  expedienteId: string
+): Promise<void> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/presupuesto-items/${itemId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al eliminar el item de presupuesto"
+    );
+  }
+
+  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
 };
 
 export const listarPresupuestoItems = async (

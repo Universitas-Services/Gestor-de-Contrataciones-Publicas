@@ -15,9 +15,14 @@ import {
 import { IoMdWarning } from "react-icons/io";
 import { Settings2 } from "lucide-react";
 
-import type { ProductoItemFormValues } from "@/lib/schemas/fase1Schema";
+import type {
+  ProductoItemFormInputValues,
+  ProductoItemFormValues,
+} from "@/lib/schemas/fase1Schema";
 import {
+  actualizarPresupuestoItem,
   crearPresupuestoItem,
+  eliminarPresupuestoItem,
   listarPresupuestoItems,
   obtenerFasePreparatoria,
 } from "@/services/fase1Service";
@@ -31,10 +36,20 @@ import {
 } from "@/services/generadorDocumentosService";
 import type {
   FasePreparatoriaDetalleResponse,
+  ListarPresupuestoItemsResponse,
   PresupuestoItemRecord,
   PresupuestoItemsMeta,
   PresupuestoItemsTotals,
 } from "@/types/fase1.types";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +127,20 @@ function getDocumentoEndpoint(tipo: string) {
 
 function getDocumentoIcon(tipo: string) {
   return FASE1_DOCUMENTOS.find((doc) => doc.tipo === tipo)?.icon ?? "receipt";
+}
+
+function toProductoItemFormInputValues(
+  item: PresupuestoItemRecord | null
+): ProductoItemFormInputValues | undefined {
+  if (!item) return undefined;
+
+  return {
+    descripcionItem: item.descripcionItem,
+    codigoPartida: item.codigoPartida,
+    unidadMedida: item.unidadMedida,
+    cantidadRequerida: String(item.cantidadRequerida),
+    precioUnitarioEstimado: String(item.precioUnitarioEstimado),
+  };
 }
 
 function EmptyText({
@@ -240,7 +269,43 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
   const [loading, setLoading] = useState(true);
   const [loadingFasePreparatoria, setLoadingFasePreparatoria] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<"create" | "edit">("create");
+  const [selectedItem, setSelectedItem] = useState<PresupuestoItemRecord | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<PresupuestoItemRecord | null>(null);
   const [isSavingItem, setIsSavingItem] = useState(false);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
+
+  const applyPresupuestoItems = (response: ListarPresupuestoItemsResponse) => {
+    setItems(response.items);
+    setMeta(response.meta);
+    setTotales(response.totales);
+    setPage((currentPage) =>
+      currentPage === response.meta.page ? currentPage : response.meta.page
+    );
+  };
+
+  const reloadPresupuestoItems = async (targetPage = page) => {
+    const response = await listarPresupuestoItems(expedienteId, {
+      page: targetPage,
+      limit,
+    });
+
+    applyPresupuestoItems(response);
+    return response;
+  };
+
+  const resetSheetState = () => {
+    setSheetMode("create");
+    setSelectedItem(null);
+  };
+
+  const handleSheetOpenChange = (open: boolean) => {
+    setIsSheetOpen(open);
+
+    if (!open) {
+      resetSheetState();
+    }
+  };
 
   const loadDocumentos = async () => {
     if (!expedienteId) return;
@@ -277,14 +342,7 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
       if (!isMounted) return;
 
       if (presupuestoResult.status === "fulfilled") {
-        setItems(presupuestoResult.value.items);
-        setMeta(presupuestoResult.value.meta);
-        setTotales(presupuestoResult.value.totales);
-        setPage((currentPage) =>
-          currentPage === presupuestoResult.value.meta.page
-            ? currentPage
-            : presupuestoResult.value.meta.page
-        );
+        applyPresupuestoItems(presupuestoResult.value);
       } else {
         setItems([]);
         setMeta(DEFAULT_META);
@@ -338,30 +396,58 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
     : `/elaboracion-expediente/${expedienteId}/fase-1`;
   const canUseDocumentActions = Boolean(fasePreparatoria) || documentos.some((doc) => doc.generado);
 
-  const handleAddItem = async (values: ProductoItemFormValues) => {
+  const handleCreateItemClick = () => {
+    resetSheetState();
+    setIsSheetOpen(true);
+  };
+
+  const handleEditItemClick = (item: PresupuestoItemRecord) => {
+    setSheetMode("edit");
+    setSelectedItem(item);
+    setIsSheetOpen(true);
+  };
+
+  const handleDeleteItemClick = (item: PresupuestoItemRecord) => {
+    setItemToDelete(item);
+  };
+
+  const handleSubmitItem = async (values: ProductoItemFormValues) => {
     setIsSavingItem(true);
 
     try {
-      await crearPresupuestoItem(expedienteId, values);
-      setIsSheetOpen(false);
-      toast.success("Item agregado al presupuesto base.");
+      if (sheetMode === "edit" && selectedItem) {
+        await actualizarPresupuestoItem(selectedItem.id, expedienteId, values);
+        handleSheetOpenChange(false);
+        toast.success("Producto actualizado");
+      } else {
+        await crearPresupuestoItem(expedienteId, values);
+        handleSheetOpenChange(false);
+        toast.success("Item agregado al presupuesto base.");
+      }
 
-      const response = await listarPresupuestoItems(expedienteId, {
-        page,
-        limit,
-      });
-
-      setItems(response.items);
-      setMeta(response.meta);
-      setTotales(response.totales);
-      setPage((currentPage) =>
-        currentPage === response.meta.page ? currentPage : response.meta.page
-      );
+      await reloadPresupuestoItems();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar el item.");
       throw error;
     } finally {
       setIsSavingItem(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    setIsDeletingItem(true);
+
+    try {
+      await eliminarPresupuestoItem(itemToDelete.id, expedienteId);
+      setItemToDelete(null);
+      toast.success("Producto eliminado");
+      await reloadPresupuestoItems();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo eliminar el producto.");
+    } finally {
+      setIsDeletingItem(false);
     }
   };
 
@@ -478,31 +564,31 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
           </CardContent>
         </Card>
 
-        <Card className="border border-border shadow-sm flex flex-col pt-6">
-          <CardHeader className="pb-6 pt-0 px-6">
+        <Card className="flex flex-col border border-border pt-6 shadow-sm">
+          <CardHeader className="px-6 pb-6 pt-0">
             <div className="flex items-center gap-4">
-              <IoDocumentTextOutline className="w-6 h-6 text-color-titulos" />
+              <IoDocumentTextOutline className="h-6 w-6 text-color-titulos" />
               <CardTitle className="text-[17px] font-bold text-color-titulos">
                 Documentos del Procedimiento
               </CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="px-6 pb-6 flex-1 flex flex-col">
-            <div className="space-y-8 mt-2">
+          <CardContent className="mt-2 flex flex-1 flex-col px-6 pb-6">
+            <div className="space-y-8">
               {documentos.map((doc) => {
                 const desactualizado = doc.estaDesactualizado && doc.generado;
                 const icon = getDocumentoIcon(doc.tipo);
 
                 return (
                   <div key={doc.tipo} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex flex-1 items-center gap-4">
                       {desactualizado ? (
                         <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
-                                className="relative w-[46px] h-[46px] rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                                className="relative flex h-[46px] w-[46px] flex-shrink-0 cursor-pointer items-center justify-center rounded-xl"
                                 style={{
                                   backgroundColor: "var(--doc-warning-bg)",
                                   border: "1px solid var(--doc-warning-border)",
@@ -510,14 +596,14 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
                               >
                                 <span className="doc-icon-normal absolute inset-0 flex items-center justify-center">
                                   {icon === "clipboard" ? (
-                                    <FaRegClipboard className="w-[20px] h-[20px] text-slate-600" />
+                                    <FaRegClipboard className="h-[20px] w-[20px] text-slate-600" />
                                   ) : (
-                                    <IoReceiptOutline className="w-[22px] h-[22px] text-slate-600" />
+                                    <IoReceiptOutline className="h-[22px] w-[22px] text-slate-600" />
                                   )}
                                 </span>
                                 <span className="doc-icon-warning absolute inset-0 flex items-center justify-center">
                                   <IoMdWarning
-                                    className="w-[22px] h-[22px]"
+                                    className="h-[22px] w-[22px]"
                                     style={{ color: "var(--doc-warning)" }}
                                   />
                                 </span>
@@ -533,73 +619,73 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <div className="w-[46px] h-[46px] rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
+                        <div className="flex h-[46px] w-[46px] flex-shrink-0 items-center justify-center rounded-xl bg-slate-200">
                           {icon === "clipboard" ? (
-                            <FaRegClipboard className="w-[20px] h-[20px] text-slate-700" />
+                            <FaRegClipboard className="h-[20px] w-[20px] text-slate-700" />
                           ) : (
-                            <IoReceiptOutline className="w-[22px] h-[22px] text-slate-700" />
+                            <IoReceiptOutline className="h-[22px] w-[22px] text-slate-700" />
                           )}
                         </div>
                       )}
 
-                      <p className="text-[14px] font-bold text-color-titulos leading-tight max-w-[130px]">
+                      <p className="max-w-[130px] text-[14px] font-bold leading-tight text-color-titulos">
                         {doc.label}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="flex flex-shrink-0 items-center gap-4">
                       {procesandoDoc[doc.tipo] ? (
-                        <div className="flex items-center justify-center w-[22px] h-[22px]">
-                          <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                        <div className="flex h-[22px] w-[22px] items-center justify-center">
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
                         </div>
                       ) : (
                         <>
                           <button
-                            className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
                             disabled={!doc.generado || !canUseDocumentActions}
                             onClick={() => handlePreviewDocumento(doc)}
                           >
-                            <IoEyeOutline className="w-[26px] h-[26px]" />
+                            <IoEyeOutline className="h-[26px] w-[26px]" />
                           </button>
 
                           <button
-                            className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
                             disabled={
                               !doc.generado || !canUseDocumentActions || isDownloading[doc.tipo]
                             }
                             onClick={() => handleDownloadDocumento(doc)}
                           >
                             {isDownloading[doc.tipo] ? (
-                              <div className="w-[24px] h-[24px] flex items-center justify-center">
-                                <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                              <div className="flex h-[24px] w-[24px] items-center justify-center">
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
                               </div>
                             ) : (
-                              <IoDownloadOutline className="w-[24px] h-[24px]" />
+                              <IoDownloadOutline className="h-[24px] w-[24px]" />
                             )}
                           </button>
 
                           {!doc.generado ? (
                             <button
-                              className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
                               disabled={!canUseDocumentActions}
                               onClick={() => handleGenerarDocumento(doc.tipo)}
                             >
-                              <IoNewspaperOutline className="w-[24px] h-[24px]" />
+                              <IoNewspaperOutline className="h-[24px] w-[24px]" />
                             </button>
                           ) : desactualizado ? (
                             <button
-                              className="text-red-400 hover:text-red-600 transition-colors"
+                              className="text-red-400 transition-colors hover:text-red-600"
                               onClick={() => handleRegenerarDocumento(doc)}
                               title="Regenerar documento"
                             >
-                              <BsArrowClockwise className="w-[20px] h-[20px]" />
+                              <BsArrowClockwise className="h-[20px] w-[20px]" />
                             </button>
                           ) : (
                             <button
-                              className="text-[#334155] opacity-30 cursor-not-allowed"
+                              className="cursor-not-allowed text-[#334155] opacity-30"
                               disabled
                             >
-                              <BsArrowClockwise className="w-[20px] h-[20px]" />
+                              <BsArrowClockwise className="h-[20px] w-[20px]" />
                             </button>
                           )}
                         </>
@@ -615,7 +701,6 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
 
       <PresupuestoItemsTable
         items={items}
-        readOnly
         showAddButton
         addButtonDisabled={loading || !canAddItems}
         addButtonLabel="Anadir item"
@@ -628,15 +713,49 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
           onPageChange: setPage,
         }}
         serverTotals={totales}
-        onAdd={() => setIsSheetOpen(true)}
+        onAdd={handleCreateItemClick}
+        onEdit={handleEditItemClick}
+        onDelete={handleDeleteItemClick}
       />
 
       <ProductoItemSheet
         open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
-        onSubmit={handleAddItem}
+        onOpenChange={handleSheetOpenChange}
+        onSubmit={handleSubmitItem}
+        mode={sheetMode}
+        initialValues={toProductoItemFormInputValues(selectedItem)}
+        submitLabel={sheetMode === "edit" ? "Guardar" : "Guardar Item"}
         isSubmitting={isSavingItem}
       />
+
+      <AlertDialog
+        open={Boolean(itemToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingItem) {
+            setItemToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar producto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estas seguro de querer eliminar este producto?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingItem}>No</AlertDialogCancel>
+            <Button
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={isDeletingItem}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {isDeletingItem ? "Eliminando..." : "Si"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ManualPreviewDialog
         open={previewDocOpen}

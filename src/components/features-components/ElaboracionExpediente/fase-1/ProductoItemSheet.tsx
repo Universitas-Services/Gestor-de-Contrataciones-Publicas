@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { X } from "lucide-react";
@@ -12,10 +13,21 @@ import {
   type ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
 
+const DEFAULT_FORM_VALUES: ProductoItemFormInputValues = {
+  descripcionItem: "",
+  codigoPartida: "",
+  unidadMedida: "",
+  cantidadRequerida: "",
+  precioUnitarioEstimado: "",
+};
+
 export interface ProductoItemSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: ProductoItemFormValues) => Promise<void> | void;
+  mode?: "create" | "edit";
+  initialValues?: ProductoItemFormInputValues;
+  submitLabel?: string;
   isSubmitting?: boolean;
 }
 
@@ -23,17 +35,14 @@ export function ProductoItemSheet({
   open,
   onOpenChange,
   onSubmit,
+  mode = "create",
+  initialValues,
+  submitLabel = "Guardar Item",
   isSubmitting = false,
 }: ProductoItemSheetProps) {
   const form = useForm<ProductoItemFormInputValues>({
     resolver: zodResolver(productoItemSchema) as unknown as Resolver<ProductoItemFormInputValues>,
-    defaultValues: {
-      descripcionItem: "",
-      codigoPartida: "",
-      unidadMedida: "",
-      cantidadRequerida: "",
-      precioUnitarioEstimado: "",
-    },
+    defaultValues: DEFAULT_FORM_VALUES,
     mode: "onSubmit",
   });
 
@@ -46,41 +55,95 @@ export function ProductoItemSheet({
 
   useEffect(() => {
     if (open) {
-      reset({
-        descripcionItem: "",
-        codigoPartida: "",
-        unidadMedida: "",
-        cantidadRequerida: "",
-        precioUnitarioEstimado: "",
-      });
+      reset(mode === "edit" ? (initialValues ?? DEFAULT_FORM_VALUES) : DEFAULT_FORM_VALUES);
     }
-  }, [open, reset]);
+  }, [initialValues, mode, open, reset]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !open) return;
+
+    const { body, documentElement } = document;
+    const scrollY = window.scrollY;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    const previousBodyStyles = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+      paddingRight: body.style.paddingRight,
+    };
+
+    const previousDocumentStyles = {
+      overflow: documentElement.style.overflow,
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    documentElement.style.overflow = "hidden";
+
+    return () => {
+      body.style.position = previousBodyStyles.position;
+      body.style.top = previousBodyStyles.top;
+      body.style.left = previousBodyStyles.left;
+      body.style.right = previousBodyStyles.right;
+      body.style.width = previousBodyStyles.width;
+      body.style.overflow = previousBodyStyles.overflow;
+      body.style.paddingRight = previousBodyStyles.paddingRight;
+      documentElement.style.overflow = previousDocumentStyles.overflow;
+
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onOpenChange(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onOpenChange, open]);
 
   const onSubmitForm = async (values: ProductoItemFormInputValues) => {
-    // Nota: Aunque el tipo sea InputValues, el zodResolver ya lo transformó a ProductoItemFormValues
     await onSubmit(values as unknown as ProductoItemFormValues);
   };
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <>
-      {/* Overlay oscuro de fondo */}
       <div
         className="fixed inset-0 z-50 bg-black/50 transition-opacity"
         onClick={() => onOpenChange(false)}
         aria-hidden="true"
       />
 
-      {/* Contenedor del panel lateral (Sheet manual) */}
-      <div
-        className="fixed inset-y-0 right-0 z-50 w-full border-l bg-white p-0 overflow-y-auto sm:max-w-md md:max-w-[430px] shadow-lg animate-in slide-in-from-right duration-300"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="flex h-full flex-col">
-          <div className="relative border-b border-slate-100 p-8 pb-4">
+      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md md:max-w-[430px]">
+        <div
+          className="flex h-full flex-col border-l bg-white shadow-lg animate-in slide-in-from-right duration-300"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Presupuesto base"
+        >
+          <div className="relative shrink-0 border-b border-slate-100 p-8 pb-4">
             <button
+              type="button"
               onClick={() => onOpenChange(false)}
               className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
@@ -89,25 +152,25 @@ export function ProductoItemSheet({
             </button>
             <h2 className="text-left text-2xl font-bold text-heading-dark">Presupuesto base</h2>
             <p className="mt-1.5 text-left text-sm font-medium italic text-slate-500">
-              Complete la información técnica, financiera y legal para generar automáticamente el
-              Acta de Inicio, el Pliego de Condiciones y el Llamado a Participar.
+              {mode === "edit"
+                ? "Actualice la informacion del producto seleccionado dentro del presupuesto base."
+                : "Complete la informacion tecnica, financiera y legal para generar automaticamente el Acta de Inicio, el Pliego de Condiciones y el Llamado a Participar."}
             </p>
           </div>
 
-          <div className="px-8 pt-6 pb-2">
+          <div className="shrink-0 px-8 pb-2 pt-6">
             <h3 className="text-base font-bold text-[#215ea8]">Estructura del presupuesto base</h3>
-            <p className="mt-1 text-xs italic text-slate-500">Artículos 59, 60 LCP.</p>
+            <p className="mt-1 text-xs italic text-slate-500">Articulos 59, 60 LCP.</p>
           </div>
 
-          <div className="flex-1 px-8 py-4">
+          <div className="flex-1 overflow-y-auto px-8 py-4">
             <form
               id="producto-item-form"
-              className="space-y-6"
+              className="space-y-6 pb-4"
               onSubmit={handleSubmit(onSubmitForm)}
             >
-              {/* Descripcion */}
               <div className="space-y-2">
-                <label className="text-base font-bold text-heading-dark block">
+                <label className="block text-base font-bold text-heading-dark">
                   {FASE1_FIELD_COPY.descripcionItem.label}
                 </label>
                 <p className="text-sm italic text-slate-500">
@@ -125,9 +188,8 @@ export function ProductoItemSheet({
                 )}
               </div>
 
-              {/* Codigo Partida */}
               <div className="space-y-2">
-                <label className="text-base font-bold text-heading-dark block">
+                <label className="block text-base font-bold text-heading-dark">
                   {FASE1_FIELD_COPY.codigoPartida.label}
                 </label>
                 <p className="text-sm italic text-slate-500">
@@ -143,9 +205,8 @@ export function ProductoItemSheet({
                 )}
               </div>
 
-              {/* Unidad Medida */}
               <div className="space-y-2">
-                <label className="text-base font-bold text-heading-dark block">
+                <label className="block text-base font-bold text-heading-dark">
                   {FASE1_FIELD_COPY.unidadMedida.label}
                 </label>
                 <p className="text-sm italic text-slate-500">
@@ -161,9 +222,8 @@ export function ProductoItemSheet({
                 )}
               </div>
 
-              {/* Cantidad Requerida */}
               <div className="space-y-2">
-                <label className="text-base font-bold text-heading-dark block">
+                <label className="block text-base font-bold text-heading-dark">
                   {FASE1_FIELD_COPY.cantidadRequerida.label}
                 </label>
                 <p className="text-sm italic text-slate-500">
@@ -183,9 +243,8 @@ export function ProductoItemSheet({
                 )}
               </div>
 
-              {/* Precio Unitario */}
               <div className="space-y-2">
-                <label className="text-base font-bold text-heading-dark block">
+                <label className="block text-base font-bold text-heading-dark">
                   {FASE1_FIELD_COPY.precioUnitarioEstimado.label}
                 </label>
                 <p className="text-sm italic text-slate-500">
@@ -205,25 +264,28 @@ export function ProductoItemSheet({
             </form>
           </div>
 
-          <div className="mt-auto flex justify-end gap-3 border-t border-slate-100 bg-slate-50/50 p-8 pb-10 pt-6">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="producto-item-form"
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-[#1a4b86] disabled:opacity-50"
-            >
-              {isSubmitting ? "Guardando..." : "Guardar Item"}
-            </button>
+          <div className="mt-auto shrink-0 border-t border-slate-100 bg-slate-50/50 p-8 pb-10 pt-6">
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="producto-item-form"
+                disabled={isSubmitting}
+                className="inline-flex items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-[#1a4b86] disabled:opacity-50"
+              >
+                {isSubmitting ? "Guardando..." : submitLabel}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

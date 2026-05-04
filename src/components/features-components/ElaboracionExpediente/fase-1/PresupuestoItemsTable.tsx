@@ -56,7 +56,6 @@ function formatBs(value: number) {
 }
 
 function buildColumns({
-  readOnly,
   onEdit,
   onDelete,
 }: Pick<
@@ -102,7 +101,8 @@ function buildColumns({
       id: "acciones",
       header: () => <span className="block text-center">Acciones</span>,
       cell: ({ row }) => {
-        const isDisabled = readOnly || !onEdit || !onDelete;
+        const isEditDisabled = !onEdit;
+        const isDeleteDisabled = !onDelete;
 
         return (
           <div className="flex items-center justify-center gap-1">
@@ -110,7 +110,7 @@ function buildColumns({
               type="button"
               size="icon-xs"
               variant="ghost"
-              disabled={isDisabled}
+              disabled={isEditDisabled}
               aria-label={`Editar ${row.original.descripcionItem}`}
               onClick={() => onEdit?.(row.original)}
             >
@@ -120,7 +120,7 @@ function buildColumns({
               type="button"
               size="icon-xs"
               variant="ghost"
-              disabled={isDisabled}
+              disabled={isDeleteDisabled}
               aria-label={`Eliminar ${row.original.descripcionItem}`}
               onClick={() => onDelete?.(row.original)}
             >

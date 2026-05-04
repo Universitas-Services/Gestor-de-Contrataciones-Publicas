@@ -16,6 +16,7 @@ export interface PresupuestoItemRecord extends PresupuestoItemBase {
 }
 
 export type CrearPresupuestoItemPayload = PresupuestoItemBase;
+export type ActualizarPresupuestoItemPayload = PresupuestoItemBase;
 
 export interface CrearPresupuestoItemResponse {
   id?: string;
@@ -28,6 +29,8 @@ export interface CrearPresupuestoItemResponse {
   totalItems?: PresupuestoNumericValue;
   [key: string]: unknown;
 }
+
+export type ActualizarPresupuestoItemResponse = CrearPresupuestoItemResponse;
 
 export interface ListarPresupuestoItemsParams {
   page?: number;
