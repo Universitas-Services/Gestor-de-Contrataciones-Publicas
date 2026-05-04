@@ -70,3 +70,34 @@ export interface ActorOption {
   value: string;
   label: string;
 }
+// ─── Phase 2 Participant Types ──────────────────────────────────────
+
+export interface Adquirente {
+  id: string;
+  fecha: string;
+  empresa: string;
+  domicilioFiscal: string;
+  telefono: string;
+  correo: string;
+  deposito: string;
+}
+
+export interface Oferente {
+  id: string;
+  nombreEmpresa: string;
+  rif: string;
+  representanteLegal: string;
+  cedula: string;
+  registroMercantil: string;
+  cantidadSobres?: string;
+  montoOferta: string;
+}
+
+export interface ProveedorBusqueda {
+  id: string;
+  rif: string;
+  nombre: string;
+  nombreRepLegal: string;
+  cedulaRepLegal: string;
+  datosRegistroMercantil: string;
+}

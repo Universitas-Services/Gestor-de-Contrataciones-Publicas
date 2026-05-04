@@ -48,6 +48,9 @@
   --color-role-admin-ente-foreground: var(--role-admin-ente-foreground);
   --color-role-supervisor: var(--role-supervisor);
   --color-role-supervisor-foreground: var(--role-supervisor-foreground);
+
+  --color-edificio-bg: var(--edificio-bg);
+  --color-edificio-icon: var(--edificio-icon);
   --color-role-visualizador: var(--role-visualizador);
   --color-role-visualizador-foreground: var(--role-visualizador-foreground);
   --color-role-ejecutor: var(--role-ejecutor);
@@ -119,6 +122,13 @@
   --color-fase-4: var(--fase-4);
   --color-progress-bar: var(--progress-bar);
   --color-card-accent-border: var(--card-accent-border);
+  --color-evaluado-bg: var(--evaluado-bg);
+  --color-doc-warning: var(--doc-warning);
+  --color-doc-warning-bg: var(--doc-warning-bg);
+  --color-doc-warning-border: var(--doc-warning-border);
+  --color-proveedor-incompleto-bg: var(--proveedor-incompleto-bg);
+  --color-proveedor-incompleto-icon: var(--proveedor-incompleto-icon);
+  --color-proveedor-incompleto-icon-hover: var(--proveedor-incompleto-icon-hover);
 
   /* Calendar specific colors */
   --color-cal-disponibilidad: var(--cal-disponibilidad);
@@ -131,7 +141,16 @@
   --color-cal-adjudicacion: var(--cal-adjudicacion);
   --color-cal-evaluacion: var(--cal-evaluacion);
   --color-cal-firma: var(--cal-firma);
+
+  /* Observacion (Fase 3 - Lista Cotejo) */
+  --color-obs-button: var(--obs-button);
+  --color-obs-bg: var(--obs-bg);
   --color-cal-llamado: var(--cal-llamado);
+
+  /* Motivo de Descalificación */
+  --color-motivo-bg: var(--motivo-bg);
+  --color-motivo-border: var(--motivo-border);
+  --color-motivo-icon: var(--motivo-icon);
 }
 
 :root {
@@ -174,7 +193,7 @@
   --role-admin-ente-foreground: oklch(1 0 0);
 
   /* Supervisor - Verde (validación, seguridad) */
-  --role-supervisor: oklch(0.6 0.15 145);
+  --role-supervisor: oklch(0.7653 0.165 119.86);
   --role-supervisor-foreground: oklch(1 0 0);
 
   /* Visualizador - Gris/Plata (neutralidad, observación) */
@@ -199,9 +218,9 @@
   --dropzone-border: oklch(0.75 0.019 212);
   --dropzone-bg: oklch(0.76 0.01 230 / 0.1);
   --section-docs: oklch(0.68 0.16 222);
-  --success: oklch(0.7253 0.1868 149.3);
-  --success-bg: oklch(0.9817 0.0175 151.28);
-  --success-text: oklch(0.527 0.1359 150.01);
+  --success: oklch(0.7653 0.165 119.86);
+  --success-bg: oklch(0.96 0.04 119.86);
+  --success-text: oklch(0.45 0.12 119.86);
 
   /* Conocenos */
   --conocenos-bg: oklch(0.96 0.012 245);
@@ -217,9 +236,9 @@
   --tipo-servicios: oklch(0.4084 0.0433 256.14);
   --tipo-servicios-bg: oklch(0.9161 0.023 250.8);
   --tipo-servicios-border: oklch(0.6841 0.0411 252.08);
-  --vigente: oklch(0.527 0.1359 150.01);
-  --vigente-bg: oklch(0.8745 0.1494 150.1);
-  --vigente-border: oklch(0.6257 0.1663 149.65);
+  --vigente: oklch(0.7653 0.165 119.86);
+  --vigente-bg: oklch(0.96 0.04 119.86);
+  --vigente-border: oklch(0.65 0.12 119.86);
   --vencido: oklch(0.4414 0.1526 35.65);
   --vencido-bg: oklch(0.9522 0.057 79.62);
   --vencido-border: oklch(0.7003 0.2048 50.05);
@@ -229,15 +248,38 @@
   --rechazado: oklch(0.4825 0.1999 27.25);
   --rechazado-bg: oklch(0.9694 0.0191 21.4);
   --rechazado-border: oklch(0.8826 0.0769 20.4);
-  --patrimonio: oklch(0.6257 0.1663 149.65);
+  --patrimonio: oklch(0.7653 0.165 119.86);
 
   /* Expediente - Fases */
   --fase-1: oklch(0.7 0.015 260);
   --fase-2: oklch(0.75 0.16 85);
   --fase-3: oklch(0.65 0.17 145);
   --fase-4: oklch(0.4 0.08 255);
-  --progress-bar: oklch(0.65 0.17 145);
+  --progress-bar: oklch(0.7653 0.165 119.86);
   --card-accent-border: oklch(0.5 0.13 250);
+  /* Fase 3 — badge evaluado (#EBF8E1 en OKLCH) */
+  --evaluado-bg: oklch(0.963 0.048 145.77);
+  --obs-button: oklch(0.6131 0.1018 250.2);
+  --obs-bg: oklch(0.9575 0.0163 216.5);
+
+  /* Icono de Edificio (Oferente) - #B4C1CF */
+  --edificio-bg: oklch(0.795 0.027 248);
+  --edificio-icon: oklch(0.45 0.04 248);
+
+  /* Documentos desactualizados — rojo claro */
+  --doc-warning: oklch(0.628 0.2 25.33);
+  --doc-warning-bg: oklch(0.971 0.025 22);
+  --doc-warning-border: oklch(0.87 0.08 22);
+
+  /* Motivo de Descalificación */
+  --motivo-bg: oklch(0.45 0.18 27);
+  --motivo-border: oklch(0.85 0.05 27);
+  --motivo-icon: oklch(0.55 0.22 27);
+
+  /* Proveedor incompleto — naranja muy claro */
+  --proveedor-incompleto-bg: oklch(0.982 0.022 65);
+  --proveedor-incompleto-icon: oklch(0.72 0.18 65);
+  --proveedor-incompleto-icon-hover: oklch(0.58 0.2 65);
 
   /* Hardcoded color refactor */
   --heading-dark: oklch(0.2795 0.0368 260.03);
@@ -274,4 +316,60 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+}
+
+/* ── Animación de advertencia de documento desactualizado ── */
+@keyframes doc-icon-hide {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes doc-icon-warn {
+  0%,
+  45% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+.doc-icon-normal {
+  animation: doc-icon-hide 2.4s ease-in-out infinite;
+}
+.doc-icon-warning {
+  animation: doc-icon-warn 2.4s ease-in-out infinite;
+}
+
+/* ── Animación de advertencia de proveedor incompleto (lápiz ↔ exclamación) ── */
+@keyframes pencil-hide {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pencil-warn {
+  0%,
+  45% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+.pencil-icon-normal {
+  animation: pencil-hide 2.4s ease-in-out infinite;
+}
+.pencil-icon-warning {
+  animation: pencil-warn 2.4s ease-in-out infinite;
 }

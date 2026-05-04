@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { obtenerExpedientes, eliminarExpediente } from "@/services/expedienteService";
 import type { ExpedienteListItem } from "@/services/expedienteService";
 
@@ -154,13 +155,22 @@ export function ExpedientesPanel() {
   const handleDelete = async () => {
     if (!deleteId) return;
     setIsDeleting(true);
+
+    // Optimistic update: marcar como ANULADO localmente de inmediato
+    const previousExpedientes = expedientes;
+    setExpedientes((prev) =>
+      prev.map((e) => (e.id === deleteId ? { ...e, estatusProceso: "ANULADO" } : e))
+    );
+    setDeleteId(null);
+
     try {
       await eliminarExpediente(deleteId);
-      toast.success("Expediente eliminado exitosamente");
-      setDeleteId(null);
+      toast.success("Expediente anulado exitosamente");
       fetchExpedientes();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al eliminar el expediente";
+      // Revertir si el backend falló
+      setExpedientes(previousExpedientes);
+      const message = error instanceof Error ? error.message : "Error al anular el expediente";
       toast.error(message);
     } finally {
       setIsDeleting(false);
@@ -294,6 +304,7 @@ export function ExpedientesPanel() {
                     isSelected={selectedIds.has(exp.id)}
                     onToggle={() => toggleSelect(exp.id)}
                     onDelete={() => setDeleteId(exp.id)}
+                    isAnulado={exp.estatusProceso === "ANULADO"}
                   />
                 ))
               ) : (
@@ -389,12 +400,14 @@ function ExpedienteRow({
   isSelected,
   onToggle,
   onDelete,
+  isAnulado,
 }: {
   expediente: ExpedienteListItem;
   isEven: boolean;
   isSelected: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  isAnulado?: boolean;
 }) {
   // Map backend tipo to display from nested modalidad object
   const tipoBackend = expediente.modalidad?.tipoContratacion || "BIENES";
@@ -416,81 +429,151 @@ function ExpedienteRow({
   const modSeleccion = expediente.modalidad?.modalidadSeleccion;
   const modalidadDisplay =
     modSeleccion === "LICITACION_PUBLICA"
-      ? "Concurso Abierto Acto Único / Apertura Única"
+      ? "Concurso Abierto, Acto Único Apertura Única"
       : modSeleccion || "—";
 
-  return (
-    <tr
-      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
+  // Estilos diferenciados para expedientes ANULADOS
+  const rowBase = isAnulado
+    ? `border-b border-slate-100 last:border-0 bg-slate-100 opacity-60`
+    : `border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
         isEven ? "bg-slate-50/50" : "bg-white"
-      }`}
-    >
-      {/* Checkbox */}
+      }`;
+
+  const rowContent = (
+    <>
+      {/* Checkbox – deshabilitado si ANULADO */}
       <td className="px-4 py-3">
-        <Checkbox checked={isSelected} onCheckedChange={onToggle} className="border-slate-300" />
+        <Checkbox
+          checked={isAnulado ? false : isSelected}
+          onCheckedChange={isAnulado ? undefined : onToggle}
+          disabled={isAnulado}
+          className="border-slate-300"
+        />
       </td>
 
       {/* Nomenclatura */}
-      <td className="px-4 py-3 font-semibold text-slate-700 text-center break-words max-w-[150px]">
+      <td
+        className={`px-4 py-3 font-semibold text-center break-words max-w-[150px] ${
+          isAnulado ? "text-slate-400 line-through" : "text-slate-700"
+        }`}
+      >
         {expediente.codigoNomenclatura}
       </td>
 
       {/* Objeto del Contrato */}
-      <td className="px-4 py-3 text-slate-600 text-center break-words max-w-[200px]">
+      <td
+        className={`px-4 py-3 text-center break-words max-w-[200px] ${
+          isAnulado ? "text-slate-400" : "text-slate-600"
+        }`}
+      >
         {expediente.descripcionObjeto}
       </td>
 
-      {/* Tipo Badge */}
+      {/* Tipo Badge – en gris si ANULADO */}
       <td className="px-4 py-3 text-center">
         <span
-          className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${tipoStyle}`}
+          className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${
+            isAnulado ? "bg-slate-100 text-slate-400 border-slate-300" : tipoStyle
+          }`}
         >
-          {tipoDisplay}
+          {isAnulado ? "Anulado" : tipoDisplay}
         </span>
       </td>
 
       {/* Modalidad */}
-      <td className="px-4 py-3 text-slate-600 text-[12px] text-center break-words max-w-[180px]">
+      <td
+        className={`px-4 py-3 text-[12px] text-center break-words max-w-[180px] ${
+          isAnulado ? "text-slate-400" : "text-slate-600"
+        }`}
+      >
         {modalidadDisplay}
       </td>
 
-      {/* Progreso */}
+      {/* Progreso – sin barra si ANULADO */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 justify-center">
           <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-progress-bar rounded-full transition-all duration-300"
-              style={{ width: `${progreso}%` }}
+              className={`h-full rounded-full transition-all duration-300 ${
+                isAnulado ? "bg-slate-300" : "bg-progress-bar"
+              }`}
+              style={{ width: isAnulado ? "100%" : `${progreso}%` }}
             />
           </div>
-          <span className="text-xs font-semibold text-slate-600 min-w-[32px]">{progreso}%</span>
+          <span
+            className={`text-xs font-semibold min-w-[32px] ${
+              isAnulado ? "text-slate-400" : "text-slate-600"
+            }`}
+          >
+            {isAnulado ? "—" : `${progreso}%`}
+          </span>
         </div>
       </td>
 
       {/* Fases */}
       <td className="px-4 py-3 text-center">
         <div className="flex items-center gap-1.5 justify-center">
-          <span className={`w-2.5 h-2.5 rounded-full ${faseDotColor}`} />
-          <span className="text-xs font-medium text-slate-600">{fase}</span>
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${isAnulado ? "bg-slate-300" : faseDotColor}`}
+          />
+          <span
+            className={`text-xs font-medium ${isAnulado ? "text-slate-400" : "text-slate-600"}`}
+          >
+            {isAnulado ? "Anulado" : fase}
+          </span>
         </div>
       </td>
 
-      {/* Acción */}
+      {/* Acción – todas deshabilitadas si ANULADO */}
       <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center gap-3">
-          <Link href={`/elaboracion-expediente/${expediente.id}`}>
-            <button className="text-slate-500 hover:text-navy transition-colors cursor-pointer">
-              <Eye className="w-4.5 h-4.5" />
-            </button>
-          </Link>
-          <button
-            onClick={onDelete}
-            className="text-red-400 hover:text-red-600 transition-colors cursor-pointer"
-          >
-            <FaRegTrashAlt className="w-4 h-4" />
-          </button>
+          {isAnulado ? (
+            <>
+              <span className="text-slate-300 cursor-not-allowed">
+                <Eye className="w-4.5 h-4.5" />
+              </span>
+              <span className="text-slate-300 cursor-not-allowed">
+                <FaRegTrashAlt className="w-4 h-4" />
+              </span>
+            </>
+          ) : (
+            <>
+              <Link href={`/elaboracion-expediente/${expediente.id}`}>
+                <button className="text-slate-500 hover:text-navy transition-colors cursor-pointer">
+                  <Eye className="w-4.5 h-4.5" />
+                </button>
+              </Link>
+              <button
+                onClick={onDelete}
+                className="text-red-400 hover:text-red-600 transition-colors cursor-pointer"
+              >
+                <FaRegTrashAlt className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </td>
-    </tr>
+    </>
   );
+
+  if (isAnulado) {
+    return (
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <tr className={rowBase}>{rowContent}</tr>
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-800 text-white max-w-[250px] text-center border-slate-700 py-2.5 shadow-lg relative z-50">
+            <p className="font-semibold text-[13px]">Expediente no disponible</p>
+            <p className="text-slate-300 text-xs mt-1 leading-snug">
+              Este expediente se encuentra anulado. Por favor, acuda a soporte técnico si desea
+              recuperarlo.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return <tr className={rowBase}>{rowContent}</tr>;
 }

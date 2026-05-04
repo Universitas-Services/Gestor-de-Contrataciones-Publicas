@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import Link from "next/link";
 import {
-  ChevronRight,
   Package,
   Wrench,
   HardHat,
@@ -21,11 +19,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Fase1Panel } from "./fase-1/Fase1Panel";
+import { Fase2Panel } from "./fase2/Fase2Panel";
+import { Fase3Panel } from "./fase3/Fase3Panel";
 
 import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
 import type { CronogramaFormValues } from "@/lib/schemas/expedienteSchema";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import type { Fase1TabValue } from "@/types/fase1.types";
 import { guardarCronograma } from "@/services/expedienteService";
 import { isFechaEditable, moverFechaCronograma } from "@/lib/utils/cronogramaUtils";
 import type { IEvent } from "./calendar/types";
@@ -34,7 +36,7 @@ import { PlanificacionStep } from "./steps/PlanificacionStep";
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 const MODALIDAD_DISPLAY: Record<string, string> = {
-  LICITACION_PUBLICA: "Licitación Pública",
+  LICITACION_PUBLICA: "Concurso Abierto, Acto Único Apertura Única",
   CONCURSO_ABIERTO: "Concurso Abierto",
   CONCURSO_CERRADO: "Concurso Cerrado",
   CONSULTA_PRECIOS: "Consulta de Precios",
@@ -179,11 +181,14 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
 
 interface Props {
   data: ExpedienteResponse;
+  initialTab?: Fase1TabValue;
 }
 
-export function ExpedienteDetalle({ data }: Props) {
+export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   // Estado del cronograma (editable)
   const rawCronograma = data.cronograma as CronogramaData | undefined;
@@ -242,6 +247,7 @@ export function ExpedienteDetalle({ data }: Props) {
     if (result.newCronograma) {
       setCronogramaData(result.newCronograma as CronogramaFormValues);
       setCalendarEvents(cronogramaToEvents(result.newCronograma));
+      setIsDirty(true);
     }
   };
 
@@ -252,6 +258,7 @@ export function ExpedienteDetalle({ data }: Props) {
     try {
       await guardarCronograma(data.id, cronogramaData);
       toast.success("Cronograma actualizado exitosamente.");
+      setIsDirty(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma.");
     } finally {
@@ -314,7 +321,18 @@ export function ExpedienteDetalle({ data }: Props) {
 
         {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
         <div className="w-full">
-          <Tabs defaultValue="fase-0" className="w-full">
+          {/* Map query ?tab=fase3 → "fase-3", default "fase-0" */}
+          <Tabs
+            defaultValue={(() => {
+              const tabParam = searchParams.get("tab");
+              if (tabParam) {
+                const match = tabParam.match(/fase(\d+)/);
+                if (match) return `fase-${match[1]}`;
+              }
+              return "fase-0";
+            })()}
+            className="w-full"
+          >
             {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
             <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
               {FASES.map((fase, i) => (
@@ -337,187 +355,208 @@ export function ExpedienteDetalle({ data }: Props) {
                 </TabsTrigger>
               ))}
             </TabsList>
-          </Tabs>
-        </div>
 
-        {/* ── Grid Principal ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Objeto del Procedimiento (2/3) */}
-          <Card className="col-span-1 lg:col-span-2 border border-slate-200 shadow-sm">
-            <CardHeader className="pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
-                Objeto del Procedimiento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
-              <p className="text-slate-700 text-sm leading-relaxed font-inter">
-                {data.descripcionObjeto || "—"}
-              </p>
-              <p className="text-xs text-slate-400 mt-3 font-inter italic">
-                Código:{" "}
-                <span className="font-mono font-semibold text-slate-600">
-                  {data.codigoNomenclatura || "—"}
-                </span>
-              </p>
-            </CardContent>
-          </Card>
+            {/* ── TabsContent: Fase 0 — Ficha Técnica ── */}
+            <TabsContent value="fase-0" className="mt-6">
+              {/* ── Grid Principal ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Objeto del Procedimiento (2/3) */}
+                <Card className="col-span-1 lg:col-span-2 border border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2 pt-5 px-6">
+                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
+                      Objeto del Procedimiento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6">
+                    <p className="text-slate-700 text-sm leading-relaxed font-inter">
+                      {data.descripcionObjeto || "—"}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-3 font-inter italic">
+                      Código:{" "}
+                      <span className="font-mono font-semibold text-slate-600">
+                        {data.codigoNomenclatura || "—"}
+                      </span>
+                    </p>
+                  </CardContent>
+                </Card>
 
-          {/* Monto Estimado (1/3) */}
-          <Card className="border border-slate-200 shadow-sm">
-            <CardHeader className="pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
-                Monto estimado de contratación
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-6 pb-6 space-y-3">
-              <div>
-                <p className="text-xs text-slate-400 font-inter italic">Valor UCAU</p>
-                <p className="text-2xl font-bold text-heading-dark font-inter tabular-nums">
-                  {ucau != null ? formatMoney(ucau) : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-inter italic">Bolívares (Bs.)</p>
-                <p className="text-xl font-bold text-heading-dark font-inter tabular-nums">
-                  {formatMoney(data.modalidad?.montoEstimadoBs)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-inter italic flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" /> Dólares (USD)
-                </p>
-                <p className="text-lg font-bold text-heading-dark font-inter tabular-nums">
-                  $ {formatMoney(data.modalidad?.montoEstimadoDolar)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Máxima Autoridad */}
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="px-6 py-5">
-              <p className="text-xs text-slate-400 font-inter italic mb-1">Máxima Autoridad</p>
-              <p className="text-base font-semibold text-heading-dark font-inter">
-                {data.autoridad?.nombreCompletoAutoridad ?? "—"}
-              </p>
-              <p className="text-xs text-slate-500 font-inter mt-0.5">
-                {data.autoridad?.cargoOficialAutoridad ?? ""}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Responsable Unidad Usuaria */}
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="px-6 py-5">
-              <p className="text-xs text-slate-400 font-inter italic mb-1">
-                Responsable Unidad Usuaria
-              </p>
-              <p className="text-base font-semibold text-heading-dark font-inter">
-                {data.unidadUsuaria?.nombreResponsableUnidadUsuaria ?? "—"}
-              </p>
-              <p className="text-xs text-slate-500 font-inter mt-0.5">
-                {data.unidadUsuaria?.nombreUnidadUsuaria ?? ""}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Fecha del Llamado */}
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="px-6 py-5">
-              <p className="text-xs text-slate-400 font-inter italic mb-1">Fecha del Llamado</p>
-              <div className="flex items-center gap-2 mt-1">
-                <CalendarDays className="w-4 h-4 text-navy" />
-                <p className="text-base font-bold text-heading-dark font-inter">
-                  {rawCronograma?.fechaLlamadoParticipar
-                    ? formatDate(rawCronograma.fechaLlamadoParticipar)
-                    : "—"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Comisión de Contrataciones — solo miembros principales */}
-          <Card className="col-span-1 lg:col-span-3 border border-slate-200 shadow-sm">
-            <CardHeader className="pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter flex items-center gap-2">
-                <Users className="w-4 h-4" /> Comisión de Contrataciones
-              </CardTitle>
-              {data.comision?.denominacionComision && (
-                <p className="text-xs text-slate-400 font-inter italic mt-1">
-                  {data.comision.denominacionComision}
-                </p>
-              )}
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
-              <div className="flex flex-wrap gap-6">
-                {miembrosPrincipales.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9 bg-navy text-white text-xs font-bold">
-                      <AvatarFallback className="bg-navy text-white text-xs font-bold">
-                        {getInitials(m.nombreCompletoMiembro)}
-                      </AvatarFallback>
-                    </Avatar>
+                {/* Monto Estimado (1/3) */}
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2 pt-5 px-6">
+                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
+                      Monto estimado de contratación
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6 space-y-3">
                     <div>
-                      <p className="text-sm font-semibold text-heading-dark font-inter capitalize">
-                        {m.nombreCompletoMiembro}
-                      </p>
-                      <p className="text-xs text-slate-400 font-inter italic">
-                        {TIPO_AREA[m.areaRepresentacion] ?? m.areaRepresentacion} ·{" "}
-                        {TIPO_MIEMBRO[m.tipoMiembro] ?? m.tipoMiembro}
+                      <p className="text-xs text-slate-400 font-inter italic">Valor UCAU</p>
+                      <p className="text-2xl font-bold text-heading-dark font-inter tabular-nums">
+                        {ucau != null ? formatMoney(ucau) : "—"}
                       </p>
                     </div>
-                  </div>
-                ))}
-                {miembrosPrincipales.length === 0 && (
-                  <p className="text-sm text-slate-400 italic font-inter">
-                    Sin miembros principales registrados.
-                  </p>
-                )}
+                    <div>
+                      <p className="text-xs text-slate-400 font-inter italic">Bolívares (Bs.)</p>
+                      <p className="text-xl font-bold text-heading-dark font-inter tabular-nums">
+                        {formatMoney(data.modalidad?.montoEstimadoBs)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 font-inter italic flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" /> Dólares (USD)
+                      </p>
+                      <p className="text-lg font-bold text-heading-dark font-inter tabular-nums">
+                        $ {formatMoney(data.modalidad?.montoEstimadoDolar)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Máxima Autoridad */}
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardContent className="px-6 py-5">
+                    <p className="text-xs text-slate-400 font-inter italic mb-1">
+                      Máxima Autoridad
+                    </p>
+                    <p className="text-base font-semibold text-heading-dark font-inter">
+                      {data.autoridad?.nombreCompletoAutoridad ?? "—"}
+                    </p>
+                    <p className="text-xs text-slate-500 font-inter mt-0.5">
+                      {data.autoridad?.cargoOficialAutoridad ?? ""}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Responsable Unidad Usuaria */}
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardContent className="px-6 py-5">
+                    <p className="text-xs text-slate-400 font-inter italic mb-1">
+                      Responsable Unidad Usuaria
+                    </p>
+                    <p className="text-base font-semibold text-heading-dark font-inter">
+                      {data.unidadUsuaria?.nombreResponsableUnidadUsuaria ?? "—"}
+                    </p>
+                    <p className="text-xs text-slate-500 font-inter mt-0.5">
+                      {data.unidadUsuaria?.nombreUnidadUsuaria ?? ""}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Fecha del Llamado */}
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardContent className="px-6 py-5">
+                    <p className="text-xs text-slate-400 font-inter italic mb-1">
+                      Fecha del Llamado
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <CalendarDays className="w-4 h-4 text-navy" />
+                      <p className="text-base font-bold text-heading-dark font-inter">
+                        {rawCronograma?.fechaLlamadoParticipar
+                          ? formatDate(rawCronograma.fechaLlamadoParticipar)
+                          : "—"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Comisión de Contrataciones — solo miembros principales */}
+                <Card className="col-span-1 lg:col-span-3 border border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2 pt-5 px-6">
+                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter flex items-center gap-2">
+                      <Users className="w-4 h-4" /> Comisión de Contrataciones
+                    </CardTitle>
+                    {data.comision?.denominacionComision && (
+                      <p className="text-xs text-slate-400 font-inter italic mt-1">
+                        {data.comision.denominacionComision}
+                      </p>
+                    )}
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6">
+                    <div className="flex flex-wrap gap-6">
+                      {miembrosPrincipales.map((m) => (
+                        <div key={m.id} className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 bg-navy text-white text-xs font-bold">
+                            <AvatarFallback className="bg-navy text-white text-xs font-bold">
+                              {getInitials(m.nombreCompletoMiembro)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-semibold text-heading-dark font-inter capitalize">
+                              {m.nombreCompletoMiembro}
+                            </p>
+                            <p className="text-xs text-slate-400 font-inter italic">
+                              {TIPO_AREA[m.areaRepresentacion] ?? m.areaRepresentacion} ·{" "}
+                              {TIPO_MIEMBRO[m.tipoMiembro] ?? m.tipoMiembro}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {miembrosPrincipales.length === 0 && (
+                        <p className="text-sm text-slate-400 italic font-inter">
+                          Sin miembros principales registrados.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* ── Botones de acción: Editar Ficha  ── */}
+              <div className="flex justify-end mt-6 mb-2">
+                <Button
+                  onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
+                  className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Editar Ficha
+                </Button>
+              </div>
+
+              {/* ── Calendario de Actividades ── */}
+              {/* El título y la navegación de meses ya los provee PlanificacionStep internamente. */}
+              <Card className="border border-slate-200 shadow-sm">
+                <CardContent className="px-6 pb-6 pt-4">
+                  <PlanificacionStep
+                    events={calendarEvents}
+                    initialMonth={initialMonth}
+                    onBack={() => {}}
+                    onFinish={() => {}}
+                    onEventDrop={handleEventDrop}
+                    isLoading={false}
+                    hideButtons
+                  />
+                </CardContent>
+              </Card>
+
+              {/* ── Botón Guardar Cronograma — alineado a la derecha ── */}
+              {cronogramaData && (
+                <div className="flex justify-end mt-6">
+                  <Button
+                    onClick={handleGuardarCronograma}
+                    disabled={isSaving || !isDirty}
+                    className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSaving ? "Guardando..." : "Guardar cambios del cronograma"}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="fase-1" className="mt-6">
+              <Fase1Panel expedienteId={data.id} fase1Creada={Boolean(data["fasePreparatoria"])} />
+            </TabsContent>
+
+            {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
+            <TabsContent value="fase-2" className="mt-6">
+              <Fase2Panel expedienteId={data.id} />
+            </TabsContent>
+
+            {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
+            <TabsContent value="fase-3" className="mt-6">
+              <Fase3Panel expedienteId={data.id} />
+            </TabsContent>
+          </Tabs>
         </div>
-
-        {/* ── Botones de acción: Editar Ficha  ── */}
-        <div className="flex justify-end">
-          <Button
-            onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
-            className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
-          >
-            <Pencil className="w-4 h-4" />
-            Editar Ficha
-          </Button>
-        </div>
-
-        {/* ── Calendario de Actividades ── */}
-        {/* El título y la navegación de meses ya los provee PlanificacionStep internamente. */}
-        <Card className="border border-slate-200 shadow-sm">
-          <CardContent className="px-6 pb-6 pt-4">
-            <PlanificacionStep
-              events={calendarEvents}
-              initialMonth={initialMonth}
-              onBack={() => {}}
-              onFinish={() => {}}
-              onEventDrop={handleEventDrop}
-              isLoading={false}
-              hideButtons
-            />
-          </CardContent>
-        </Card>
-
-        {/* ── Botón Guardar Cronograma — alineado a la derecha ── */}
-        {cronogramaData && (
-          <div className="flex justify-end">
-            <Button
-              onClick={handleGuardarCronograma}
-              disabled={isSaving}
-              className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? "Guardando..." : "Guardar cambios del cronograma"}
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

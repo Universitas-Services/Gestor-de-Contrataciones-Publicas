@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -30,6 +30,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -65,6 +71,10 @@ export function ComisionContratacionesForm() {
   const editId = searchParams.get("id");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Estado para Teléfono con prefijo
+  const [phonePrefix, setPhonePrefix] = useState("0414");
+  const [phoneBody, setPhoneBody] = useState("");
+
   // Generamos el template inicial de los 8 slots
   const getInitialSlots = () =>
     FIXED_SLOTS.map((slot) => ({
@@ -79,6 +89,8 @@ export function ComisionContratacionesForm() {
     defaultValues: {
       denominacionComision: "",
       datosDesignacionComision: "",
+      correoElectronico: "",
+      telefono: "",
       comisionCertificada: false,
       miembros: getInitialSlots(),
     },
@@ -89,6 +101,13 @@ export function ComisionContratacionesForm() {
     control: form.control,
     name: "miembros",
   });
+
+  // Efecto para sincronizar Teléfono cuando cambia el prefijo
+  useEffect(() => {
+    if (phoneBody.length === 7) {
+      form.setValue("telefono", `${phonePrefix}${phoneBody}`, { shouldValidate: true });
+    }
+  }, [phonePrefix, phoneBody, form]);
 
   useEffect(() => {
     if (editId) {
@@ -122,9 +141,25 @@ export function ComisionContratacionesForm() {
             form.reset({
               denominacionComision: data.denominacionComision || "",
               datosDesignacionComision: data.datosDesignacionComision || "",
+              correoElectronico: data.correoElectronico || "",
+              telefono: data.telefono || "",
               comisionCertificada: data.comisionCertificada ?? false,
               miembros: mappedMiembros,
             });
+
+            // Fragmentar Teléfono al editar
+            if (data.telefono) {
+              const tel = data.telefono;
+              // Si el teléfono empieza con un prefijo conocido de 4 dígitos
+              const prefixes = ["0414", "0424", "0412", "0422", "0416", "0426"];
+              const matchedPrefix = prefixes.find((p) => tel.startsWith(p));
+              if (matchedPrefix) {
+                setPhonePrefix(matchedPrefix);
+                setPhoneBody(tel.slice(4));
+              } else {
+                setPhoneBody(tel);
+              }
+            }
           }
         })
         .catch((err) => {
@@ -250,6 +285,88 @@ export function ComisionContratacionesForm() {
                   </FormItem>
                 )}
               />
+
+              {/* Correo Electrónico */}
+              <FormField
+                control={form.control}
+                name="correoElectronico"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                      Indique el correo electrónico de la comisión de contrataciones.
+                    </FormLabel>
+                    <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                      Artículos 66.24 LCP; 95 RLCP; 28 NORMAS DE CONTROL INTERNO SUNAI.
+                    </p>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value || ""}
+                        disabled={isLoading}
+                        placeholder="comision@ejemplo.gob.ve"
+                        className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Teléfono */}
+              <div className="space-y-2">
+                <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                  Indique el número telefónico de la Comisión de contrataciones.
+                </FormLabel>
+                <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                  Artículos 66. 24 LCP; 95 RLCP; 28 NORMAS DE CONTROL INTERNO SUNAI.
+                </p>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isLoading}
+                        className="h-11 w-[90px] border border-slate-300 font-inter text-slate-500 justify-between bg-white"
+                      >
+                        {phonePrefix}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[90px]">
+                      {["0414", "0424", "0412", "0422", "0416", "0426"].map((p) => (
+                        <DropdownMenuItem key={p} onClick={() => setPhonePrefix(p)}>
+                          {p}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Input
+                    type="text"
+                    maxLength={7}
+                    value={phoneBody}
+                    disabled={isLoading}
+                    onChange={(e) => {
+                      const newBody = e.target.value.replace(/\D/g, "");
+                      setPhoneBody(newBody);
+                      if (newBody.length === 7) {
+                        form.setValue("telefono", `${phonePrefix}${newBody}`, {
+                          shouldValidate: true,
+                        });
+                      } else {
+                        form.setValue("telefono", "", { shouldValidate: true });
+                      }
+                    }}
+                    placeholder="7894561"
+                    className="h-11 border border-slate-300 flex-1 max-w-[200px] focus-visible:ring-1 focus-visible:ring-color-boton-2/30"
+                  />
+                </div>
+                {form.formState.errors.telefono && (
+                  <p className="text-sm font-medium text-destructive">
+                    {form.formState.errors.telefono.message}
+                  </p>
+                )}
+              </div>
 
               <FormField
                 control={form.control}

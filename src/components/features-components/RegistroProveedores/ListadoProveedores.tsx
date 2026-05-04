@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Search, Filter, ArrowUpDown, ChevronLeft, Loader2 } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
 import { IoAlertCircleOutline, IoFilterOutline } from "react-icons/io5";
+import { IoMdWarning } from "react-icons/io";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,15 +36,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Provider {
   id: string;
   nombre: string;
   rif: string;
   nombreRepLegal: string;
-  areaEspecialidad: string;
+  areaEspecialidad: string | null;
   estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
-  // Add other fields as needed based on API response
 }
 
 export function ListadoProveedores() {
@@ -224,124 +225,193 @@ export function ListadoProveedores() {
             </thead>
             <tbody>
               {providers.length > 0
-                ? providers.map((provider, index) => (
-                    <tr
-                      key={provider.id}
-                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-                        index % 2 !== 0 ? "bg-slate-50/30" : "bg-white"
-                      }`}
-                    >
-                      <td className="px-6 py-3 font-semibold text-slate-700 max-w-[200px] truncate">
-                        {provider.nombre}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
-                      <td className="px-4 py-3 text-slate-600 text-center font-medium max-w-[150px] truncate">
-                        {provider.nombreRepLegal}
-                      </td>
+                ? providers.map((provider, index) => {
+                    const incompleto = !provider.areaEspecialidad;
+                    return (
+                      <tr
+                        key={provider.id}
+                        className="border-b border-slate-100 last:border-0 transition-colors"
+                        style={{
+                          backgroundColor: incompleto
+                            ? "var(--proveedor-incompleto-bg)"
+                            : index % 2 !== 0
+                              ? "oklch(0.984 0.003 247.86 / 0.3)"
+                              : "white",
+                        }}
+                      >
+                        <td className="px-6 py-3 font-semibold text-slate-700 max-w-[200px] truncate">
+                          {provider.nombre}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
+                        <td className="px-4 py-3 text-slate-600 text-center font-medium max-w-[150px] truncate">
+                          {provider.nombreRepLegal}
+                        </td>
 
-                      {/* Tipo Pill */}
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            provider.areaEspecialidad === "OBRAS"
-                              ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
-                              : provider.areaEspecialidad === "BIENES"
-                                ? "bg-tipo-bienes-bg text-tipo-bienes border-tipo-bienes-border"
-                                : "bg-tipo-servicios-bg text-tipo-servicios border-tipo-servicios-border"
-                          }`}
-                        >
-                          {provider.areaEspecialidad}
-                        </span>
-                      </td>
-
-                      {/* Estatus Pill */}
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            provider.estatusValidacion === "APROBADO"
-                              ? "bg-success-bg text-success-text border-success/30"
-                              : provider.estatusValidacion === "PENDIENTE"
-                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                : "bg-red-50 text-red-700 border-red-200"
-                          }`}
-                        >
-                          {provider.estatusValidacion === "APROBADO"
-                            ? "activo"
-                            : provider.estatusValidacion === "PENDIENTE"
-                              ? "por aprobar"
-                              : "vencido"}
-                        </span>
-                      </td>
-
-                      {/* Aprobación Switch */}
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() =>
-                            handleToggleApproval(provider.id, provider.estatusValidacion)
-                          }
-                          className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 ${
-                            provider.estatusValidacion === "APROBADO" ? "bg-success" : "bg-danger"
-                          }`}
-                        >
-                          <span className="sr-only">Cambiar estatus</span>
+                        {/* Tipo Pill */}
+                        <td className="px-4 py-3 text-center">
                           <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              provider.estatusValidacion === "APROBADO"
-                                ? "translate-x-4"
-                                : "translate-x-0"
+                            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              provider.areaEspecialidad === "OBRAS"
+                                ? "bg-tipo-obras-bg text-tipo-obras border-tipo-obras-border"
+                                : provider.areaEspecialidad === "BIENES"
+                                  ? "bg-tipo-bienes-bg text-tipo-bienes border-tipo-bienes-border"
+                                  : "bg-tipo-servicios-bg text-tipo-servicios border-tipo-servicios-border"
                             }`}
-                          />
-                        </button>
-                      </td>
+                          >
+                            {provider.areaEspecialidad}
+                          </span>
+                        </td>
 
-                      {/* Acciones */}
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <Link href={`/registro-proveedores/${provider.id}`}>
-                            <button className="text-slate-500 hover:text-navy transition-colors">
-                              <BsEye className="w-4.5 h-4.5" />
-                            </button>
-                          </Link>
-                          <Link href={`/registro-proveedores/editar/${provider.id}`}>
-                            <button className="text-slate-500 hover:text-navy transition-colors">
-                              <BsPencilSquare className="w-4.5 h-4.5" />
-                            </button>
-                          </Link>
+                        {/* Estatus Pill */}
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              provider.estatusValidacion === "APROBADO"
+                                ? "bg-success-bg text-success-text border-success/30"
+                                : provider.estatusValidacion === "PENDIENTE"
+                                  ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  : "bg-red-50 text-red-700 border-red-200"
+                            }`}
+                          >
+                            {provider.estatusValidacion === "APROBADO"
+                              ? "activo"
+                              : provider.estatusValidacion === "PENDIENTE"
+                                ? "por aprobar"
+                                : "vencido"}
+                          </span>
+                        </td>
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button className="text-red-400 hover:text-red-600 transition-colors">
-                                <FaRegTrashAlt className="w-4 h-4" />
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta acción eliminará al proveedor{" "}
-                                  <strong>{provider.nombre}</strong> de forma lógica. Podrás seguir
-                                  viendo su historial si es necesario, pero ya no aparecerá en las
-                                  listas activas.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel disabled={isDeleting}>
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(provider.id)}
-                                  className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
-                                  disabled={isDeleting}
+                        {/* Aprobación Switch */}
+                        <td className="px-4 py-3 text-center">
+                          {incompleto ? (
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex cursor-not-allowed">
+                                    <button
+                                      disabled
+                                      className="relative inline-flex h-6 w-10 flex-shrink-0 rounded-full border-2 border-transparent bg-slate-300 opacity-50 cursor-not-allowed"
+                                    >
+                                      <span className="sr-only">Cambiar estatus</span>
+                                      <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 translate-x-0" />
+                                    </button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="top"
+                                  className="max-w-[220px] text-center text-xs"
                                 >
-                                  {isDeleting ? "Eliminando..." : "Eliminar"}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                                  Debes completar el perfil del proveedor antes de poder aprobarlo.
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleToggleApproval(provider.id, provider.estatusValidacion)
+                              }
+                              className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2 ${
+                                provider.estatusValidacion === "APROBADO"
+                                  ? "bg-success"
+                                  : "bg-danger"
+                              }`}
+                            >
+                              <span className="sr-only">Cambiar estatus</span>
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  provider.estatusValidacion === "APROBADO"
+                                    ? "translate-x-4"
+                                    : "translate-x-0"
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </td>
+
+                        {/* Acciones */}
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-3">
+                            <Link href={`/registro-proveedores/${provider.id}`}>
+                              <button className="text-slate-500 hover:text-navy transition-colors">
+                                <BsEye className="w-4.5 h-4.5" />
+                              </button>
+                            </Link>
+
+                            {/* Lápiz — animado si proveedor incompleto */}
+                            {incompleto ? (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                                      <button className="relative w-[18px] h-[18px]">
+                                        {/* Lápiz normal — se desvanece */}
+                                        <span className="pencil-icon-normal absolute inset-0 flex items-center justify-center">
+                                          <BsPencilSquare
+                                            className="w-[16px] h-[16px]"
+                                            style={{ color: "var(--proveedor-incompleto-icon)" }}
+                                          />
+                                        </span>
+                                        {/* Icono advertencia — aparece */}
+                                        <span className="pencil-icon-warning absolute inset-0 flex items-center justify-center">
+                                          <IoMdWarning
+                                            className="w-[16px] h-[16px]"
+                                            style={{ color: "var(--proveedor-incompleto-icon)" }}
+                                          />
+                                        </span>
+                                      </button>
+                                    </Link>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    className="max-w-[200px] text-center text-xs"
+                                  >
+                                    Proveedor incompleto. Haz clic para completar su información.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                                <button className="text-slate-500 hover:text-navy transition-colors">
+                                  <BsPencilSquare className="w-4.5 h-4.5" />
+                                </button>
+                              </Link>
+                            )}
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button className="text-red-400 hover:text-red-600 transition-colors">
+                                  <FaRegTrashAlt className="w-4 h-4" />
+                                </button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción eliminará al proveedor{" "}
+                                    <strong>{provider.nombre}</strong> de forma lógica. Podrás
+                                    seguir viendo su historial si es necesario, pero ya no aparecerá
+                                    en las listas activas.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel disabled={isDeleting}>
+                                    Cancelar
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(provider.id)}
+                                    className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
+                                    disabled={isDeleting}
+                                  >
+                                    {isDeleting ? "Eliminando..." : "Eliminar"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 : !loading && (
                     <tr>
                       <td colSpan={8} className="px-4 py-10 text-center text-slate-500 italic">

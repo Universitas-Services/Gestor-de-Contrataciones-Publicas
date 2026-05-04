@@ -1,71 +1,104 @@
 "use client";
 
 import React from "react";
+import { Check, FileText, Calculator, Users, Calendar } from "lucide-react";
 
 interface StepProgressBarProps {
   currentStep: number;
   totalSteps: number;
+  modoEdicion?: boolean;
 }
 
-const STEP_LABELS = [
-  "Datos básicos",
-  "Análisis de modalidad",
-  "Configuración de actores",
-  "Planificación",
+const CREATION_STEPS = [
+  { label: "Datos básicos", icon: FileText },
+  { label: "Análisis modalidad", icon: Calculator },
+  { label: "Config. actores", icon: Users },
+  { label: "Planificación", icon: Calendar },
 ];
 
-export function StepProgressBar({ currentStep, totalSteps }: StepProgressBarProps) {
+const EDIT_STEPS = [
+  { label: "Datos básicos", icon: FileText },
+  { label: "Análisis modalidad", icon: Calculator },
+  { label: "Config. actores", icon: Users },
+];
+
+export function StepProgressBar({
+  currentStep,
+  totalSteps,
+  modoEdicion = false,
+}: StepProgressBarProps) {
+  const steps = modoEdicion ? EDIT_STEPS : CREATION_STEPS;
+
   return (
-    <div className="w-full mb-8">
-      {/* Step indicators */}
-      <div className="flex items-center justify-between mb-3">
-        {STEP_LABELS.map((label, index) => {
+    <div className="w-full mb-8 pt-4 pb-2">
+      <div className="relative flex justify-between items-start w-full">
+        {/* Connecting Lines */}
+        <div className="absolute top-6 left-[10%] right-[10%] h-[2px] bg-slate-200 -z-10" />
+        <div
+          className="absolute top-6 left-[10%] h-[2px] bg-success transition-all duration-500 -z-10"
+          style={{
+            width: `${(Math.min(currentStep - 1, steps.length - 1) / (steps.length - 1)) * 80}%`,
+          }}
+        />
+
+        {steps.map((step, index) => {
           const stepNum = index + 1;
           const isActive = stepNum === currentStep;
           const isCompleted = stepNum < currentStep;
+          const Icon = step.icon;
+
+          // Status colors
+          let circleClass = "";
+          let statusText = "";
+          let badgeClass = "";
+
+          if (isCompleted) {
+            circleClass = "bg-success text-white border-2 border-success";
+            statusText = "Completado";
+            badgeClass = "bg-success/10 text-success font-medium";
+          } else if (isActive) {
+            circleClass =
+              "bg-color-boton-2 text-white border-2 border-color-boton-2 ring-4 ring-color-boton-2/20";
+            statusText = "En curso";
+            badgeClass = "bg-slate-100 text-slate-700 font-medium";
+          } else {
+            circleClass = "bg-white text-slate-400 border-2 border-slate-200";
+            statusText = "Pendiente";
+            badgeClass = "bg-slate-50 text-slate-400";
+          }
 
           return (
-            <div key={label} className="flex items-center gap-2">
+            <div key={index} className="flex flex-col items-center relative z-10 w-1/4">
+              {/* Circle */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                  isCompleted
-                    ? "bg-navy text-white"
-                    : isActive
-                      ? "bg-navy text-white ring-4 ring-navy/20"
-                      : "bg-slate-200 text-slate-500"
-                }`}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${circleClass}`}
               >
                 {isCompleted ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <Check className="w-6 h-6 stroke-[3]" />
                 ) : (
-                  stepNum
+                  <Icon className="w-5 h-5" />
                 )}
               </div>
-              <span
-                className={`text-sm font-medium hidden sm:inline ${
-                  isActive || isCompleted ? "text-heading-dark" : "text-slate-400"
-                }`}
-              >
-                {label}
-              </span>
+
+              {/* Text Container */}
+              <div className="flex flex-col items-center mt-4 text-center space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                  PASO {stepNum}
+                </span>
+                <span
+                  className={`text-[14px] font-bold leading-tight ${isActive || isCompleted ? "text-slate-800" : "text-slate-500"}`}
+                >
+                  {step.label}
+                </span>
+
+                {/* Badge */}
+                <span className={`text-[10px] px-2.5 py-0.5 rounded-full mt-1 ${badgeClass}`}>
+                  {statusText}
+                </span>
+              </div>
             </div>
           );
         })}
-      </div>
-
-      {/* Progress bar */}
-      <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-navy rounded-full transition-all duration-500 ease-in-out"
-          style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
-        />
       </div>
     </div>
   );

@@ -40,6 +40,8 @@ export const registrarComisionContrataciones = async (
     body: JSON.stringify({
       denominacionComision: payload.denominacionComision,
       datosDesignacionComision: payload.datosDesignacionComision,
+      correoElectronico: payload.correoElectronico,
+      telefono: payload.telefono,
       comisionCertificada: payload.comisionCertificada,
       miembros: payload.miembros,
     }),

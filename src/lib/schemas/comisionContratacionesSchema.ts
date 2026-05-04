@@ -67,6 +67,11 @@ export const comisionContratacionesSchema = z.object({
     .string()
     .min(1, "Los datos de designación son requeridos")
     .max(255, "Máximo 255 caracteres"),
+  correoElectronico: z
+    .string()
+    .min(1, { message: "El correo electrónico es requerido" })
+    .email({ message: "Ingrese un correo electrónico válido" }),
+  telefono: z.string().min(1, { message: "El teléfono de contacto es requerido" }),
   comisionCertificada: z.boolean(),
   miembros: z
     .array(miembroSchema)

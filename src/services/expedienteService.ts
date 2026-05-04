@@ -254,35 +254,53 @@ export const guardarCronograma = async (
 ): Promise<ExpedienteResponse> => {
   const token = await getServerToken();
 
-  // Validate and strip extra properties like id, createdAt, etc. that the backend rejects.
-  const {
-    fechaLlamadoParticipar,
-    fechaInicioDisponibilidadPliego,
-    fechaFinDisponibilidadPliego,
-    fechaSolicitudAclaratorias,
-    fechaRespuestaAclaratorias,
-    fechaModificacionPliego,
-    fechaActoRecepcionAperturaSobres,
-    fechaLimiteEvaluacion,
-    fechaLimiteAdjudicacion,
-    fechaLimiteNotificacion,
-    fechaLimiteGarantias,
-    fechaLimiteFirmaContrato,
-  } = payload as any;
+  /**
+   * Normaliza cualquier string de fecha a "YYYY-MM-DD".
+   * Acepta "2024-05-15", "2024-05-15T00:00:00.000Z", "2024-05-15T04:00:00.000Z", etc.
+   * Si el valor es undefined/null/vacío lanza un error descriptivo.
+   */
+  const toDateOnly = (value: unknown, fieldName: string): string => {
+    if (!value || typeof value !== "string") {
+      throw new Error(`Fecha inválida o ausente en el campo "${fieldName}": ${value}`);
+    }
+    const dateOnly = value.split("T")[0]; // "YYYY-MM-DD"
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+      throw new Error(`Formato de fecha incorrecto en "${fieldName}": ${value}`);
+    }
+    return dateOnly;
+  };
+
+  // Strip extra fields (id, expedienteId, createdAt…) y normalizar fechas a YYYY-MM-DD
+  const raw = payload as unknown as Record<string, unknown>;
 
   const validPayload = {
-    fechaLlamadoParticipar,
-    fechaInicioDisponibilidadPliego,
-    fechaFinDisponibilidadPliego,
-    fechaSolicitudAclaratorias,
-    fechaRespuestaAclaratorias,
-    fechaModificacionPliego,
-    fechaActoRecepcionAperturaSobres,
-    fechaLimiteEvaluacion,
-    fechaLimiteAdjudicacion,
-    fechaLimiteNotificacion,
-    fechaLimiteGarantias,
-    fechaLimiteFirmaContrato,
+    fechaLlamadoParticipar: toDateOnly(raw.fechaLlamadoParticipar, "fechaLlamadoParticipar"),
+    fechaInicioDisponibilidadPliego: toDateOnly(
+      raw.fechaInicioDisponibilidadPliego,
+      "fechaInicioDisponibilidadPliego"
+    ),
+    fechaFinDisponibilidadPliego: toDateOnly(
+      raw.fechaFinDisponibilidadPliego,
+      "fechaFinDisponibilidadPliego"
+    ),
+    fechaSolicitudAclaratorias: toDateOnly(
+      raw.fechaSolicitudAclaratorias,
+      "fechaSolicitudAclaratorias"
+    ),
+    fechaRespuestaAclaratorias: toDateOnly(
+      raw.fechaRespuestaAclaratorias,
+      "fechaRespuestaAclaratorias"
+    ),
+    fechaModificacionPliego: toDateOnly(raw.fechaModificacionPliego, "fechaModificacionPliego"),
+    fechaActoRecepcionAperturaSobres: toDateOnly(
+      raw.fechaActoRecepcionAperturaSobres,
+      "fechaActoRecepcionAperturaSobres"
+    ),
+    fechaLimiteEvaluacion: toDateOnly(raw.fechaLimiteEvaluacion, "fechaLimiteEvaluacion"),
+    fechaLimiteAdjudicacion: toDateOnly(raw.fechaLimiteAdjudicacion, "fechaLimiteAdjudicacion"),
+    fechaLimiteNotificacion: toDateOnly(raw.fechaLimiteNotificacion, "fechaLimiteNotificacion"),
+    fechaLimiteGarantias: toDateOnly(raw.fechaLimiteGarantias, "fechaLimiteGarantias"),
+    fechaLimiteFirmaContrato: toDateOnly(raw.fechaLimiteFirmaContrato, "fechaLimiteFirmaContrato"),
   };
 
   const response = await fetch(`${API_URL}/expedientes/${id}/cronograma`, {
