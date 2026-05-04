@@ -33,8 +33,8 @@ import {
 import { obtenerExpediente } from "@/services/expedienteService";
 import {
   generarListaCotejo,
-  previewDocumento,
-  descargarDocumento,
+  previewListaCotejoEvaluacion,
+  descargarListaCotejoEvaluacion,
 } from "@/services/generadorDocumentosService";
 import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 
@@ -306,12 +306,14 @@ export default function MatrizEvaluacionPage({
 
       await evaluarSobre2Fase3(oferenteId, payload);
 
-      // Generar lista de cotejo al guardar evaluación calificada (silencioso si falla)
-      await generarListaCotejo(id, oferenteId).catch(() => {
-        toast.warning(
-          "Evaluación guardada, pero la lista de cotejo no pudo generarse automáticamente."
+      // Generar lista de cotejo al guardar evaluación calificada
+      await generarListaCotejo(id, oferenteId)
+        .then(() => toast.success("Lista de cotejo generada correctamente."))
+        .catch(() =>
+          toast.warning(
+            "Evaluación guardada, pero la lista de cotejo no pudo generarse automáticamente."
+          )
         );
-      });
       setListaCotejoGenerada(true);
 
       sessionStorage.removeItem(`sobre2_oferente_${oferenteId}`);
@@ -332,7 +334,7 @@ export default function MatrizEvaluacionPage({
     setIsPreviewing(true);
     setPreviewOpen(true);
     try {
-      const result = await previewDocumento("lista-cotejo", id);
+      const result = await previewListaCotejoEvaluacion(oferenteId);
       setPreviewUrl(result.urlArchivo);
       setPreviewTitle(result.tituloDocumento || "Lista de Cotejo");
     } catch (error: unknown) {
@@ -348,7 +350,7 @@ export default function MatrizEvaluacionPage({
   const handleDownloadCotejo = async () => {
     setIsDownloading(true);
     try {
-      const { data, fileName } = await descargarDocumento("lista-cotejo", id);
+      const { data, fileName } = await descargarListaCotejoEvaluacion(oferenteId);
       const blob = new Blob([new Uint8Array(data)], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });

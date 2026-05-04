@@ -35,6 +35,8 @@ import {
   obtenerStatusDocumentos,
   previewDocumento,
   descargarDocumento,
+  previewListaCotejoEvaluacion,
+  descargarListaCotejoEvaluacion,
   type DocumentoStatus,
 } from "@/services/generadorDocumentosService";
 
@@ -137,17 +139,23 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
       }
 
       // Orden de prelación para ordenar de menor a mayor
+      // Orden de prelación para ordenar de menor a mayor
       const PRELACION_ORDER = [
-        "Primera Opción",
-        "Segunda Opción",
-        "Tercera Opción",
-        "Cuarta Opción",
-        "Quinta Opción",
-        "Sexta Opción",
-        "Séptima Opción",
-        "Octava Opción",
-        "Novena Opción",
-        "Décima Opción",
+        "primera opción",
+        "segunda opción",
+        "tercera opción",
+        "cuarta opción",
+        "quinta opción",
+        "sexta opción",
+        "séptima opción",
+        "octava opción",
+        "novena opción",
+        "décima opción",
+        "undécima opción",
+        "duodécima opción",
+        "decimotercera opción",
+        "decimocuarta opción",
+        "decimoquinta opción",
       ];
 
       const mapped: ParticipanteEvaluacion[] = evaluacionesList
@@ -161,12 +169,14 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
           prelacion: item.posicionPrelacion,
         }))
         .sort((a, b) => {
-          const idxA = a.prelacion ? PRELACION_ORDER.indexOf(a.prelacion) : -1;
-          const idxB = b.prelacion ? PRELACION_ORDER.indexOf(b.prelacion) : -1;
+          const idxA = a.prelacion ? PRELACION_ORDER.indexOf(a.prelacion.toLowerCase()) : -1;
+          const idxB = b.prelacion ? PRELACION_ORDER.indexOf(b.prelacion.toLowerCase()) : -1;
+
           // Sin prelación van al final
           if (idxA === -1 && idxB === -1) return 0;
           if (idxA === -1) return 1;
           if (idxB === -1) return -1;
+
           return idxA - idxB;
         });
       setParticipantes(mapped);
@@ -380,20 +390,57 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                       <TableCell className="text-center px-2 py-3">
                         <div className="flex items-center justify-center gap-3">
                           <button
-                            className="text-slate-500 hover:text-navy transition-colors"
-                            title="Ver detalle"
-                            onClick={() =>
-                              toast.info(`Vista detallada de "${p.nombreEmpresa}" próximamente.`)
-                            }
+                            className={`transition-colors ${p.oferenteCalificado !== null ? "text-slate-500 hover:text-navy" : "text-slate-300 cursor-not-allowed"}`}
+                            title="Previsualizar lista de cotejo"
+                            disabled={p.oferenteCalificado === null}
+                            onClick={async () => {
+                              if (p.oferenteCalificado === null) return;
+                              setIsPreviewing(true);
+                              setPreviewDocOpen(true);
+                              try {
+                                const result = await previewListaCotejoEvaluacion(p.id);
+                                setPreviewDocUrl(result.urlArchivo);
+                                setPreviewDocTitle(result.tituloDocumento || "Lista de Cotejo");
+                              } catch (error: unknown) {
+                                const msg =
+                                  error instanceof Error ? error.message : "Error al previsualizar";
+                                toast.error(msg);
+                                setPreviewDocOpen(false);
+                              } finally {
+                                setIsPreviewing(false);
+                              }
+                            }}
                           >
                             <BsEye className="w-[18px] h-[18px]" />
                           </button>
                           <button
-                            className="text-slate-500 hover:text-navy transition-colors"
-                            title="Descargar oferta"
-                            onClick={() =>
-                              toast.info(`Descarga de oferta de "${p.nombreEmpresa}" próximamente.`)
-                            }
+                            className={`transition-colors ${p.oferenteCalificado !== null ? "text-slate-500 hover:text-navy" : "text-slate-300 cursor-not-allowed"}`}
+                            title="Descargar lista de cotejo"
+                            disabled={p.oferenteCalificado === null}
+                            onClick={async () => {
+                              if (p.oferenteCalificado === null) return;
+                              try {
+                                const { data, fileName } = await descargarListaCotejoEvaluacion(
+                                  p.id
+                                );
+                                const blob = new Blob([new Uint8Array(data)], {
+                                  type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.download = fileName;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                                toast.success("Lista de cotejo descargada exitosamente");
+                              } catch (error) {
+                                toast.error(
+                                  error instanceof Error ? error.message : "Error al descargar"
+                                );
+                              }
+                            }}
                           >
                             <IoDownloadOutline className="w-[18px] h-[18px]" />
                           </button>

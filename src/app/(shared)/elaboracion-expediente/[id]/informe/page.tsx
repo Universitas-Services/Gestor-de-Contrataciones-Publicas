@@ -6,6 +6,15 @@ import { IoSaveOutline } from "react-icons/io5";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FaCheckCircle } from "react-icons/fa";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { crearInformeRecomendacion, obtenerInformeRecomendacion } from "@/services/oferenteService";
 import { generarDocumento } from "@/services/generadorDocumentosService";
 
@@ -129,6 +138,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
 
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<InformeState>(initialState);
 
   // ── Cargar datos existentes (modo edición) ──
@@ -233,13 +243,17 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
         toast.warning("Informe guardado, pero el documento no pudo generarse automáticamente.");
       });
 
-      toast.success("Informe de recomendación guardado y documento generado correctamente");
-      router.push(`/elaboracion-expediente/${id}?tab=fase3`);
+      setShowModal(true);
     } catch (error: any) {
       toast.error(error.message || "Error al guardar el informe");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCerrarModal = () => {
+    setShowModal(false);
+    router.push(`/elaboracion-expediente/${id}?tab=fase3`);
   };
 
   // ── Loading ──
@@ -426,6 +440,31 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
           </Button>
         </div>
       </div>
+
+      {/* Modal de Éxito de Evaluación */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-[400px] flex flex-col items-center justify-center p-8 gap-4 rounded-xl">
+          <div className="w-16 h-16 rounded-full border-[3px] border-[var(--success)] flex items-center justify-center mb-2">
+            <FaCheckCircle className="w-8 h-8 text-[var(--success)]" />
+          </div>
+          <DialogHeader className="text-center w-full space-y-2">
+            <DialogTitle className="text-xl font-bold text-navy w-full text-center">
+              ¡Evaluación completada!
+            </DialogTitle>
+            <DialogDescription className="text-sm italic text-muted-foreground w-full text-center">
+              Se ha generado el informe de recomendación
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="w-full mt-4 sm:justify-center">
+            <Button
+              className="w-full sm:w-[200px] bg-navy hover:bg-navy-hover text-white font-bold h-11 rounded-md"
+              onClick={handleCerrarModal}
+            >
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

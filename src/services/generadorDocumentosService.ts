@@ -256,3 +256,80 @@ export const descargarDocumento = async (
 
   return { data, fileName };
 };
+
+/**
+ * GET /generador-documentos/preview/lista-cotejo/evaluacion/{evaluacionId}
+ * Preview de Lista de Cotejo por evaluación.
+ */
+export const previewListaCotejoEvaluacion = async (
+  evaluacionId: string
+): Promise<PreviewResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(
+    `${API_URL}/generador-documentos/preview/lista-cotejo/evaluacion/${evaluacionId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Lista de cotejo no encontrada. Debe generarla primero.");
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as Record<string, string>)?.message ?? "Error al previsualizar la lista de cotejo"
+    );
+  }
+
+  return response.json() as Promise<PreviewResponse>;
+};
+
+/**
+ * GET /generador-documentos/download/lista-cotejo/evaluacion/{evaluacionId}
+ * Descarga la Lista de Cotejo por evaluación.
+ */
+export const descargarListaCotejoEvaluacion = async (
+  evaluacionId: string
+): Promise<{ data: Uint8Array; fileName: string }> => {
+  const token = await getServerToken();
+
+  const response = await fetch(
+    `${API_URL}/generador-documentos/download/lista-cotejo/evaluacion/${evaluacionId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Lista de cotejo no encontrada. Debe generarla primero.");
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as Record<string, string>)?.message ?? "Error al descargar la lista de cotejo"
+    );
+  }
+
+  const contentDisposition = response.headers.get("Content-Disposition");
+  let fileName = "lista-cotejo.docx";
+
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+    if (match?.[1]) {
+      fileName = match[1];
+    }
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const data = new Uint8Array(arrayBuffer);
+
+  return { data, fileName };
+};
