@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ColumnFiltersState,
   SortingState,
@@ -41,6 +42,9 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function UserManagementTable() {
+  const searchParams = useSearchParams();
+  const initialRol = searchParams.get("rol") || undefined;
+
   const [data, setData] = React.useState<User[]>([]);
   const [metadata, setMetadata] = React.useState<PaginationMetadata | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -60,7 +64,7 @@ export function UserManagementTable() {
   const debouncedSearchQuery = useDebounce(searchQuery, 700);
 
   // Filter State
-  const [roleFilter, setRoleFilter] = React.useState<string | undefined>(undefined);
+  const [roleFilter, setRoleFilter] = React.useState<string | undefined>(initialRol);
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Eye,
@@ -67,8 +68,11 @@ const ITEMS_PER_PAGE = 5;
 // ─── Component ──────────────────────────────────────────────────────
 
 export function ExpedientesPanel() {
+  const params = useSearchParams();
+  const initialTipo = params.get("tipo") || "todos";
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [tipoFilter, setTipoFilter] = useState<string>("todos");
+  const [tipoFilter, setTipoFilter] = useState<string>(initialTipo);
   const [faseFilter, setFaseFilter] = useState<string>("todos");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

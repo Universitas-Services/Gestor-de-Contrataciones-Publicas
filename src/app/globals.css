@@ -151,6 +151,9 @@
   --color-motivo-bg: var(--motivo-bg);
   --color-motivo-border: var(--motivo-border);
   --color-motivo-icon: var(--motivo-icon);
+  --color-icon-people: var(--icon-people);
+  --color-icon-terminados: var(--icon-terminados);
+  --color-icon-bg-terminados: var(--icon-bg-terminados);
 }
 
 :root {
@@ -306,6 +309,9 @@
   --cal-evaluacion: oklch(0.56 0.25 24);
   --cal-firma: oklch(0.66 0.18 144);
   --cal-llamado: oklch(0.55 0.03 250);
+  --icon-people: oklch(0.38 0.05 254);
+  --icon-terminados: oklch(0.31 0.08 255);
+  --icon-bg-terminados: oklch(0.88 0 0);
 }
 
 @layer base {

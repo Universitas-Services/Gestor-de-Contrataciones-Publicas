@@ -337,7 +337,7 @@ export const obtenerExpedientes = async (params?: {
   if (params?.page !== undefined) searchParams.set("page", String(params.page));
   if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
   if (params?.search) searchParams.set("search", params.search);
-  if (params?.tipoContratacion) searchParams.set("tipoContratacion", params.tipoContratacion);
+  if (params?.tipoContratacion) searchParams.set("tipo", params.tipoContratacion);
   if (params?.estado) searchParams.set("estado", params.estado);
 
   const queryString = searchParams.toString();
