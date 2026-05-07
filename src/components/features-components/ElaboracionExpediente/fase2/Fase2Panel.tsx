@@ -95,6 +95,53 @@ const TIPO_TO_ICON: Record<string, "receipt" | "clipboard"> = {
   ACTA_APERTURA: "receipt",
 };
 
+// ─── Sub-componente: Botón Generar con validación ───────────────────
+
+interface GenerarDocBtnProps {
+  tipo: string;
+  adquirentesCount: number;
+  oferentesCount: number;
+  onGenerar: (tipo: string) => void;
+}
+
+function GenerarDocBtn({ tipo, adquirentesCount, oferentesCount, onGenerar }: GenerarDocBtnProps) {
+  const requiereAdquirentes = tipo === "REGISTRO_ADQUIRENTES";
+  const requiereOferentes = tipo === "ACTA_RECEPCION" || tipo === "ACTA_APERTURA";
+  const puedeGenerar =
+    (requiereAdquirentes && adquirentesCount > 0) || (requiereOferentes && oferentesCount > 0);
+
+  const mensajeDisabled = requiereAdquirentes
+    ? "Registre al menos un adquirente para generar este documento"
+    : "Registre al menos un oferente para generar este documento";
+
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">
+            <button
+              className={`transition-colors ${
+                puedeGenerar
+                  ? "text-[#334155] hover:text-navy"
+                  : "text-[#334155] opacity-30 cursor-not-allowed"
+              }`}
+              disabled={!puedeGenerar}
+              onClick={() => onGenerar(tipo)}
+            >
+              <IoNewspaperOutline className="w-[24px] h-[24px]" />
+            </button>
+          </span>
+        </TooltipTrigger>
+        {!puedeGenerar && (
+          <TooltipContent side="top" className="max-w-[220px] text-center text-xs">
+            {mensajeDisabled}
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 // ─── Componente Principal ───────────────────────────────────────────
 
 interface Fase2PanelProps {
@@ -702,13 +749,12 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
 
                           {/* Generar (primera vez) / Regenerar (cuando desactualizado) / Icono inactivo */}
                           {!doc.generado ? (
-                            // Primera generación — siempre activo
-                            <button
-                              className="text-[#334155] hover:text-navy transition-colors"
-                              onClick={() => handleGenerarDocumento(doc.tipo)}
-                            >
-                              <IoNewspaperOutline className="w-[24px] h-[24px]" />
-                            </button>
+                            <GenerarDocBtn
+                              tipo={doc.tipo}
+                              adquirentesCount={adquirentes.length}
+                              oferentesCount={oferentes.length}
+                              onGenerar={handleGenerarDocumento}
+                            />
                           ) : desactualizado ? (
                             // Regenerar — activo solo cuando estaDesactualizado
                             <button
