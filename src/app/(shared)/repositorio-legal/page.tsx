@@ -6,7 +6,7 @@ import { FaBalanceScale } from "react-icons/fa";
 export default async function RepositorioLegalPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin_ente" || !user.enteId) {
+  if (!user) {
     redirect("/login");
   }
 

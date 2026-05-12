@@ -5,7 +5,7 @@ import { ConsultorChat } from "./ConsultorChat";
 export default async function ConsultorIAPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin_ente" || !user.enteId) {
+  if (!user) {
     redirect("/login");
   }
 

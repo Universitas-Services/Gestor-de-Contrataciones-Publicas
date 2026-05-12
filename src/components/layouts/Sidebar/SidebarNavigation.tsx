@@ -18,6 +18,7 @@ import {
 import { getSidebarConfig, GLOBAL_SIDEBAR_ITEMS, type SidebarItem } from "./SidebarConfig";
 import { getRoleConfig } from "@/types/role.types";
 import type { UserRole } from "@/types/role.types";
+import { SupervisorEntesList } from "./SupervisorEntesList";
 
 interface SidebarNavigationProps {
   role: UserRole;
@@ -103,6 +104,8 @@ export function SidebarNavigation({ role }: SidebarNavigationProps) {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      {role === "supervisor" && <SupervisorEntesList />}
 
       <SidebarGroup>
         <SidebarGroupLabel>Otros Servicios</SidebarGroupLabel>
