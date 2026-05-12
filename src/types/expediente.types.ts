@@ -50,11 +50,19 @@ export interface DatosBasicosForm {
 export interface AnalisisModalidad {
   objetoProceso: string;
   tipoContratacion: string;
-  montoUCAU: number;
   montoBs: number;
-  montoDolares: number;
+  /** Computed from SDK: monto / tasaBCV_USD */
+  montoDolares: number | null;
+  /** Computed from SDK: monto / valorUCAU */
+  montoUCAU: number | null;
+  /** Raw BCV USD rate fetched from SDK */
+  tasaBcvUsd: number | null;
+  /** Raw UCAU value fetched from SDK */
+  valorUcau: number | null;
   modalidadSugerida: string;
   baseLegal: string;
+  /** True while SDK calls are in-flight */
+  isLoadingRates: boolean;
 }
 
 export interface ConfiguracionActoresForm {

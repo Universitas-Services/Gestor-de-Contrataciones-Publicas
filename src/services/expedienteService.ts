@@ -194,7 +194,8 @@ async function handleResponse<T>(response: Response, errorMsg: string): Promise<
  */
 export const crearExpedienteBorrador = async (
   formData: DatosBasicosFormValues,
-  valorUcauBase: number
+  valorUcauBase?: number,
+  montoDolar?: number
 ): Promise<ExpedienteResponse> => {
   const token = await getServerToken();
 
@@ -203,8 +204,8 @@ export const crearExpedienteBorrador = async (
     codigoNomenclatura: formData.codigoNomenclatura,
     tipoContratacion: formData.tipoContratacion,
     montoEstimadoBs: formData.montoEstimadoBs,
-    montoEstimadoDolar: formData.montoEstimadoDolar,
-    valorUcauBase,
+    montoEstimadoDolar: montoDolar ?? 0,
+    valorUcauBase: valorUcauBase ?? 0,
     modalidadSeleccion: "LICITACION_PUBLICA",
   };
 
