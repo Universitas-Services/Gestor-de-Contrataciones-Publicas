@@ -13,7 +13,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { getCurrentUser } from "@/lib/auth/auth";
-import { obtenerSupervisor, type EnteAsignado } from "@/services/supervisorService";
+import { obtenerMisEntes, type EnteAsignado } from "@/services/supervisorService";
 import { getRoleConfig } from "@/types/role.types";
 
 export function SupervisorEntesList() {
@@ -26,9 +26,9 @@ export function SupervisorEntesList() {
     async function fetchData() {
       try {
         const user = await getCurrentUser();
-        if (user?.userId && user.role === "supervisor") {
-          const data = await obtenerSupervisor(user.userId);
-          setEntes(data.entesAsignados || []);
+        if (user?.role === "supervisor") {
+          const data = await obtenerMisEntes();
+          setEntes(data || []);
         }
       } catch (error) {
         console.error("Error al obtener los entes del supervisor:", error);

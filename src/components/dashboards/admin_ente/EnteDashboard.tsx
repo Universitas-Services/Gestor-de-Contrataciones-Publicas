@@ -15,6 +15,7 @@ import type { DashboardOperativoResponse } from "@/types/dashboard-operativo.typ
 /* ─────────── Props ─────────── */
 interface EnteDashboardProps {
   data: DashboardOperativoResponse;
+  hideManualButtons?: boolean;
 }
 
 /* ─────────── Helpers para calcular porcentajes ─────────── */
@@ -46,8 +47,17 @@ const ROUTES = {
   consultorIA: "/consultor-ia",
 } as const;
 
-export function EnteDashboard({ data }: EnteDashboardProps) {
+export function EnteDashboard({ data, hideManualButtons = false }: EnteDashboardProps) {
   const router = useRouter();
+
+  const handleNavigation = (route: string) => {
+    if (hideManualButtons) return;
+    router.push(route);
+  };
+
+  const clickableCardClass = hideManualButtons
+    ? ""
+    : "cursor-pointer transition-shadow hover:shadow-md";
 
   /* ── Datos derivados: Expedientes en proceso → porcentajes ── */
   const totalEnProceso = data.expedientesEnProceso.total;
@@ -76,7 +86,7 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
               Seguimiento de procesos de contratación y gestión de expedientes.
             </p>
           </div>
-          <ManualButtons />
+          {!hideManualButtons && <ManualButtons />}
         </div>
 
         {/* ── Usuarios de la plataforma ── */}
@@ -85,10 +95,7 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
 
           <div className="grid gap-4 md:grid-cols-3">
             {/* Total de usuarios */}
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => router.push(ROUTES.usuarios)}
-            >
+            <Card className={clickableCardClass} onClick={() => handleNavigation(ROUTES.usuarios)}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total de usuarios
@@ -102,8 +109,8 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
 
             {/* Ejecutores */}
             <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => router.push(ROUTES.ejecutores)}
+              className={clickableCardClass}
+              onClick={() => handleNavigation(ROUTES.ejecutores)}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -118,8 +125,8 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
 
             {/* Visualizadores */}
             <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => router.push(ROUTES.visualizadores)}
+              className={clickableCardClass}
+              onClick={() => handleNavigation(ROUTES.visualizadores)}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -145,8 +152,8 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Expedientes en proceso */}
             <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => router.push(ROUTES.expedientes)}
+              className={clickableCardClass}
+              onClick={() => handleNavigation(ROUTES.expedientes)}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex items-center gap-2">
@@ -209,9 +216,9 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
                 {expedientesTerminados.map((exp) => (
                   <Card
                     key={exp.label}
-                    className="py-3 shadow-none cursor-pointer transition-colors hover:bg-slate-bg"
+                    className={`py-3 shadow-none ${!hideManualButtons ? "cursor-pointer transition-colors hover:bg-slate-bg" : ""}`}
                     onClick={() =>
-                      router.push(`${ROUTES.expedientes}?tipo=${exp.key.toUpperCase()}`)
+                      handleNavigation(`${ROUTES.expedientes}?tipo=${exp.key.toUpperCase()}`)
                     }
                   >
                     <CardContent className="flex items-center gap-3 py-0">
@@ -250,8 +257,8 @@ export function EnteDashboard({ data }: EnteDashboardProps) {
 
               {/* Proveedores Registrados */}
               <Card
-                className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => router.push(ROUTES.proveedores)}
+                className={clickableCardClass}
+                onClick={() => handleNavigation(ROUTES.proveedores)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
