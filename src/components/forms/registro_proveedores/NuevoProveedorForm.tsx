@@ -45,13 +45,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   InputOTP,
   InputOTPGroup,
@@ -70,11 +64,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UniversitasAPI, Estado, Municipio, Parroquia } from "@universitas/sdk-global";
 
-// Mocks de data
-const ESTADOS = ["Distrito Capital", "Miranda", "Carabobo", "Lara"];
-const MUNICIPIOS = ["Libertador", "Sucre", "Valencia", "Iribarren"];
-const PARROQUIAS = ["Catedral", "El Recreo", "San Blas", "Concepcion"];
+// Instancia del SDK para el cliente
+const universitasClient = new UniversitasAPI(process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL!);
 
 // Tipos de documento para la carga de documentos del proveedor
 const TIPOS_DOCUMENTO = [
@@ -147,7 +140,7 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
       rnc: undefined,
       solvenciaLaboral: undefined,
       licenciaMunicipal: undefined,
-      actividadPrincipal: "No" as any,
+      actividadPrincipal: undefined,
       areaEspecialidad: "",
       anosExperiencia: "",
       patrimonioNeto: "",
@@ -156,6 +149,53 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
     },
     mode: "onChange",
   });
+
+  // --- Estados Territoriales Dinámicos ---
+  const [estadosList, setEstadosList] = useState<Estado[]>([]);
+  const [municipiosList, setMunicipiosList] = useState<Municipio[]>([]);
+  const [parroquiasList, setParroquiasList] = useState<Parroquia[]>([]);
+
+  const selectedEstado = form.watch("estado");
+  const selectedMunicipio = form.watch("municipio");
+
+  // Cargar estados iniciales
+  useEffect(() => {
+    universitasClient.territorio
+      .getEstados()
+      .then((res) => setEstadosList(res.data))
+      .catch(console.error);
+  }, []);
+
+  // Cargar municipios cuando cambia estado
+  useEffect(() => {
+    if (!selectedEstado) {
+      setMunicipiosList([]);
+      setParroquiasList([]);
+      return;
+    }
+    const estadoObj = estadosList.find((e) => e.nombre === selectedEstado);
+    if (estadoObj) {
+      universitasClient.territorio
+        .getMunicipios(estadoObj.id)
+        .then((res) => setMunicipiosList(res.data))
+        .catch(console.error);
+    }
+  }, [selectedEstado, estadosList]);
+
+  // Cargar parroquias cuando cambia municipio
+  useEffect(() => {
+    if (!selectedMunicipio) {
+      setParroquiasList([]);
+      return;
+    }
+    const municipioObj = municipiosList.find((m) => m.nombre === selectedMunicipio);
+    if (municipioObj) {
+      universitasClient.territorio
+        .getParroquias(municipioObj.id)
+        .then((res) => setParroquiasList(res.data))
+        .catch(console.error);
+    }
+  }, [selectedMunicipio, municipiosList]);
 
   // Cargar datos si estamos en modo edición
   useEffect(() => {
@@ -513,15 +553,21 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                       Ejemplo: J-12345678-9
                     </p>
                     <div className="flex items-center gap-2">
-                      <Select value={rifTipo} onValueChange={setRifTipo}>
-                        <SelectTrigger className="w-[80px] h-11 border border-border bg-white">
-                          <SelectValue placeholder="J" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="G">G</SelectItem>
-                          <SelectItem value="J">J</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-[80px] h-11 font-normal border border-border bg-white justify-between"
+                          >
+                            <span>{rifTipo || "J"}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setRifTipo("G")}>G</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setRifTipo("J")}>J</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
 
                       <InputOTP
                         maxLength={8}
@@ -583,23 +629,48 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                         <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: C.A., S.A., S.R.L.
                         </p>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
-                              <SelectValue placeholder="Seleccionar opciones" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Compañía Anónima">Compañía Anónima (C.A)</SelectItem>
-                            <SelectItem value="Asociación Civil">Asociación Civil</SelectItem>
-                            <SelectItem value="Sociedades de Responsabilidad Limitada (S.R.L.)">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <span className={field.value ? "text-slate-700" : ""}>
+                                  {field.value || "Seleccionar opciones"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                            <DropdownMenuItem onClick={() => field.onChange("Compañía Anónima")}>
+                              Compañía Anónima (C.A)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("Asociación Civil")}>
+                              Asociación Civil
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                field.onChange("Sociedades de Responsabilidad Limitada (S.R.L.)")
+                              }
+                            >
                               Sociedades de Responsabilidad Limitada (S.R.L.)
-                            </SelectItem>
-                            <SelectItem value="Fundaciones">Fundaciones</SelectItem>
-                            <SelectItem value="Cooperativas">Cooperativas</SelectItem>
-                            <SelectItem value="Pymes">Pymes</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("Fundaciones")}>
+                              Fundaciones
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("Cooperativas")}>
+                              Cooperativas
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("Pymes")}>
+                              Pymes
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -614,17 +685,32 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                         <FormLabel className="font-bold text-color-subtitulos mb-2">
                           Tipo de Persona
                         </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
-                              <SelectValue placeholder="Selecciona tipo" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="NATURAL">NATURAL</SelectItem>
-                            <SelectItem value="JURIDICA">JURIDICA</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <span className={field.value ? "text-slate-700" : ""}>
+                                  {field.value || "Selecciona tipo"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                            <DropdownMenuItem onClick={() => field.onChange("NATURAL")}>
+                              NATURAL
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("JURIDICA")}>
+                              JURIDICA
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -660,52 +746,91 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                     control={form.control}
                     name="estado"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel className="font-bold text-color-subtitulos">Estado</FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">Ejemplo: Lara</p>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
-                              <SelectValue placeholder="Selecciona estado" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {ESTADOS.map((e) => (
-                              <SelectItem key={e} value={e}>
-                                {e}
-                              </SelectItem>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={isSubmitting || estadosList.length === 0}
+                              >
+                                <span className={field.value ? "text-slate-700" : ""}>
+                                  {field.value || "Selecciona estado"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
+                            {estadosList.map((estado) => (
+                              <DropdownMenuItem
+                                key={estado.id}
+                                onClick={() => {
+                                  field.onChange(estado.nombre);
+                                  form.setValue("municipio", "");
+                                  form.setValue("parroquia", "");
+                                }}
+                                className="cursor-pointer"
+                              >
+                                {estado.nombre}
+                              </DropdownMenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Parroquia */}
+                  {/* Municipio (A nivel visual reemplaza la posición de parroquia) */}
                   <FormField
                     control={form.control}
-                    name="parroquia"
+                    name="municipio"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">Parroquia</FormLabel>
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="font-bold text-color-subtitulos">Municipio</FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: Concepción
+                          Ejemplo: Iribarren
                         </p>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
-                              <SelectValue placeholder="Selecciona parroquia" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PARROQUIAS.map((p) => (
-                              <SelectItem key={p} value={p}>
-                                {p}
-                              </SelectItem>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={isSubmitting || municipiosList.length === 0}
+                              >
+                                <span className={field.value ? "text-slate-700" : ""}>
+                                  {field.value || "Selecciona municipio"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
+                            {municipiosList.map((municipio) => (
+                              <DropdownMenuItem
+                                key={municipio.id}
+                                onClick={() => {
+                                  field.onChange(municipio.nombre);
+                                  form.setValue("parroquia", "");
+                                }}
+                                className="cursor-pointer"
+                              >
+                                {municipio.nombre}
+                              </DropdownMenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -734,36 +859,50 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                     )}
                   />
 
-                  {/* Municipio */}
+                  {/* Parroquia (A nivel visual reemplaza la posición de municipio) */}
                   <FormField
                     control={form.control}
-                    name="municipio"
+                    name="parroquia"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">Municipio</FormLabel>
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="font-bold text-color-subtitulos">Parroquia</FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: Iribarren
+                          Ejemplo: Concepción
                         </p>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 border-border focus-visible:ring-color-boton-2">
-                              <SelectValue placeholder="Selecciona municipio" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {MUNICIPIOS.map((m) => (
-                              <SelectItem key={m} value={m}>
-                                {m}
-                              </SelectItem>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={isSubmitting || parroquiasList.length === 0}
+                              >
+                                <span className={field.value ? "text-slate-700" : ""}>
+                                  {field.value || "Selecciona parroquia"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
+                            {parroquiasList.map((parroquia) => (
+                              <DropdownMenuItem
+                                key={parroquia.id}
+                                onClick={() => field.onChange(parroquia.nombre)}
+                                className="cursor-pointer"
+                              >
+                                {parroquia.nombre}
+                              </DropdownMenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
-                  {/* Cedula Representante */}
                   <div className="space-y-2">
                     <FormLabel className="font-bold text-color-subtitulos">
                       Cédula del Representante Legal
@@ -772,15 +911,21 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                       Ejemplo: V-00.000.000
                     </p>
                     <div className="flex items-center gap-2">
-                      <Select value={cedulaTipo} onValueChange={setCedulaTipo}>
-                        <SelectTrigger className="w-[100px] h-11 border-border bg-white shadow-sm">
-                          <SelectValue placeholder="V" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="V">V</SelectItem>
-                          <SelectItem value="E">E</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-[100px] h-11 font-normal border-border bg-white shadow-sm justify-between"
+                          >
+                            <span>{cedulaTipo || "V"}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setCedulaTipo("V")}>V</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setCedulaTipo("E")}>E</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Input
                         placeholder="00000000"
                         maxLength={8}
@@ -1177,26 +1322,39 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                     <p className="text-xs text-muted-foreground italic mb-2">
                       Seleccione el tipo de documento.
                     </p>
-                    <Select value={tipoDocActual} onValueChange={setTipoDocActual}>
-                      <FormControl>
-                        <SelectTrigger
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
                           className={cn(
-                            "h-11 border-border focus-visible:ring-color-boton-2 transition-all",
+                            "w-full h-11 justify-between text-left font-normal border-border focus-visible:ring-color-boton-2 transition-all bg-white",
+                            !tipoDocActual && "text-muted-foreground",
                             documentos.some((d) => d.tipoDoc === tipoDocActual) &&
-                              "border-success bg-success-bg/50"
+                              "border-success bg-success-bg/50 hover:bg-success-bg/70 text-success-text font-medium"
                           )}
                         >
-                          <SelectValue placeholder="Selecciona el tipo de documento" />
-                          {documentos.some((d) => d.tipoDoc === tipoDocActual) && (
-                            <CheckCircle2 className="h-4 w-4 text-success-text ml-2" />
-                          )}
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
+                          <div className="flex items-center gap-2 truncate">
+                            <span>
+                              {tipoDocActual
+                                ? TIPOS_DOCUMENTO.find((t) => t.value === tipoDocActual)?.label
+                                : "Selecciona el tipo de documento"}
+                            </span>
+                            {documentos.some((d) => d.tipoDoc === tipoDocActual) && (
+                              <CheckCircle2 className="h-4 w-4 text-success-text" />
+                            )}
+                          </div>
+                          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
                         {TIPOS_DOCUMENTO.map((tipo) => {
                           const isUploaded = documentos.some((d) => d.tipoDoc === tipo.value);
                           return (
-                            <SelectItem key={tipo.value} value={tipo.value}>
+                            <DropdownMenuItem
+                              key={tipo.value}
+                              onClick={() => setTipoDocActual(tipo.value)}
+                              className="cursor-pointer"
+                            >
                               <div className="flex items-center justify-between w-full min-w-[300px]">
                                 <span>{tipo.label}</span>
                                 {isUploaded && (
@@ -1206,11 +1364,11 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
                                   </div>
                                 )}
                               </div>
-                            </SelectItem>
+                            </DropdownMenuItem>
                           );
                         })}
-                      </SelectContent>
-                    </Select>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </FormItem>
 
                   {/* Mensaje Informativo sobre Límite de Tamaño */}
