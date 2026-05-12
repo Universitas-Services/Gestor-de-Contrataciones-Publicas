@@ -27,7 +27,13 @@ import {
 
 // --- Componente ---
 
-export function ChangePasswordForm() {
+interface ChangePasswordFormProps {
+  onSuccessRedirect?: string;
+}
+
+export function ChangePasswordForm({
+  onSuccessRedirect = "/admin_ente/completar-ente",
+}: ChangePasswordFormProps = {}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,7 +57,7 @@ export function ChangePasswordForm() {
       });
 
       toast.success("Contraseña actualizada correctamente");
-      router.push("/admin_ente/completar-ente");
+      router.push(onSuccessRedirect);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Error al cambiar la contraseña";
       toast.error(message);
