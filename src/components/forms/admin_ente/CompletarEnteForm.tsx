@@ -15,8 +15,15 @@ import { UniversitasAPI, Estado, Municipio, Ciudad, Parroquia } from "@universit
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
 import { generarManual } from "@/services/manualService";
 
-// Instancia del SDK para el cliente (apuntando directamente a Universitas)
-const universitasClient = new UniversitasAPI(process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL!);
+// Lazy getter: el SDK solo se instancia cuando se invoca por primera vez (en runtime),
+// no durante la importación del módulo (build-time). Evita el crash en Vercel.
+let _universitasClient: UniversitasAPI | null = null;
+function getClient(): UniversitasAPI {
+  if (!_universitasClient) {
+    _universitasClient = new UniversitasAPI(process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL ?? "");
+  }
+  return _universitasClient;
+}
 import {
   Form,
   FormControl,
@@ -123,8 +130,8 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
     }
     const estadoObj = estadosList.find((e) => e.nombre === selectedEstado);
     if (estadoObj) {
-      universitasClient.territorio
-        .getMunicipios(estadoObj.id)
+      getClient()
+        .territorio.getMunicipios(estadoObj.id)
         .then((res) => setMunicipiosList(res.data))
         .catch(console.error);
     }
@@ -139,12 +146,12 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
     }
     const municipioObj = municipiosList.find((m) => m.nombre === selectedMunicipio);
     if (municipioObj) {
-      universitasClient.territorio
-        .getCiudades(municipioObj.id)
+      getClient()
+        .territorio.getCiudades(municipioObj.id)
         .then((res) => setCiudadesList(res.data))
         .catch(console.error);
-      universitasClient.territorio
-        .getParroquias(municipioObj.id)
+      getClient()
+        .territorio.getParroquias(municipioObj.id)
         .then((res) => setParroquiasList(res.data))
         .catch(console.error);
     }

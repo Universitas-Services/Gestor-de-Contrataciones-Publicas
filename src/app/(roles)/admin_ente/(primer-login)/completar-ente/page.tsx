@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
-import { universitas } from "@/lib/universitas";
+import { getUniversitas } from "@/lib/universitas";
 import { Estado } from "@universitas/sdk-global";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default async function CompletarEntePage() {
 
   let estadosData: Estado[] = [];
   try {
-    const res = await universitas.territorio.getEstados();
+    const res = await getUniversitas().territorio.getEstados();
     estadosData = res.data;
   } catch (error) {
     console.error("Error fetching estados on server", error);

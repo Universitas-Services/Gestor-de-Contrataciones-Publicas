@@ -158,6 +158,19 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
   return events;
 }
 
+// ─── Lazy Universitas SDK client ─────────────────────────────────────────────
+// El SDK solo se instancia cuando se invoca por primera vez (en runtime),
+// no durante la importación del módulo (build-time). Evita el crash en Vercel.
+let _universitasClientWizard: UniversitasAPI | null = null;
+function getClient(): UniversitasAPI {
+  if (!_universitasClientWizard) {
+    _universitasClientWizard = new UniversitasAPI(
+      process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL ?? ""
+    );
+  }
+  return _universitasClientWizard;
+}
+
 // ─── Props ───────────────────────────────────────────────────────────
 
 export interface CrearExpedienteWizardProps {
@@ -208,10 +221,7 @@ export function CrearExpedienteWizard({
     },
   });
 
-  // ─── Universitas SDK client (cliente) ──────────────────────────────
-  const universitasClient = new UniversitasAPI(process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL!);
-
-  // ─── Navigation helpers ──────────────────────────────────────────
+  // ─── Navigation helpers ────────────────────────────────────────────────────
   const goToStep = (step: number) => {
     setCurrentStep(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -239,8 +249,8 @@ export function CrearExpedienteWizard({
     // Fetch BCV + UCAU in parallel without blocking navigation
     try {
       const [bcvRes, ucauRes] = await Promise.all([
-        universitasClient.economia.getBCV(),
-        universitasClient.economia.getUCAUU(),
+        getClient().economia.getBCV(),
+        getClient().economia.getUCAUU(),
       ]);
       const tasaBcvUsd: number = bcvRes.data.usd;
       const valorUcau: number = ucauRes.valor;
