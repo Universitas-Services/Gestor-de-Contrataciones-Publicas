@@ -98,7 +98,7 @@ const services = [
 export default async function ConocenosPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin_ente" || !user.enteId) {
+  if (!user) {
     redirect("/login");
   }
 

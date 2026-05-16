@@ -166,41 +166,6 @@ export function DatosBasicosStep({ form, onNext, isLoading = false }: DatosBasic
           />
         </div>
 
-        {/* Monto Divisas */}
-        <div className="mb-8">
-          <FormField
-            control={form.control}
-            name="montoEstimadoDolar"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-heading-dark font-bold font-inter text-base">
-                  Ingrese el monto equivalente en Divisas ($) Referencia
-                </FormLabel>
-                <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
-                  Referencia financiera interna.
-                </p>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={field.value ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      field.onChange(val === "" ? undefined : parseFloat(val));
-                    }}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                    className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-1/3 lg:w-1/4"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
         {/* Navigation */}
         <div className="flex justify-end pt-6 border-t border-slate-200">
           <Button

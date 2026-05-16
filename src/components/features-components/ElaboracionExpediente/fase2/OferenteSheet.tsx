@@ -3,8 +3,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { MinusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -71,6 +69,15 @@ export function OferenteSheet({
   const isSelectingRef = useRef(false);
   const [isProveedorSeleccionado, setIsProveedorSeleccionado] = useState(false);
 
+  // ── Estado visual: RIF dividido (letra + cuerpo + verificador) ──
+  const [rifTipo, setRifTipo] = useState("J");
+  const [rifCuerpo, setRifCuerpo] = useState("");
+  const [rifVerificador, setRifVerificador] = useState("");
+
+  // ── Estado visual: Cédula dividida (letra + número) ──
+  const [cedulaTipo, setCedulaTipo] = useState("V");
+  const [cedulaNumero, setCedulaNumero] = useState("");
+
   // ── Sugerencias del autocomplete ──
   const [sugerencias, setSugerencias] = useState<ProveedorBusqueda[]>([]);
   const [showSugerencias, setShowSugerencias] = useState(false);
@@ -89,11 +96,35 @@ export function OferenteSheet({
         montoOferta: defaultValues?.montoOferta || "",
       });
 
+      // Fragmentar RIF existente (ej: "J-12345678-9")
+      if (defaultValues?.rif) {
+        const parts = defaultValues.rif.split("-");
+        if (parts.length === 3) {
+          setRifTipo(parts[0]);
+          setRifCuerpo(parts[1]);
+          setRifVerificador(parts[2]);
+        }
+      }
+
+      // Fragmentar Cédula existente (ej: "V-12345678")
+      if (defaultValues?.cedulaRepresentante) {
+        const parts = defaultValues.cedulaRepresentante.split("-");
+        if (parts.length === 2) {
+          setCedulaTipo(parts[0]);
+          setCedulaNumero(parts[1]);
+        }
+      }
+
       if (mode === "crear") {
         setSearchTerm("");
         setSugerencias([]);
         setShowSugerencias(false);
         setIsProveedorSeleccionado(false);
+        setRifTipo("J");
+        setRifCuerpo("");
+        setRifVerificador("");
+        setCedulaTipo("V");
+        setCedulaNumero("");
       }
       setIsEditing(mode === "crear");
     }
@@ -135,24 +166,66 @@ export function OferenteSheet({
     return () => clearTimeout(handler);
   }, [searchTerm, mode]);
 
+  // ── Efecto: concatenar RIF visual → campo oculto del form ──
+  useEffect(() => {
+    if (rifTipo && rifCuerpo.length >= 7 && rifVerificador.length === 1) {
+      const rif = `${rifTipo}-${rifCuerpo}-${rifVerificador}`;
+      form.setValue("rif", rif, { shouldValidate: true });
+      setSearchTerm(rif);
+    } else if (rifCuerpo.length > 0 || rifVerificador.length > 0) {
+      // Construir searchTerm parcial para búsqueda
+      const partial = `${rifTipo}-${rifCuerpo}`;
+      setSearchTerm(partial);
+      form.setValue("rif", "");
+    }
+  }, [rifTipo, rifCuerpo, rifVerificador, form]);
+
+  // ── Efecto: concatenar Cédula visual → campo oculto del form ──
+  useEffect(() => {
+    if (cedulaTipo && cedulaNumero.length >= 6) {
+      form.setValue("cedulaRepresentante", `${cedulaTipo}-${cedulaNumero}`, {
+        shouldValidate: true,
+      });
+    } else if (cedulaNumero.length > 0) {
+      form.setValue("cedulaRepresentante", "");
+    }
+  }, [cedulaTipo, cedulaNumero, form]);
+
   // ── Autocompletar al seleccionar una sugerencia ──
   const handleSeleccionarSugerencia = async (proveedor: ProveedorBusqueda) => {
     try {
       isSelectingRef.current = true;
-      // Llamamos endpoint para prellenar todo
       const detallado = await getProveedorById(proveedor.id);
 
+      // Fragmentar RIF (ej: "J-12345678-9")
+      if (detallado.rif) {
+        const rifParts = detallado.rif.split("-");
+        if (rifParts.length === 3) {
+          setRifTipo(rifParts[0]);
+          setRifCuerpo(rifParts[1]);
+          setRifVerificador(rifParts[2]);
+        }
+      }
       setSearchTerm(detallado.rif);
       form.setValue("rif", detallado.rif, { shouldValidate: true });
+
+      // Fragmentar Cédula (ej: "V-12345678")
+      if (detallado.cedulaRepLegal) {
+        const cidParts = detallado.cedulaRepLegal.split("-");
+        if (cidParts.length === 2) {
+          setCedulaTipo(cidParts[0]);
+          setCedulaNumero(cidParts[1]);
+        }
+      }
+      form.setValue("cedulaRepresentante", detallado.cedulaRepLegal, { shouldValidate: true });
+
       form.setValue("nombreEmpresa", detallado.nombre, { shouldValidate: true });
       form.setValue("representanteLegal", detallado.nombreRepLegal, { shouldValidate: true });
-      form.setValue("cedulaRepresentante", detallado.cedulaRepLegal, { shouldValidate: true });
       form.setValue("registroMercantil", detallado.datosRegistroMercantil || "—", {
         shouldValidate: true,
       });
 
       setIsProveedorSeleccionado(true);
-
       setSugerencias([]);
       setShowSugerencias(false);
       toast.success("Datos del proveedor autocargados");
@@ -208,7 +281,7 @@ export function OferenteSheet({
                 className="space-y-6"
                 id="oferente-form"
               >
-                {/* ── RIF con InputOTP (modo crear o editar) / Campo de solo lectura ── */}
+                {/* ── RIF con campos divididos (modo crear o editar) / Campo de solo lectura ── */}
                 {isEditing ? (
                   <div className="space-y-2">
                     <FormLabel className="font-bold text-color-titulos text-[11px] block">
@@ -217,41 +290,58 @@ export function OferenteSheet({
                     <p className="text-[10px] text-muted-foreground italic">
                       Artículos 91, 92 LCP; 96 RLCP; 18.4 LOPA; 5 NORMAS DE CONTROL INTERNO SUNAI.
                     </p>
-                    <div className="relative">
-                      <div className="border border-slate-300 bg-white px-3 py-1.5 rounded-md w-full min-h-[32px] flex items-center">
-                        <input
-                          value={searchTerm}
+                    <div className="flex items-center gap-2">
+                      {/* Letra */}
+                      <Select
+                        value={rifTipo}
+                        onValueChange={(val) => {
+                          setRifTipo(val);
+                          isSelectingRef.current = false;
+                          setIsProveedorSeleccionado(false);
+                        }}
+                      >
+                        <SelectTrigger className="w-[70px] h-[32px] border border-slate-300 bg-white text-[11px] font-medium shadow-none focus:ring-0">
+                          <SelectValue placeholder="J" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="J">J-</SelectItem>
+                          <SelectItem value="G">G-</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {/* 8 dígitos (cuerpo) */}
+                      <div className="relative flex-1">
+                        <Input
+                          value={rifCuerpo}
                           onChange={(e) => {
-                            isSelectingRef.current = false; // El usuario editó manualmente
+                            const val = e.target.value.replace(/\D/g, "");
+                            setRifCuerpo(val);
+                            isSelectingRef.current = false;
                             setIsProveedorSeleccionado(false);
-
-                            let val = e.target.value.toUpperCase();
-                            // Limitar a J, G, números y guiones
-                            val = val.replace(/[^JG0-9-]/g, "");
-
-                            if (val.length > 0) {
-                              // La primera letra debe ser J o G estrictamente
-                              if (val[0] !== "J" && val[0] !== "G") {
-                                val = "";
-                              } else {
-                                // El resto solo puede ser números o guiones (evitando dobles guiones)
-                                let rest = val.slice(1).replace(/[^0-9-]/g, "");
-                                rest = rest.replace(/-+/g, "-");
-                                val = val[0] + rest;
-                              }
-                            }
-
-                            setSearchTerm(val);
-                            form.setValue("rif", val, { shouldValidate: true });
                           }}
-                          placeholder="Ejemplo: G-12345678-9"
-                          className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
-                          maxLength={13}
+                          placeholder="12345678"
+                          maxLength={9}
+                          className="h-[32px] border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 shadow-none focus-visible:ring-0 pr-7 placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/50"
                         />
                         {isSearching && (
-                          <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin flex-shrink-0 ml-2" />
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
                         )}
                       </div>
+
+                      {/* Separador */}
+                      <span className="text-slate-400 font-bold text-xs select-none">-</span>
+
+                      {/* 1 dígito verificador */}
+                      <Input
+                        value={rifVerificador}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setRifVerificador(val);
+                        }}
+                        placeholder="0"
+                        maxLength={1}
+                        className="w-[42px] h-[32px] text-center border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 shadow-none focus-visible:ring-0 placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/50"
+                      />
                     </div>
 
                     {/* Sugerencias de proveedores */}
@@ -355,48 +445,43 @@ export function OferenteSheet({
                 />
 
                 {/* Cédula representante */}
-                <FormField
-                  control={form.control}
-                  name="cedulaRepresentante"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="font-bold text-color-titulos text-[11px]">
-                        Indique C.I del Representante legal de la empresa oferente.
-                      </FormLabel>
-                      <p className="text-[10px] text-muted-foreground italic">
-                        Artículos 91, 92 LCP; 96 RLCP; 18.4 LOPA; 5 NORMAS DE CONTROL INTERNO SUNAI.
-                      </p>
-                      <FormControl>
-                        <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
-                          {!isEditing ? (
-                            field.value || "-"
-                          ) : (
-                            <input
-                              {...field}
-                              onChange={(e) => {
-                                let val = e.target.value.toUpperCase();
-                                val = val.replace(/[^VE0-9]/g, "");
-                                if (val.length > 0) {
-                                  let firstChar = val.charAt(0);
-                                  if (firstChar !== "V" && firstChar !== "E") {
-                                    firstChar = "V";
-                                  }
-                                  const numbers = val.substring(1).replace(/[^0-9]/g, "");
-                                  val = `${firstChar}-${numbers}`;
-                                }
-                                field.onChange(val);
-                              }}
-                              className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
-                              placeholder="V-00000000"
-                              maxLength={10}
-                            />
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-1">
+                  <FormLabel className="font-bold text-color-titulos text-[11px]">
+                    Indique C.I del Representante legal de la empresa oferente.
+                  </FormLabel>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Artículos 91, 92 LCP; 96 RLCP; 18.4 LOPA; 5 NORMAS DE CONTROL INTERNO SUNAI.
+                  </p>
+                  {!isEditing ? (
+                    <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]">
+                      {form.watch("cedulaRepresentante") || "-"}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Select value={cedulaTipo} onValueChange={setCedulaTipo}>
+                        <SelectTrigger className="w-[70px] h-[32px] border border-slate-300 bg-white text-[11px] font-medium shadow-none focus:ring-0">
+                          <SelectValue placeholder="V" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="V">V-</SelectItem>
+                          <SelectItem value="E">E-</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        value={cedulaNumero}
+                        onChange={(e) => setCedulaNumero(e.target.value.replace(/\D/g, ""))}
+                        placeholder="00000000"
+                        maxLength={8}
+                        className="flex-1 h-[32px] border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 shadow-none focus-visible:ring-0 placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/50"
+                      />
+                    </div>
                   )}
-                />
+                  {form.formState.errors.cedulaRepresentante && (
+                    <p className="text-sm font-medium text-destructive">
+                      {form.formState.errors.cedulaRepresentante.message}
+                    </p>
+                  )}
+                </div>
 
                 {/* Registro Mercantil */}
                 <FormField

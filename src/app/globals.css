@@ -151,6 +151,18 @@
   --color-motivo-bg: var(--motivo-bg);
   --color-motivo-border: var(--motivo-border);
   --color-motivo-icon: var(--motivo-icon);
+  --color-icon-people: var(--icon-people);
+  --color-icon-terminados: var(--icon-terminados);
+  --color-icon-bg-terminados: var(--icon-bg-terminados);
+
+  /* Repositorio Legal — tipos de documentos */
+  --color-legal-organica: var(--legal-organica);
+  --color-legal-ordinaria: var(--legal-ordinaria);
+  --color-legal-norma: var(--legal-norma);
+  --color-legal-resolucion: var(--legal-resolucion);
+  --color-legal-reglamento: var(--legal-reglamento);
+  --color-legal-especial: var(--legal-especial);
+  --color-legal-constitucional: var(--legal-constitucional);
 }
 
 :root {
@@ -306,6 +318,25 @@
   --cal-evaluacion: oklch(0.56 0.25 24);
   --cal-firma: oklch(0.66 0.18 144);
   --cal-llamado: oklch(0.55 0.03 250);
+  --icon-people: oklch(0.38 0.05 254);
+  --icon-terminados: oklch(0.31 0.08 255);
+  --icon-bg-terminados: oklch(0.88 0 0);
+
+  /* Repositorio Legal — tipos de documentos (OKLCH conversions) */
+  /* #E3DBE2 → Ley Orgánica (lavanda suave) */
+  --legal-organica: oklch(0.892 0.025 320);
+  /* #D1E7D0 → Ley Ordinaria (verde menta suave) */
+  --legal-ordinaria: oklch(0.906 0.048 148);
+  /* #D9E5EF → Norma General (azul cielo suave) */
+  --legal-norma: oklch(0.907 0.033 240);
+  /* #ECE0C5 → Resolución (arena cálida) */
+  --legal-resolucion: oklch(0.91 0.043 88);
+  /* Reglamento → tono gris-azulado neutro */
+  --legal-reglamento: oklch(0.905 0.02 250);
+  /* Ley Especial → tono lila-rosa suave */
+  --legal-especial: oklch(0.895 0.035 350);
+  /* Ley Constitucional → dorado institucional suave */
+  --legal-constitucional: oklch(0.918 0.055 75);
 }
 
 @layer base {

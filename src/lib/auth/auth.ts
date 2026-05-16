@@ -143,6 +143,16 @@ export async function loginAction(credentials: LoginCredentials): Promise<LoginA
       }
     }
 
+    // Lógica de redirección especial para Supervisor (flujo de primer login)
+    if (role === ROLES.SUPERVISOR) {
+      if (!cambioPasswordDefault) {
+        return {
+          success: true,
+          redirectUrl: "/supervisor/cambiar-contrasena",
+        };
+      }
+    }
+
     return {
       success: true,
       redirectUrl: getDashboardRoute(result.user.role),

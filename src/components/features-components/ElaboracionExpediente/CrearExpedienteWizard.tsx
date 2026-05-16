@@ -12,12 +12,7 @@ import { AnalisisModalidadStep } from "./steps/AnalisisModalidadStep";
 import { ConfiguracionActoresStep } from "./steps/ConfiguracionActoresStep";
 import { PlanificacionStep } from "./steps/PlanificacionStep";
 import { StepProgressBar } from "./steps/StepProgressBar";
-import {
-  datosBasicosSchema,
-  VALOR_UCAU_ACTUAL,
-  MODALIDAD_SUGERIDA,
-  BASE_LEGAL,
-} from "@/lib/schemas/expedienteSchema";
+import { datosBasicosSchema, MODALIDAD_SUGERIDA, BASE_LEGAL } from "@/lib/schemas/expedienteSchema";
 import type {
   DatosBasicosFormValues,
   ConfiguracionActoresFormValues,
@@ -31,6 +26,7 @@ import {
   obtenerExpediente,
 } from "@/services/expedienteService";
 import type { ExpedienteResponse } from "@/services/expedienteService";
+import { UniversitasAPI } from "@universitas/sdk-global";
 import {
   isFechaEditable,
   moverFechaCronograma,
@@ -162,6 +158,19 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
   return events;
 }
 
+// ─── Lazy Universitas SDK client ─────────────────────────────────────────────
+// El SDK solo se instancia cuando se invoca por primera vez (en runtime),
+// no durante la importación del módulo (build-time). Evita el crash en Vercel.
+let _universitasClientWizard: UniversitasAPI | null = null;
+function getClient(): UniversitasAPI {
+  if (!_universitasClientWizard) {
+    _universitasClientWizard = new UniversitasAPI(
+      process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL ?? ""
+    );
+  }
+  return _universitasClientWizard;
+}
+
 // ─── Props ───────────────────────────────────────────────────────────
 
 export interface CrearExpedienteWizardProps {
@@ -209,32 +218,61 @@ export function CrearExpedienteWizard({
       montoEstimadoBs: datosIniciales?.modalidad?.montoEstimadoBs
         ? parseFloat(datosIniciales.modalidad.montoEstimadoBs)
         : undefined,
-      montoEstimadoDolar: datosIniciales?.modalidad?.montoEstimadoDolar
-        ? parseFloat(datosIniciales.modalidad.montoEstimadoDolar)
-        : undefined,
     },
   });
 
-  // ─── Navigation helpers ──────────────────────────────────────────
+  // ─── Navigation helpers ────────────────────────────────────────────────────
   const goToStep = (step: number) => {
     setCurrentStep(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const buildAnalisis = (fd: DatosBasicosFormValues): AnalisisModalidad => ({
+  const buildAnalisisBase = (fd: DatosBasicosFormValues): AnalisisModalidad => ({
     objetoProceso: fd.descripcionObjeto,
     tipoContratacion: TIPO_DISPLAY[fd.tipoContratacion] ?? fd.tipoContratacion,
-    montoUCAU: fd.montoEstimadoBs / VALOR_UCAU_ACTUAL,
     montoBs: fd.montoEstimadoBs,
-    montoDolares: fd.montoEstimadoDolar,
+    montoDolares: null,
+    montoUCAU: null,
+    tasaBcvUsd: null,
+    valorUcau: null,
     modalidadSugerida: MODALIDAD_SUGERIDA,
     baseLegal: BASE_LEGAL,
+    isLoadingRates: true,
   });
 
-  // ─── Paso 1 "Siguiente" — solo valida y navega, sin API ─────────
+  // ─── Paso 1 "Siguiente" — valida, navega y dispara SDK en paralelo ─
   const handleStep1Next = async (formData: DatosBasicosFormValues) => {
-    setAnalisisData(buildAnalisis(formData));
+    const base = buildAnalisisBase(formData);
+    setAnalisisData(base);
     goToStep(2);
+
+    // Fetch BCV + UCAU in parallel without blocking navigation
+    try {
+      const [bcvRes, ucauRes] = await Promise.all([
+        getClient().economia.getBCV(),
+        getClient().economia.getUCAUU(),
+      ]);
+      const tasaBcvUsd: number = bcvRes.data.usd;
+      const valorUcau: number = ucauRes.valor;
+
+      setAnalisisData((prev) =>
+        prev
+          ? {
+              ...prev,
+              tasaBcvUsd,
+              valorUcau,
+              montoDolares: formData.montoEstimadoBs / tasaBcvUsd,
+              montoUCAU: formData.montoEstimadoBs / valorUcau,
+              isLoadingRates: false,
+            }
+          : prev
+      );
+    } catch {
+      setAnalisisData((prev) => (prev ? { ...prev, isLoadingRates: false } : prev));
+      toast.error(
+        "No se pudieron obtener las tasas del SDK. Los montos en $ y UCAU no estarán disponibles."
+      );
+    }
   };
 
   // ─── Paso 2 "Editar" — vuelve sin API (form RHF preserva datos) ─
@@ -255,14 +293,18 @@ export function CrearExpedienteWizard({
           codigoNomenclatura: formData.codigoNomenclatura,
           tipoContratacion: formData.tipoContratacion,
           montoEstimadoBs: formData.montoEstimadoBs,
-          montoEstimadoDolar: formData.montoEstimadoDolar,
-          valorUcauBase: VALOR_UCAU_ACTUAL,
+          montoEstimadoDolar: analisisData?.montoDolares ?? undefined,
+          valorUcauBase: analisisData?.valorUcau ?? undefined,
           modalidadSeleccion: "LICITACION_PUBLICA",
         });
         goToStep(3);
       } else {
         // Modo creación: POST para crear el borrador
-        const result = await crearExpedienteBorrador(formData, VALOR_UCAU_ACTUAL);
+        const result = await crearExpedienteBorrador(
+          formData,
+          analisisData?.valorUcau ?? undefined,
+          analisisData?.montoDolares ?? undefined
+        );
 
         if (!result?.id) {
           console.error("API no devolvió ID:", result);
@@ -297,8 +339,8 @@ export function CrearExpedienteWizard({
         codigoNomenclatura: fd.codigoNomenclatura,
         tipoContratacion: fd.tipoContratacion,
         montoEstimadoBs: fd.montoEstimadoBs,
-        montoEstimadoDolar: fd.montoEstimadoDolar,
-        valorUcauBase: VALOR_UCAU_ACTUAL,
+        montoEstimadoDolar: analisisData?.montoDolares ?? undefined,
+        valorUcauBase: analisisData?.valorUcau ?? undefined,
         modalidadSeleccion: "LICITACION_PUBLICA",
         autoridadId: actores.autoridadId,
         comisionId: actores.comisionId,

@@ -7,6 +7,7 @@ vi.stubGlobal("process", {
   env: {
     ...process.env,
     NEXT_PUBLIC_API_URL: "http://localhost:3000/api", // Valor simulado para los tests
+    NEXT_PUBLIC_UNIVERSITAS_SDK_URL: "http://localhost:3000/api", // Mock para el SDK en los tests
   },
 });
 

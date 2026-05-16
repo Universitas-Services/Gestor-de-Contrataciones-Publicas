@@ -77,6 +77,19 @@ vi.mock("@/services/manualService", () => ({
   generarManual: vi.fn(),
 }));
 
+vi.mock("@universitas/sdk-global", () => {
+  return {
+    UniversitasAPI: class {
+      territorio = {
+        getEstados: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Lara" }] }),
+        getMunicipios: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Iribarren" }] }),
+        getCiudades: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Barquisimeto" }] }),
+        getParroquias: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Catedral" }] }),
+      };
+    },
+  };
+});
+
 // --- 2. Mock de Navegación y Toasts ---
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
@@ -150,7 +163,7 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
 
     vi.mocked(obtenerEnte).mockResolvedValueOnce(enteParcial);
 
-    render(<CompletarEnteForm enteId="ente-123" />);
+    render(<CompletarEnteForm enteId="ente-123" initialEstados={[{ id: 1, nombre: "Lara" }]} />);
 
     expect(screen.getByText("Cargando datos del ente...")).toBeInTheDocument();
 
@@ -169,7 +182,7 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
 
   it("2. Validaciones: No permite avanzar al Paso 2 si faltan campos requeridos en el Paso 1", async () => {
     const user = userEvent.setup();
-    render(<CompletarEnteForm enteId="ente-123" />);
+    render(<CompletarEnteForm enteId="ente-123" initialEstados={[{ id: 1, nombre: "Lara" }]} />);
 
     await waitFor(() => {
       expect(screen.queryByText("Cargando datos del ente...")).not.toBeInTheDocument();
@@ -188,7 +201,7 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
 
   it("3. Flujo End-to-End: Completa Paso 1, avanza al Paso 2 y envía el formulario exitosamente", async () => {
     const user = userEvent.setup();
-    render(<CompletarEnteForm enteId="ente-123" />);
+    render(<CompletarEnteForm enteId="ente-123" initialEstados={[{ id: 1, nombre: "Lara" }]} />);
 
     await waitFor(() => {
       expect(screen.queryByText("Cargando datos del ente...")).not.toBeInTheDocument();
@@ -232,37 +245,37 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
     // Usamos una query más dócil basada en el texto del label/placeholder
 
     // 1. Estado
-    const estadoCombo = screen.getByRole("combobox", { name: /estado/i });
+    const estadoCombo = screen.getByRole("button", { name: /selecciona estado/i });
     await user.click(estadoCombo);
-    const optionEstado = await screen.findByRole("option", { name: "Lara" });
+    const optionEstado = await screen.findByRole("menuitem", { name: "Lara" });
     await user.click(optionEstado);
     // Wait for the select to close completely
     await waitFor(() =>
-      expect(screen.queryByRole("option", { name: "Lara" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("menuitem", { name: "Lara" })).not.toBeInTheDocument()
     );
 
     // 2. Municipio
-    await user.click(screen.getByRole("combobox", { name: /municipio/i }));
-    const optionMunicipio = await screen.findByRole("option", { name: "Iribarren" });
+    await user.click(screen.getByRole("button", { name: /selecciona municipio/i }));
+    const optionMunicipio = await screen.findByRole("menuitem", { name: "Iribarren" });
     await user.click(optionMunicipio);
     await waitFor(() =>
-      expect(screen.queryByRole("option", { name: "Iribarren" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("menuitem", { name: "Iribarren" })).not.toBeInTheDocument()
     );
 
     // 3. Ciudad
-    await user.click(screen.getByRole("combobox", { name: /ciudad/i }));
-    const optionCiudad = await screen.findByRole("option", { name: "Barquisimeto" });
+    await user.click(screen.getByRole("button", { name: /selecciona ciudad/i }));
+    const optionCiudad = await screen.findByRole("menuitem", { name: "Barquisimeto" });
     await user.click(optionCiudad);
     await waitFor(() =>
-      expect(screen.queryByRole("option", { name: "Barquisimeto" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("menuitem", { name: "Barquisimeto" })).not.toBeInTheDocument()
     );
 
     // 4. Parroquia
-    await user.click(screen.getByRole("combobox", { name: /parroquia/i }));
-    const optionParroquia = await screen.findByRole("option", { name: "Catedral" });
+    await user.click(screen.getByRole("button", { name: /selecciona parroquia/i }));
+    const optionParroquia = await screen.findByRole("menuitem", { name: "Catedral" });
     await user.click(optionParroquia);
     await waitFor(() =>
-      expect(screen.queryByRole("option", { name: "Catedral" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("menuitem", { name: "Catedral" })).not.toBeInTheDocument()
     );
 
     await user.type(
@@ -322,7 +335,7 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
 
   it("4. Sube el logo correctamente llamando a la API", async () => {
     const user = userEvent.setup();
-    render(<CompletarEnteForm enteId="ente-123" />);
+    render(<CompletarEnteForm enteId="ente-123" initialEstados={[{ id: 1, nombre: "Lara" }]} />);
 
     await waitFor(() => {
       expect(screen.queryByText("Cargando datos del ente...")).not.toBeInTheDocument();

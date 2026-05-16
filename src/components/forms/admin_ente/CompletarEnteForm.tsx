@@ -6,13 +6,24 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Upload, X, ImageIcon, Loader2, MinusIcon } from "lucide-react";
+import { Upload, X, ImageIcon, Loader2, MinusIcon, ChevronDown } from "lucide-react";
 import {
   completarEnteSchema,
   type CompletarEnteFormValues,
 } from "@/lib/schemas/completarEnteSchema";
+import { UniversitasAPI, Estado, Municipio, Ciudad, Parroquia } from "@universitas/sdk-global";
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
 import { generarManual } from "@/services/manualService";
+
+// Lazy getter: el SDK solo se instancia cuando se invoca por primera vez (en runtime),
+// no durante la importación del módulo (build-time). Evita el crash en Vercel.
+let _universitasClient: UniversitasAPI | null = null;
+function getClient(): UniversitasAPI {
+  if (!_universitasClient) {
+    _universitasClient = new UniversitasAPI(process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL ?? "");
+  }
+  return _universitasClient;
+}
 import {
   Form,
   FormControl,
@@ -24,6 +35,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -40,16 +57,13 @@ import {
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 // --- Datos manuales para los Selects ---
-
-const ESTADOS = ["Distrito Capital", "Miranda", "Lara"];
-const MUNICIPIOS = ["Libertador", "Sucre", "Iribarren"];
-const CIUDADES = ["Caracas", "Los Teques", "Barquisimeto"];
-const PARROQUIAS = ["Catedral", "El Recreo", "Concepcion"];
+// Removido a favor del SDK Universitas
 
 // --- Props ---
 
 interface CompletarEnteFormProps {
   enteId: string;
+  initialEstados?: Estado[];
 }
 
 // --- Formatos y tamaño del logo ---
@@ -59,7 +73,7 @@ const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 
 // --- Componente ---
 
-export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
+export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnteFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -69,6 +83,12 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploaded, setLogoUploaded] = useState(false);
   const [step, setStep] = useState(1);
+
+  // Estados para listas territoriales
+  const [estadosList, setEstadosList] = useState<Estado[]>(initialEstados);
+  const [municipiosList, setMunicipiosList] = useState<Municipio[]>([]);
+  const [ciudadesList, setCiudadesList] = useState<Ciudad[]>([]);
+  const [parroquiasList, setParroquiasList] = useState<Parroquia[]>([]);
 
   // Estados visuales para el RIF
   const [rifTipo, setRifTipo] = useState("G");
@@ -93,6 +113,49 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
       organoAdscripcion: "",
     },
   });
+
+  const selectedEstado = form.watch("estado");
+  const selectedMunicipio = form.watch("municipio");
+
+  // Cargar estados al inicio (removido porque ahora viene por props para evitar lentitud)
+  // useEffect(() => {
+  //   getEstados().then(res => setEstadosList(res.data)).catch(console.error);
+  // }, []);
+
+  // Cargar municipios cuando cambia el estado
+  useEffect(() => {
+    if (!selectedEstado) {
+      setMunicipiosList([]);
+      return;
+    }
+    const estadoObj = estadosList.find((e) => e.nombre === selectedEstado);
+    if (estadoObj) {
+      getClient()
+        .territorio.getMunicipios(estadoObj.id)
+        .then((res) => setMunicipiosList(res.data))
+        .catch(console.error);
+    }
+  }, [selectedEstado, estadosList]);
+
+  // Cargar ciudades y parroquias cuando cambia el municipio
+  useEffect(() => {
+    if (!selectedMunicipio) {
+      setCiudadesList([]);
+      setParroquiasList([]);
+      return;
+    }
+    const municipioObj = municipiosList.find((m) => m.nombre === selectedMunicipio);
+    if (municipioObj) {
+      getClient()
+        .territorio.getCiudades(municipioObj.id)
+        .then((res) => setCiudadesList(res.data))
+        .catch(console.error);
+      getClient()
+        .territorio.getParroquias(municipioObj.id)
+        .then((res) => setParroquiasList(res.data))
+        .catch(console.error);
+    }
+  }, [selectedMunicipio, municipiosList]);
 
   // Sincronizar estados locales de RIF con react-hook-form
   useEffect(() => {
@@ -573,24 +636,40 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                             Ejemplo: Lara
                           </p>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
-                                <SelectValue placeholder="selecciona estado" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {ESTADOS.map((estado) => (
-                                <SelectItem key={estado} value={estado} className="font-inter">
-                                  {estado}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                                disabled={isSubmitting || estadosList.length === 0}
+                              >
+                                <Button
+                                  variant="outline"
+                                  className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter font-normal justify-between"
+                                >
+                                  <span className={!field.value ? "italic" : "text-slate-900"}>
+                                    {field.value || "selecciona estado"}
+                                  </span>
+                                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                                {estadosList.map((estado) => (
+                                  <DropdownMenuItem
+                                    key={estado.id}
+                                    onClick={() => {
+                                      field.onChange(estado.nombre);
+                                      form.setValue("municipio", "");
+                                      form.setValue("ciudad", "");
+                                      form.setValue("parroquia", "");
+                                    }}
+                                    className="font-inter"
+                                  >
+                                    {estado.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -609,28 +688,39 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                             Ejemplo: Iribarren
                           </p>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
-                                <SelectValue placeholder="selecciona municipio" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {MUNICIPIOS.map((municipio) => (
-                                <SelectItem
-                                  key={municipio}
-                                  value={municipio}
-                                  className="font-inter"
+                          <FormControl>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                                disabled={isSubmitting || municipiosList.length === 0}
+                              >
+                                <Button
+                                  variant="outline"
+                                  className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter font-normal justify-between"
                                 >
-                                  {municipio}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                  <span className={!field.value ? "italic" : "text-slate-900"}>
+                                    {field.value || "selecciona municipio"}
+                                  </span>
+                                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                                {municipiosList.map((municipio) => (
+                                  <DropdownMenuItem
+                                    key={municipio.id}
+                                    onClick={() => {
+                                      field.onChange(municipio.nombre);
+                                      form.setValue("ciudad", "");
+                                      form.setValue("parroquia", "");
+                                    }}
+                                    className="font-inter"
+                                  >
+                                    {municipio.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -649,24 +739,35 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                             Ejemplo: Barquisimeto
                           </p>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
-                                <SelectValue placeholder="selecciona ciudad" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {CIUDADES.map((ciudad) => (
-                                <SelectItem key={ciudad} value={ciudad} className="font-inter">
-                                  {ciudad}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                                disabled={isSubmitting || ciudadesList.length === 0}
+                              >
+                                <Button
+                                  variant="outline"
+                                  className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter font-normal justify-between"
+                                >
+                                  <span className={!field.value ? "italic" : "text-slate-900"}>
+                                    {field.value || "selecciona ciudad"}
+                                  </span>
+                                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                                {ciudadesList.map((ciudad) => (
+                                  <DropdownMenuItem
+                                    key={ciudad.id}
+                                    onClick={() => field.onChange(ciudad.nombre)}
+                                    className="font-inter"
+                                  >
+                                    {ciudad.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -685,28 +786,35 @@ export function CompletarEnteForm({ enteId }: CompletarEnteFormProps) {
                           <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                             Ejemplo: Concepcion
                           </p>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter placeholder:italic">
-                                <SelectValue placeholder="selecciona parroquia" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {PARROQUIAS.map((parroquia) => (
-                                <SelectItem
-                                  key={parroquia}
-                                  value={parroquia}
-                                  className="font-inter"
+                          <FormControl>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                                disabled={isSubmitting || parroquiasList.length === 0}
+                              >
+                                <Button
+                                  variant="outline"
+                                  className="w-[200px] h-9 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 text-slate-400 text-sm font-inter font-normal justify-between"
                                 >
-                                  {parroquia}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                  <span className={!field.value ? "italic" : "text-slate-900"}>
+                                    {field.value || "selecciona parroquia"}
+                                  </span>
+                                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                                {parroquiasList.map((parroquia) => (
+                                  <DropdownMenuItem
+                                    key={parroquia.id}
+                                    onClick={() => field.onChange(parroquia.nombre)}
+                                    className="font-inter"
+                                  >
+                                    {parroquia.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

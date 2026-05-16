@@ -194,7 +194,8 @@ async function handleResponse<T>(response: Response, errorMsg: string): Promise<
  */
 export const crearExpedienteBorrador = async (
   formData: DatosBasicosFormValues,
-  valorUcauBase: number
+  valorUcauBase?: number,
+  montoDolar?: number
 ): Promise<ExpedienteResponse> => {
   const token = await getServerToken();
 
@@ -203,8 +204,8 @@ export const crearExpedienteBorrador = async (
     codigoNomenclatura: formData.codigoNomenclatura,
     tipoContratacion: formData.tipoContratacion,
     montoEstimadoBs: formData.montoEstimadoBs,
-    montoEstimadoDolar: formData.montoEstimadoDolar,
-    valorUcauBase,
+    montoEstimadoDolar: montoDolar ?? 0,
+    valorUcauBase: valorUcauBase ?? 0,
     modalidadSeleccion: "LICITACION_PUBLICA",
   };
 
@@ -337,7 +338,7 @@ export const obtenerExpedientes = async (params?: {
   if (params?.page !== undefined) searchParams.set("page", String(params.page));
   if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
   if (params?.search) searchParams.set("search", params.search);
-  if (params?.tipoContratacion) searchParams.set("tipoContratacion", params.tipoContratacion);
+  if (params?.tipoContratacion) searchParams.set("tipo", params.tipoContratacion);
   if (params?.estado) searchParams.set("estado", params.estado);
 
   const queryString = searchParams.toString();

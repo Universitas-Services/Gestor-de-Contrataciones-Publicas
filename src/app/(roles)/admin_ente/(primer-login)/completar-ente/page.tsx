@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
+import { getUniversitas } from "@/lib/universitas";
+import { Estado } from "@universitas/sdk-global";
 
 export const metadata: Metadata = {
   title: "Completar Datos del Ente | Admin Ente",
@@ -13,6 +15,14 @@ export default async function CompletarEntePage() {
 
   if (!user || !user.enteId) {
     redirect("/login");
+  }
+
+  let estadosData: Estado[] = [];
+  try {
+    const res = await getUniversitas().territorio.getEstados();
+    estadosData = res.data;
+  } catch (error) {
+    console.error("Error fetching estados on server", error);
   }
 
   return (
@@ -31,7 +41,7 @@ export default async function CompletarEntePage() {
 
       {/* Contenedor del Formulario */}
       <main className="pb-16 px-4">
-        <CompletarEnteForm enteId={user.enteId as string} />
+        <CompletarEnteForm enteId={user.enteId as string} initialEstados={estadosData} />
       </main>
     </div>
   );

@@ -16,10 +16,12 @@ function InfoCard({
   title,
   value,
   accent = false,
+  isLoading = false,
 }: {
   title: string;
   value: string;
   accent?: boolean;
+  isLoading?: boolean;
 }) {
   return (
     <div
@@ -28,7 +30,14 @@ function InfoCard({
       }`}
     >
       <h4 className="text-heading-dark font-bold text-sm mb-1">{title}</h4>
-      <p className="text-slate-500 text-sm leading-relaxed">{value}</p>
+      {isLoading ? (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+          <span className="text-slate-400 text-sm">Consultando tasas...</span>
+        </div>
+      ) : (
+        <p className="text-slate-500 text-sm leading-relaxed">{value}</p>
+      )}
     </div>
   );
 }
@@ -45,16 +54,37 @@ export function AnalisisModalidadStep({
   const formatUsd = (amount: number) =>
     `$ ${amount.toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
 
+  const formatUcau = (amount: number) =>
+    `${amount.toLocaleString("es-VE", { minimumFractionDigits: 4 })} UCAU`;
+
   return (
     <div className="space-y-4">
       <InfoCard title="Objeto del Proceso" value={data.objetoProceso} />
       <InfoCard title="Tipo de contratación" value={data.tipoContratacion} />
+      <InfoCard title="Monto en Bs" value={formatBs(data.montoBs)} />
+
+      {/* Monto USD — calculado dinámicamente desde el SDK (BCV) */}
+      <InfoCard
+        title="Monto en $ (Referencia BCV)"
+        value={
+          data.montoDolares !== null
+            ? `${formatUsd(data.montoDolares)}${data.tasaBcvUsd ? ` — Tasa BCV: Bs. ${data.tasaBcvUsd.toFixed(4)}` : ""}`
+            : "—"
+        }
+        isLoading={data.isLoadingRates}
+      />
+
+      {/* Monto UCAU — calculado dinámicamente desde el SDK (UCAUU) */}
       <InfoCard
         title="Monto en UCAU"
-        value={data.montoUCAU.toLocaleString("es-VE", { minimumFractionDigits: 1 })}
+        value={
+          data.montoUCAU !== null
+            ? `${formatUcau(data.montoUCAU)}${data.valorUcau ? ` — 1 UCAU = Bs. ${data.valorUcau.toFixed(2)}` : ""}`
+            : "—"
+        }
+        isLoading={data.isLoadingRates}
       />
-      <InfoCard title="Monto en Bs" value={formatBs(data.montoBs)} />
-      <InfoCard title="Monto en $" value={formatUsd(data.montoDolares)} />
+
       <InfoCard title="Modalidad de Contratación Sugerida" value={data.modalidadSugerida} accent />
       <InfoCard title="Base Legal" value={data.baseLegal} accent />
 
@@ -63,7 +93,7 @@ export function AnalisisModalidadStep({
           type="button"
           variant="outline"
           onClick={onEdit}
-          disabled={isLoading}
+          disabled={isLoading || data.isLoadingRates}
           className="border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold px-8 h-11 rounded-md cursor-pointer"
         >
           Editar
@@ -71,13 +101,18 @@ export function AnalisisModalidadStep({
         <Button
           type="button"
           onClick={onConfirm}
-          disabled={isLoading}
+          disabled={isLoading || data.isLoadingRates}
           className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
         >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Creando borrador...
+            </>
+          ) : data.isLoadingRates ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Calculando tasas...
             </>
           ) : (
             "Confirmar"

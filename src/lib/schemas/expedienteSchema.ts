@@ -1,11 +1,6 @@
 import { z } from "zod";
 
 /**
- * Valor fijo de la UCAU en Bolívares (hardcoded hasta que el backend lo provea)
- */
-export const VALOR_UCAU_ACTUAL = 40.0;
-
-/**
  * Modalidad de Contratación Sugerida (hardcoded)
  */
 export const MODALIDAD_SUGERIDA = "Concurso Abierto, acto único, apertura única";
@@ -55,10 +50,6 @@ export const datosBasicosSchema = z.object({
   montoEstimadoBs: z
     .number({ message: "El monto en Bs. es requerido" })
     .positive("El monto en Bs. debe ser mayor a cero"),
-
-  montoEstimadoDolar: z
-    .number({ message: "El monto en Divisas es requerido" })
-    .positive("El monto en Divisas debe ser mayor a cero"),
 });
 
 export type DatosBasicosFormValues = z.infer<typeof datosBasicosSchema>;

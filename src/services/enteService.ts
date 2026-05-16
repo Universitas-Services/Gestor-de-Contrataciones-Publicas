@@ -2,6 +2,7 @@
 
 import { getServerToken, getSessionCookie } from "@/lib/auth/session";
 import type { EnteResponse, EnteUpdatePayload } from "@/types/ente.types";
+import type { DashboardOperativoResponse } from "@/types/dashboard-operativo.types";
 import type {
   CreateUserPayload,
   CreateUserResponse,
@@ -289,4 +290,27 @@ export const eliminarUsuarioEnte = async (
   }
 
   return { message: "Usuario eliminado correctamente" };
+};
+
+/**
+ * GET /entes/dashboard/operativo
+ * Obtiene los datos del dashboard operativo del Ente autenticado.
+ */
+export const obtenerDashboardOperativo = async (): Promise<DashboardOperativoResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/dashboard/operativo`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al obtener el dashboard operativo");
+  }
+
+  return response.json() as Promise<DashboardOperativoResponse>;
 };
