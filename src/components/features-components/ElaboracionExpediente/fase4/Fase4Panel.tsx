@@ -18,6 +18,7 @@ import {
   type ParticipanteEvaluacion,
 } from "@/lib/utils/evaluacionesFase3Utils";
 import { NotificacionOferentesTable } from "./NotificacionOferentesTable";
+import { ActaAdjudicacionSheet } from "./ActaAdjudicacionSheet";
 
 const MOCK_DOCUMENTOS = [
   { id: "adjudicacion", label: "Adjudicación", subtitulo: "Firmado el 24/05/2024" },
@@ -152,6 +153,7 @@ function DocumentosProcesoCard({ readOnly }: { readOnly?: boolean }) {
 export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: Fase4PanelProps) {
   const [participantes, setParticipantes] = useState<ParticipanteEvaluacion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [actaSheetOpen, setActaSheetOpen] = useState(false);
 
   const adjudicado = getOferenteAdjudicado(participantes);
 
@@ -194,7 +196,7 @@ export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: 
               type="button"
               variant="outline"
               disabled={readOnly}
-              onClick={handleMockCrear}
+              onClick={() => setActaSheetOpen(true)}
               className="border-navy text-navy hover:bg-muted font-semibold text-sm gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -218,6 +220,12 @@ export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: 
       <NotificacionOferentesTable
         participantes={participantes}
         loading={loading}
+        readOnly={readOnly}
+      />
+
+      <ActaAdjudicacionSheet
+        open={actaSheetOpen}
+        onOpenChange={setActaSheetOpen}
         readOnly={readOnly}
       />
     </div>
