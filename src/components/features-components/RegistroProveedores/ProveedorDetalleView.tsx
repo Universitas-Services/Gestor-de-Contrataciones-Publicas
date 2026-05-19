@@ -60,7 +60,7 @@ interface ProviderDetails {
   documentos: Documento[];
 }
 
-export function ProveedorDetalleView({ id }: { id: string }) {
+export function ProveedorDetalleView({ id, readOnly = false }: { id: string; readOnly?: boolean }) {
   const [provider, setProvider] = useState<ProviderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingEstatus, setUpdatingEstatus] = useState(false);
@@ -91,7 +91,7 @@ export function ProveedorDetalleView({ id }: { id: string }) {
   }, [id]);
 
   const handleToggleStatus = async (checked: boolean) => {
-    if (!provider) return;
+    if (readOnly || !provider) return;
     setUpdatingEstatus(true);
     const newStatus = checked ? "APROBADO" : "RECHAZADO";
     try {
@@ -194,12 +194,14 @@ export function ProveedorDetalleView({ id }: { id: string }) {
             <Download className="w-4 h-4 mr-2" />
             Descargar
           </Button>
-          <Link href={`/registro-proveedores/editar/${provider.id}`} className="w-full md:w-auto">
-            <Button className="bg-navy hover:bg-navy-hover text-white h-11 px-6 font-semibold w-full">
-              <Edit className="w-4 h-4 mr-2" />
-              Editar
-            </Button>
-          </Link>
+          {!readOnly && (
+            <Link href={`/registro-proveedores/editar/${provider.id}`} className="w-full md:w-auto">
+              <Button className="bg-navy hover:bg-navy-hover text-white h-11 px-6 font-semibold w-full">
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </Button>
+            </Link>
+          )}
         </div>
       </Card>
 
@@ -391,7 +393,7 @@ export function ProveedorDetalleView({ id }: { id: string }) {
               <Switch
                 checked={provider.estatusValidacion === "APROBADO"}
                 onCheckedChange={handleToggleStatus}
-                disabled={updatingEstatus}
+                disabled={updatingEstatus || readOnly}
                 className="data-[state=checked]:bg-success"
               />
             </div>

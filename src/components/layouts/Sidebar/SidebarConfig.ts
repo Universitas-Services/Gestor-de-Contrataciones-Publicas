@@ -1,20 +1,7 @@
 import type { UserRole } from "@/types/role.types";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
-import {
-  CheckCircle,
-  Eye,
-  ClipboardList,
-  ListTodo,
-  FileUp,
-  FolderOpen,
-  Bell,
-  Search,
-  Download,
-  Newspaper,
-  Globe,
-  SquarePen,
-} from "lucide-react";
+import { CheckCircle, Eye, ClipboardList, FolderOpen, Newspaper, SquarePen } from "lucide-react";
 
 import { IconType } from "react-icons";
 import { LiaRobotSolid } from "react-icons/lia";
@@ -32,6 +19,34 @@ export interface SidebarItem {
 export interface SidebarConfig {
   items: SidebarItem[];
 }
+
+const ENTE_FUNCTIONAL_ITEMS: SidebarItem[] = [
+  {
+    label: "Gestión de datos",
+    href: "#",
+    icon: Newspaper,
+    submenu: [
+      {
+        label: "Perfil del Ente",
+        href: "/gestion-datos/perfil",
+      },
+      {
+        label: "Estructura organizativa",
+        href: "/gestion-datos/estructura-organizativa",
+      },
+    ],
+  },
+  {
+    label: "Registro de proveedores",
+    href: "/registro-proveedores",
+    icon: Newspaper,
+  },
+  {
+    label: "Elaboración de Expediente de selección de Contratista",
+    href: "/elaboracion-expediente",
+    icon: SquarePen,
+  },
+];
 
 /**
  * Configuraciones de sidebar por rol
@@ -116,26 +131,7 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         href: ROLE_ROUTES.visualizador.dashboard,
         icon: HiMiniHome,
       },
-      {
-        label: "Registro de proveedores",
-        href: "/registro-proveedores",
-        icon: Newspaper,
-      },
-      {
-        label: "Consultas",
-        href: ROLE_ROUTES.visualizador.consultas,
-        icon: Search,
-      },
-      {
-        label: "Reportes",
-        href: ROLE_ROUTES.visualizador.reportes,
-        icon: Download,
-      },
-      {
-        label: "Transparencia",
-        href: ROLE_ROUTES.visualizador.transparencia,
-        icon: Globe,
-      },
+      ...ENTE_FUNCTIONAL_ITEMS,
     ],
   },
   ejecutor: {
@@ -145,31 +141,7 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         href: ROLE_ROUTES.ejecutor.dashboard,
         icon: HiMiniHome,
       },
-      {
-        label: "Registro de proveedores",
-        href: "/registro-proveedores",
-        icon: Newspaper,
-      },
-      {
-        label: "Tareas",
-        href: ROLE_ROUTES.ejecutor.tareas,
-        icon: ListTodo,
-      },
-      {
-        label: "Documentos",
-        href: ROLE_ROUTES.ejecutor.documentos,
-        icon: FileUp,
-      },
-      {
-        label: "Procesos",
-        href: ROLE_ROUTES.ejecutor.procesos,
-        icon: FolderOpen,
-      },
-      {
-        label: "Notificaciones",
-        href: ROLE_ROUTES.ejecutor.notificaciones,
-        icon: Bell,
-      },
+      ...ENTE_FUNCTIONAL_ITEMS,
     ],
   },
 };

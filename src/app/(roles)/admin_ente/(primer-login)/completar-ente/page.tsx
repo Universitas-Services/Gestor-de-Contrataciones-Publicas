@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { redirect } from "next/navigation";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
 import { getUniversitas } from "@/lib/universitas";
@@ -16,6 +17,8 @@ export default async function CompletarEntePage() {
   if (!user || !user.enteId) {
     redirect("/login");
   }
+
+  const readOnly = isReadOnlyRole(user.role);
 
   let estadosData: Estado[] = [];
   try {
@@ -41,7 +44,11 @@ export default async function CompletarEntePage() {
 
       {/* Contenedor del Formulario */}
       <main className="pb-16 px-4">
-        <CompletarEnteForm enteId={user.enteId as string} initialEstados={estadosData} />
+        <CompletarEnteForm
+          enteId={user.enteId as string}
+          initialEstados={estadosData}
+          readOnly={readOnly}
+        />
       </main>
     </div>
   );

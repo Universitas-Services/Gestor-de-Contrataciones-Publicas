@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { obtenerExpediente } from "@/services/expedienteService";
 import { CrearExpedienteWizard } from "@/components/features-components/ElaboracionExpediente/CrearExpedienteWizard";
 
@@ -22,7 +23,12 @@ export default async function EditarExpedientePage({ params }: Props) {
 
   return (
     <div className="w-full max-w-full mx-auto flex flex-col items-center p-0">
-      <CrearExpedienteWizard expedienteId={id} datosIniciales={expediente} modoEdicion />
+      <CrearExpedienteWizard
+        expedienteId={id}
+        datosIniciales={expediente}
+        modoEdicion
+        readOnly={isReadOnlyRole(user.role)}
+      />
     </div>
   );
 }

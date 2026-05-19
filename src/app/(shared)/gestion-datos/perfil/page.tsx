@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
+import { canAccessEnteModules, isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { Building2 } from "lucide-react";
 import Image from "next/image";
 import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons";
@@ -14,10 +15,12 @@ import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons"
 export default async function PerfilEntePage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin_ente" || !user.enteId) {
+  if (!user || !canAccessEnteModules(user.role) || !user.enteId) {
     // Si no tiene ente vinculado, redirigir al dashboard u otra página de escape
     redirect("/login");
   }
+
+  const readOnly = isReadOnlyRole(user.role);
 
   // Obtener los datos del backend
   const enteInfo = await obtenerEnte(user.enteId);
@@ -54,9 +57,11 @@ export default async function PerfilEntePage() {
                   {enteInfo.organoAdscripcion || "Sin órgano de adscripción asociado"}
                 </p>
               </div>
-              <Button asChild className="w-32 bg-color-boton-2 font-semibold hover:bg-navy-deep">
-                <Link href={ROLE_ROUTES.admin_ente.completarEnte}>Editar</Link>
-              </Button>
+              {!readOnly && (
+                <Button asChild className="w-32 bg-color-boton-2 font-semibold hover:bg-navy-deep">
+                  <Link href={ROLE_ROUTES.admin_ente.completarEnte}>Editar</Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
 

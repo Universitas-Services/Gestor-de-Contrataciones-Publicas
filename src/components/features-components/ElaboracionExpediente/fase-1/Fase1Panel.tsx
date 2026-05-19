@@ -62,6 +62,7 @@ import { ProductoItemSheet } from "./ProductoItemSheet";
 interface Fase1PanelProps {
   expedienteId: string;
   fase1Creada?: boolean;
+  readOnly?: boolean;
 }
 
 interface Fase1DocumentoConfig {
@@ -249,7 +250,11 @@ function Fase1TechnicalContent({
   );
 }
 
-export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProps) {
+export function Fase1Panel({
+  expedienteId,
+  fase1Creada = false,
+  readOnly = false,
+}: Fase1PanelProps) {
   const [items, setItems] = useState<PresupuestoItemRecord[]>([]);
   const [meta, setMeta] = useState<PresupuestoItemsMeta>(DEFAULT_META);
   const [totales, setTotales] = useState<PresupuestoItemsTotals>(DEFAULT_TOTALS);
@@ -397,21 +402,25 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
   const canUseDocumentActions = Boolean(fasePreparatoria) || documentos.some((doc) => doc.generado);
 
   const handleCreateItemClick = () => {
+    if (readOnly) return;
     resetSheetState();
     setIsSheetOpen(true);
   };
 
   const handleEditItemClick = (item: PresupuestoItemRecord) => {
+    if (readOnly) return;
     setSheetMode("edit");
     setSelectedItem(item);
     setIsSheetOpen(true);
   };
 
   const handleDeleteItemClick = (item: PresupuestoItemRecord) => {
+    if (readOnly) return;
     setItemToDelete(item);
   };
 
   const handleSubmitItem = async (values: ProductoItemFormValues) => {
+    if (readOnly) return;
     setIsSavingItem(true);
 
     try {
@@ -435,6 +444,7 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
   };
 
   const handleConfirmDelete = async () => {
+    if (readOnly) return;
     if (!itemToDelete) return;
 
     setIsDeletingItem(true);
@@ -452,6 +462,7 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
   };
 
   const handleGenerarDocumento = async (tipo: string) => {
+    if (readOnly) return;
     const endpoint = getDocumentoEndpoint(tipo);
     if (!endpoint || !expedienteId) return;
 
@@ -468,6 +479,7 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
   };
 
   const handleRegenerarDocumento = async (doc: DocumentoStatus) => {
+    if (readOnly) return;
     if (!doc.documento?.id) return;
 
     setProcesandoDoc((prev) => ({ ...prev, [doc.tipo]: true }));
@@ -530,13 +542,18 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button asChild className="bg-navy font-semibold text-white shadow-sm hover:bg-navy-hover">
-          <Link href={fase1Href}>
-            {fasePreparatoria ? "Editar fase de preparacion" : "Iniciar fase de preparacion"}
-          </Link>
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-end">
+          <Button
+            asChild
+            className="bg-navy font-semibold text-white shadow-sm hover:bg-navy-hover"
+          >
+            <Link href={fase1Href}>
+              {fasePreparatoria ? "Editar fase de preparacion" : "Iniciar fase de preparacion"}
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.9fr)]">
         <Card className="border border-slate-200 shadow-sm">
@@ -667,16 +684,17 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
                           {!doc.generado ? (
                             <button
                               className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
-                              disabled={!canUseDocumentActions}
+                              disabled={!canUseDocumentActions || readOnly}
                               onClick={() => handleGenerarDocumento(doc.tipo)}
                             >
                               <IoNewspaperOutline className="h-[24px] w-[24px]" />
                             </button>
                           ) : desactualizado ? (
                             <button
-                              className="text-red-400 transition-colors hover:text-red-600"
+                              className="text-red-400 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                               onClick={() => handleRegenerarDocumento(doc)}
                               title="Regenerar documento"
+                              disabled={readOnly}
                             >
                               <BsArrowClockwise className="h-[20px] w-[20px]" />
                             </button>
@@ -701,8 +719,9 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
 
       <PresupuestoItemsTable
         items={items}
-        showAddButton
-        addButtonDisabled={loading || !canAddItems}
+        readOnly={readOnly}
+        showAddButton={!readOnly}
+        addButtonDisabled={readOnly || loading || !canAddItems}
         addButtonLabel="Anadir item"
         emptyTitle="Sin items cargados"
         emptyDescription={emptyDescription}
@@ -713,9 +732,9 @@ export function Fase1Panel({ expedienteId, fase1Creada = false }: Fase1PanelProp
           onPageChange: setPage,
         }}
         serverTotals={totales}
-        onAdd={handleCreateItemClick}
-        onEdit={handleEditItemClick}
-        onDelete={handleDeleteItemClick}
+        onAdd={readOnly ? undefined : handleCreateItemClick}
+        onEdit={readOnly ? undefined : handleEditItemClick}
+        onDelete={readOnly ? undefined : handleDeleteItemClick}
       />
 
       <ProductoItemSheet

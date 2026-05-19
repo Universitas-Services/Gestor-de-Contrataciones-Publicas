@@ -2,6 +2,7 @@ import { ExpedienteDetalle } from "@/components/features-components/ElaboracionE
 import { redirect, notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { obtenerExpediente } from "@/services/expedienteService";
 import type { Fase1TabValue } from "@/types/fase1.types";
 
@@ -44,7 +45,7 @@ export default async function ExpedienteDetallePage({ params, searchParams }: Pr
           </div>
         }
       >
-        <ExpedienteDetalle data={expediente} />
+        <ExpedienteDetalle data={expediente} readOnly={isReadOnlyRole(user.role)} />
       </Suspense>
     </div>
   );

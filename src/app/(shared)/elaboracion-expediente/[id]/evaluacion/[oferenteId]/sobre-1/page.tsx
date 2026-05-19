@@ -7,6 +7,7 @@ import { IoSaveOutline, IoEyeOutline } from "react-icons/io5";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useRoleAccess } from "@/hooks/use-role-access";
 import { obtenerExpediente } from "@/services/expedienteService";
 import {
   listarEvaluacionesFase3,
@@ -60,6 +61,7 @@ export default function Sobre1Page({
   const router = useRouter();
   const unwrappedParams = React.use(params);
   const { id, oferenteId } = unwrappedParams;
+  const { readOnly } = useRoleAccess();
 
   const [loading, setLoading] = useState(true);
   const [oferente, setOferente] = useState<any>(null);
@@ -150,19 +152,31 @@ export default function Sobre1Page({
   }, [id, oferenteId]);
 
   const handleToggle = (id: number, valor: "SI" | "NO") => {
+    if (readOnly) {
+      return;
+    }
     setRespuestas((prev) => ({ ...prev, [id]: valor }));
   };
 
   const toggleObs = (id: number) => {
+    if (readOnly) {
+      return;
+    }
     setObsAbiertas((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const saveObs = (id: number) => {
+    if (readOnly) {
+      return;
+    }
     toast.success("Observación guardada localmente");
     setObsAbiertas((prev) => ({ ...prev, [id]: false }));
   };
 
   const handleNext = async () => {
+    if (readOnly) {
+      return;
+    }
     if (Object.keys(respuestas).length < PREGUNTAS.length) {
       toast.error("Debe responder todas las preguntas antes de continuar");
       return;
@@ -299,31 +313,34 @@ export default function Sobre1Page({
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleToggle(q.id, "SI")}
+                        disabled={readOnly}
                         className={`px-4 h-8 rounded text-[11px] font-bold border transition-colors ${
                           respuestas[q.id] === "SI"
                             ? "bg-navy text-white border-navy"
                             : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                        }`}
+                        } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         SI
                       </button>
                       <button
                         onClick={() => handleToggle(q.id, "NO")}
+                        disabled={readOnly}
                         className={`px-4 h-8 rounded text-[11px] font-bold border transition-colors ${
                           respuestas[q.id] === "NO"
                             ? "bg-navy text-white border-navy"
                             : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                        }`}
+                        } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         NO
                       </button>
                       <button
                         onClick={() => toggleObs(q.id)}
+                        disabled={readOnly}
                         className={`flex items-center gap-1.5 px-3 h-8 rounded text-[11px] font-bold border transition-colors ${
                           hasObs || obsAbiertas[q.id]
                             ? "bg-[var(--obs-bg)] text-[var(--obs-button)] border-[var(--obs-button)]"
                             : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                        }`}
+                        } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         <IoEyeOutline className="w-[14px] h-[14px]" />
                         OBSERVACIÓN
@@ -340,12 +357,14 @@ export default function Sobre1Page({
                           onChange={(e) =>
                             setObservaciones((prev) => ({ ...prev, [q.id]: e.target.value }))
                           }
+                          disabled={readOnly}
                           placeholder="Escriba su observación aquí..."
-                          className="w-full text-[12px] border border-[var(--obs-button)] bg-[var(--obs-bg)] text-color-titulos font-medium rounded-md py-2.5 pl-3 pr-10 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic"
+                          className="w-full text-[12px] border border-[var(--obs-button)] bg-[var(--obs-bg)] text-color-titulos font-medium rounded-md py-2.5 pl-3 pr-10 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic disabled:cursor-not-allowed disabled:opacity-70"
                         />
                         <button
                           onClick={() => saveObs(q.id)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[var(--obs-button)] hover:opacity-75 rounded-md transition-colors"
+                          disabled={readOnly}
+                          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[var(--obs-button)] hover:opacity-75 rounded-md transition-colors ${readOnly ? "hidden" : ""}`}
                           title="Guardar observación"
                         >
                           <IoSaveOutline className="w-[18px] h-[18px]" />
@@ -368,20 +387,22 @@ export default function Sobre1Page({
           >
             Anterior
           </Button>
-          <Button
-            className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white disabled:opacity-50"
-            onClick={handleNext}
-            disabled={isSaving || Object.keys(respuestas).length < PREGUNTAS.length}
-          >
-            {isSaving ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Guardando...
-              </span>
-            ) : (
-              "Siguiente"
-            )}
-          </Button>
+          {!readOnly && (
+            <Button
+              className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white disabled:opacity-50"
+              onClick={handleNext}
+              disabled={isSaving || Object.keys(respuestas).length < PREGUNTAS.length}
+            >
+              {isSaving ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Guardando...
+                </span>
+              ) : (
+                "Siguiente"
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>

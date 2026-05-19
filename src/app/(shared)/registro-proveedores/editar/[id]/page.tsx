@@ -1,4 +1,7 @@
 import { NuevoProveedorForm } from "@/components/forms/registro_proveedores/NuevoProveedorForm";
+import { getCurrentUser } from "@/lib/auth/auth";
+import { redirect } from "next/navigation";
+import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 
 interface EditarProveedorPageProps {
   params: {
@@ -7,11 +10,15 @@ interface EditarProveedorPageProps {
 }
 
 export default async function EditarProveedorPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
   const { id } = await params;
   return (
     <div className="w-full max-w-full mx-auto space-y-6 animate-in fade-in duration-500 rounded-xl">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 md:p-12">
-        <NuevoProveedorForm providerId={id} />
+        <NuevoProveedorForm providerId={id} readOnly={isReadOnlyRole(user.role)} />
       </div>
     </div>
   );

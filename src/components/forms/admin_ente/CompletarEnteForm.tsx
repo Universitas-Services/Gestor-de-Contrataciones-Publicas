@@ -64,6 +64,7 @@ import { REGEXP_ONLY_DIGITS } from "input-otp";
 interface CompletarEnteFormProps {
   enteId: string;
   initialEstados?: Estado[];
+  readOnly?: boolean;
 }
 
 // --- Formatos y tamaño del logo ---
@@ -73,7 +74,11 @@ const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 
 // --- Componente ---
 
-export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnteFormProps) {
+export function CompletarEnteForm({
+  enteId,
+  initialEstados = [],
+  readOnly = false,
+}: CompletarEnteFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -229,6 +234,7 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
 
   // Manejar selección de archivo del logo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -257,6 +263,7 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
 
   // Remover logo seleccionado
   const handleRemoveLogo = () => {
+    if (readOnly) return;
     setLogoFile(null);
     setLogoPreview(null);
     setLogoUploaded(false);
@@ -267,6 +274,7 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
 
   // Subir logo al backend
   const handleUploadLogo = async () => {
+    if (readOnly) return;
     if (!logoFile) {
       toast.error("Selecciona una imagen primero");
       return;
@@ -290,6 +298,11 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
   };
 
   const handleNextStep = async () => {
+    if (readOnly) {
+      setStep(2);
+      return;
+    }
+
     // Validamos solo campos de paso 1
     const isValid = await form.trigger(["nombre", "rif", "siglas", "organoAdscripcion"]);
 
@@ -309,6 +322,7 @@ export function CompletarEnteForm({ enteId, initialEstados = [] }: CompletarEnte
 
   // Guardar datos del ente
   const onSubmit = async (values: CompletarEnteFormValues) => {
+    if (readOnly) return;
     setIsSubmitting(true);
 
     const toastId = toast.loading("Guardando datos del ente...");

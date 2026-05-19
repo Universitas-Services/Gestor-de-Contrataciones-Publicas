@@ -89,9 +89,10 @@ const TIPOS_DOCUMENTO = [
 
 interface NuevoProveedorFormProps {
   providerId?: string;
+  readOnly?: boolean;
 }
 
-export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
+export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProveedorFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -333,6 +334,11 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
 
   // Validaciones de Transición
   const handleNextStep = async () => {
+    if (readOnly) {
+      setStep(2);
+      return;
+    }
+
     // Validar manualmente si los campos requeridos del Paso 1 están listos
     const isValid = await form.trigger([
       "correo",
@@ -366,6 +372,7 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
   };
 
   const onSubmit = async () => {
+    if (readOnly) return;
     setIsSubmitting(true);
     try {
       const data = form.getValues();
@@ -429,6 +436,7 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
 
   // Funciones de Dropzone
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -454,6 +462,7 @@ export function NuevoProveedorForm({ providerId }: NuevoProveedorFormProps) {
   };
 
   const handleDeleteDocument = (id: string) => {
+    if (readOnly) return;
     setDocumentos((prev) => prev.filter((d) => d.id !== id));
   };
 

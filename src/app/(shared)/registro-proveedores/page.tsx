@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { RegistroProveedoresDashboard } from "@/components/features-components/RegistroProveedores/RegistroProveedoresDashboard";
+import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 
 export default async function RegistroProveedoresPage() {
   const user = await getCurrentUser();
@@ -11,7 +12,7 @@ export default async function RegistroProveedoresPage() {
 
   return (
     <div className="w-full max-w-full mx-auto flex flex-col items-center p-0">
-      <RegistroProveedoresDashboard />
+      <RegistroProveedoresDashboard readOnly={isReadOnlyRole(user.role)} />
     </div>
   );
 }
