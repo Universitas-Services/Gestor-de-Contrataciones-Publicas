@@ -1,40 +1,15 @@
-import type { Metadata } from "next";
-import { DashboardLayout } from "@/components/layouts/DashboardLayout";
-import { Header } from "@/components/shared/Header";
-import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { getCurrentUser } from "@/lib/auth/auth";
-import { redirect } from "next/navigation";
+import { enforceRoleAccess } from "@/lib/auth/roleGuard";
 import { ROLES } from "@/types/role.types";
 
-export const metadata: Metadata = {
-  title: "Supervisor | Dashboard",
-  description: "Panel de Control - Supervisor de Procesos",
-};
-
-export default async function SupervisorLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Layout raíz de supervisor: solo protección de rol.
+ */
+export default async function SupervisorRootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== ROLES.SUPERVISOR) {
-    redirect("/login");
-  }
+  // Defense-in-depth: Layout validates role even though proxy already does
+  enforceRoleAccess(user, ROLES.SUPERVISOR);
 
-  return (
-    <DashboardLayout
-      role={ROLES.SUPERVISOR}
-      userName={user.name}
-      userEmail={user.email}
-      notificationCount={3}
-    >
-      <Header
-        userName={user.name}
-        userEmail={user.email}
-        userRole={user.role}
-        notificationCount={3}
-      />
-      <div className="p-8">
-        <Breadcrumbs />
-        {children}
-      </div>
-    </DashboardLayout>
-  );
+  return <>{children}</>;
 }

@@ -4,8 +4,7 @@
  */
 
 export const ROLES = {
-  UNIVERSITAS: "universitas",
-  ENTE: "ente",
+  ENTE: "admin_ente",
   SUPERVISOR: "supervisor",
   VISUALIZADOR: "visualizador",
   EJECUTOR: "ejecutor",
@@ -19,14 +18,9 @@ export type UserRole = (typeof ROLES)[keyof typeof ROLES];
  * Se referencian como CSS variables de Tailwind
  */
 export const ROLE_COLORS = {
-  [ROLES.UNIVERSITAS]: {
-    cssVar: "role-universitas", // Referencia a --role-universitas en globals.css
-    name: "Universitas",
-    description: "Máxima Autoridad",
-  },
   [ROLES.ENTE]: {
-    cssVar: "role-ente", // Referencia a --role-ente en globals.css
-    name: "Ente",
+    cssVar: "role-admin-ente", // Referencia a --role-admin-ente en globals.css
+    name: "Admin Ente",
     description: "Entidad Contratante",
   },
   [ROLES.SUPERVISOR]: {

@@ -17,13 +17,18 @@ import { Fragment } from "react";
  * Componente de Breadcrumbs que genera automáticamente la navegación desde la URL
  * Utiliza los componentes de shadcn/ui para mejor accesibilidad y estilo
  *
- * Ejemplo: /universitas/dashboard → Inicio > Universitas > Dashboard
+ * Ejemplo: /ente/dashboard → Inicio > Ente > Dashboard
  */
 export function Breadcrumbs() {
   const pathname = usePathname();
 
   // Dividir el pathname en segmentos
-  const segments = pathname.split("/").filter((segment) => segment !== "");
+  let segments = pathname.split("/").filter((segment) => segment !== "");
+
+  // Evitar migajas largas y rotas en flujos profundos de elaboración de expediente
+  if (segments[0] === "elaboracion-expediente" && segments.length > 2) {
+    segments = segments.slice(0, 2);
+  }
 
   // Si estamos en la raíz, no mostrar breadcrumbs
   if (segments.length === 0) {
@@ -31,7 +36,21 @@ export function Breadcrumbs() {
   }
 
   // Función para formatear nombres de ruta
-  const formatSegment = (segment: string): string => {
+  const formatSegment = (segment: string, index: number, segments: string[]): string => {
+    // Si el segmento es un UUID o un ID largo de proveedor, determinar según el contexto
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
+      // Si el segmento anterior es 'usuarios', mostrar 'Editar usuario'
+      if (index > 0 && segments[index - 1] === "usuarios") {
+        return "Editar usuario";
+      }
+      // Verificamos el segmento anterior para determinar el contexto
+      if (index > 0 && segments[index - 1] === "elaboracion-expediente") {
+        return "Detalle de Expediente";
+      }
+      return "Perfil del proveedor";
+    }
+
     return segment
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -41,7 +60,7 @@ export function Breadcrumbs() {
   // Construir breadcrumbs
   const breadcrumbs = segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const label = formatSegment(segment);
+    const label = formatSegment(segment, index, segments);
     const isLast = index === segments.length - 1;
 
     return {
@@ -67,7 +86,7 @@ export function Breadcrumbs() {
         <BreadcrumbSeparator />
 
         {/* Segmentos de la ruta */}
-        {breadcrumbs.map((breadcrumb, index) => (
+        {breadcrumbs.map((breadcrumb) => (
           <Fragment key={breadcrumb.href}>
             <BreadcrumbItem>
               {breadcrumb.isLast ? (

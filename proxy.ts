@@ -43,14 +43,21 @@ export async function proxy(request: NextRequest) {
   }
 
   // Todo OK, permitir acceso
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 /**
  * Helper para obtener ruta de dashboard
  */
 function getDashboardRoute(role: string): string {
-  return `/${role}/dashboard`;
+  return `/${role.toLowerCase()}/dashboard`;
 }
 
 /**

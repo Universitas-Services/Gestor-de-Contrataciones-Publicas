@@ -1,0 +1,155 @@
+"use server";
+
+import { getServerToken } from "@/lib/auth/session";
+import { ComisionContratacionesFormValues } from "@/lib/schemas/comisionContratacionesSchema";
+import { revalidatePath } from "next/cache";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// --- Tipos ---
+export interface ComisionContratacionesResponse {
+  message?: string;
+  id?: number | string; // Idealmente el backend retorna el ID de la comisión creada
+  comision?: ComisionContratacionesFormValues; // O tal vez el objeto completo
+}
+
+export interface MiembroResponse {
+  message?: string;
+  id?: number | string;
+}
+
+export type GetComisionResponse = ComisionContratacionesFormValues;
+
+// --- Endpoints ---
+
+/**
+ * POST /comision-contrataciones
+ * Crea una nueva Comisión de Contrataciones (Paso 1).
+ */
+export const registrarComisionContrataciones = async (
+  payload: ComisionContratacionesFormValues
+): Promise<ComisionContratacionesResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/comision-contrataciones`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      denominacionComision: payload.denominacionComision,
+      datosDesignacionComision: payload.datosDesignacionComision,
+      correoElectronico: payload.correoElectronico,
+      telefono: payload.telefono,
+      comisionCertificada: payload.comisionCertificada,
+      miembros: payload.miembros,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error("Error en registrarComisionContrataciones:", errorData);
+    throw new Error(errorData?.message ?? "Error al crear la Comisión de Contrataciones");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+  return response.json() as Promise<ComisionContratacionesResponse>;
+};
+
+/**
+ * GET /comision-contrataciones
+ * Lista todas las Comisiones de Contrataciones del Ente actual.
+ */
+export const listarComisionesContrataciones = async (): Promise<Record<string, unknown>[]> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/comision-contrataciones`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al listar las Comisiones de Contrataciones");
+  }
+  return response.json();
+};
+
+/**
+ * GET /comision-contrataciones/{id}
+ * Obtiene los detalles de la comisión y sus miembros para listar en la tabla (Paso 2).
+ */
+export const obtenerComisionContrataciones = async (
+  id: string | number
+): Promise<GetComisionResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/comision-contrataciones/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener la Comisión de Contrataciones");
+  }
+
+  return response.json() as Promise<GetComisionResponse>;
+};
+
+/**
+ * PATCH /comision-contrataciones/{id}
+ * Actualiza la comisión. Puede usarse para editar un miembro en la tabla final o sincronizar data.
+ */
+export const actualizarComisionContrataciones = async (
+  comisionId: string | number,
+  payload: Partial<ComisionContratacionesFormValues>
+): Promise<ComisionContratacionesResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/comision-contrataciones/${comisionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar la Comisión");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+  return response.json() as Promise<ComisionContratacionesResponse>;
+};
+
+/**
+ * DELETE /comision-contrataciones/{id}
+ * Elimina (borrado lógico) la Comisión de Contrataciones.
+ */
+export const eliminarComisionContrataciones = async (id: string | number): Promise<void> => {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/comision-contrataciones/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al eliminar la Comisión");
+  }
+
+  revalidatePath("/gestion-datos/estructura-organizativa");
+};

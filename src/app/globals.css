@@ -4,7 +4,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -44,21 +44,130 @@
   --radius-4xl: calc(var(--radius) + 16px);
 
   /* Role-specific colors */
-  --color-role-universitas: var(--role-universitas);
-  --color-role-universitas-foreground: var(--role-universitas-foreground);
-  --color-role-ente: var(--role-ente);
-  --color-role-ente-foreground: var(--role-ente-foreground);
+  --color-role-admin-ente: var(--role-admin-ente);
+  --color-role-admin-ente-foreground: var(--role-admin-ente-foreground);
   --color-role-supervisor: var(--role-supervisor);
   --color-role-supervisor-foreground: var(--role-supervisor-foreground);
+
+  --color-edificio-bg: var(--edificio-bg);
+  --color-edificio-icon: var(--edificio-icon);
   --color-role-visualizador: var(--role-visualizador);
   --color-role-visualizador-foreground: var(--role-visualizador-foreground);
   --color-role-ejecutor: var(--role-ejecutor);
   --color-role-ejecutor-foreground: var(--role-ejecutor-foreground);
+
+  /* Login colors */
+  --color-izq-login: var(--izq-login);
+  --color-login-gris: var(--login-gris);
+  --color-color-boton-1: var(--color-boton-1);
+  --color-color-boton-2: var(--color-boton-2);
+  --color-color-boton-hover: var(--color-boton-hover);
+  --color-color-titulos: var(--color-titulos);
+  --color-color-subtitulos: var(--color-subtitulos);
+  --color-df-bg: var(--df-bg);
+  --color-navy: var(--navy);
+  --color-navy-hover: var(--navy-hover);
+  --color-dropzone-border: var(--dropzone-border);
+  --color-dropzone-bg: var(--dropzone-bg);
+  --color-section-docs: var(--section-docs);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-text: var(--success-text);
+
+  /* Hardcoded color refactor */
+  --color-heading-dark: var(--heading-dark);
+  --color-text-muted-dark: var(--text-muted-dark);
+  --color-heading-secondary: var(--heading-secondary);
+  --color-navy-deep: var(--navy-deep);
+  --color-blue-accent: var(--blue-accent);
+  --color-lime: var(--lime);
+  --color-danger: var(--danger);
+  --color-amber-dark: var(--amber-dark);
+  --color-indigo: var(--indigo);
+  --color-slate-bg: var(--slate-bg);
+  --color-border-light: var(--border-light);
+
+  /* Conocenos */
+  --color-conocenos-bg: var(--conocenos-bg);
+  --color-color-boton-2-hover: var(--color-boton-2-hover);
+
+  /* Tipo (Area) colors */
+  --color-tipo-obras: var(--tipo-obras);
+  --color-tipo-obras-bg: var(--tipo-obras-bg);
+  --color-tipo-obras-border: var(--tipo-obras-border);
+  --color-tipo-bienes: var(--tipo-bienes);
+  --color-tipo-bienes-bg: var(--tipo-bienes-bg);
+  --color-tipo-bienes-border: var(--tipo-bienes-border);
+  --color-tipo-servicios: var(--tipo-servicios);
+  --color-tipo-servicios-bg: var(--tipo-servicios-bg);
+  --color-tipo-servicios-border: var(--tipo-servicios-border);
+  --color-vigente: var(--vigente);
+  --color-vigente-bg: var(--vigente-bg);
+  --color-vigente-border: var(--vigente-border);
+  --color-vencido: var(--vencido);
+  --color-vencido-bg: var(--vencido-bg);
+  --color-vencido-border: var(--vencido-border);
+  --color-pendiente: var(--pendiente);
+  --color-pendiente-bg: var(--pendiente-bg);
+  --color-pendiente-border: var(--pendiente-border);
+  --color-rechazado: var(--rechazado);
+  --color-rechazado-bg: var(--rechazado-bg);
+  --color-rechazado-border: var(--rechazado-border);
+  --color-patrimonio: var(--patrimonio);
+
+  /* Expediente - Fases */
+  --color-fase-1: var(--fase-1);
+  --color-fase-2: var(--fase-2);
+  --color-fase-3: var(--fase-3);
+  --color-fase-4: var(--fase-4);
+  --color-progress-bar: var(--progress-bar);
+  --color-card-accent-border: var(--card-accent-border);
+  --color-evaluado-bg: var(--evaluado-bg);
+  --color-doc-warning: var(--doc-warning);
+  --color-doc-warning-bg: var(--doc-warning-bg);
+  --color-doc-warning-border: var(--doc-warning-border);
+  --color-proveedor-incompleto-bg: var(--proveedor-incompleto-bg);
+  --color-proveedor-incompleto-icon: var(--proveedor-incompleto-icon);
+  --color-proveedor-incompleto-icon-hover: var(--proveedor-incompleto-icon-hover);
+
+  /* Calendar specific colors */
+  --color-cal-disponibilidad: var(--cal-disponibilidad);
+  --color-cal-modificaciones: var(--cal-modificaciones);
+  --color-cal-recepcion: var(--cal-recepcion);
+  --color-cal-notificacion: var(--cal-notificacion);
+  --color-cal-garantias: var(--cal-garantias);
+  --color-cal-solicitud-aclaratorias: var(--cal-solicitud-aclaratorias);
+  --color-cal-respuesta-aclaratorias: var(--cal-respuesta-aclaratorias);
+  --color-cal-adjudicacion: var(--cal-adjudicacion);
+  --color-cal-evaluacion: var(--cal-evaluacion);
+  --color-cal-firma: var(--cal-firma);
+
+  /* Observacion (Fase 3 - Lista Cotejo) */
+  --color-obs-button: var(--obs-button);
+  --color-obs-bg: var(--obs-bg);
+  --color-cal-llamado: var(--cal-llamado);
+
+  /* Motivo de Descalificación */
+  --color-motivo-bg: var(--motivo-bg);
+  --color-motivo-border: var(--motivo-border);
+  --color-motivo-icon: var(--motivo-icon);
+  --color-icon-people: var(--icon-people);
+  --color-icon-terminados: var(--icon-terminados);
+  --color-icon-bg-terminados: var(--icon-bg-terminados);
+
+  /* Repositorio Legal — tipos de documentos */
+  --color-legal-organica: var(--legal-organica);
+  --color-legal-ordinaria: var(--legal-ordinaria);
+  --color-legal-norma: var(--legal-norma);
+  --color-legal-resolucion: var(--legal-resolucion);
+  --color-legal-reglamento: var(--legal-reglamento);
+  --color-legal-especial: var(--legal-especial);
+  --color-legal-constitucional: var(--legal-constitucional);
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.9308 0.0151 235.39);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -81,26 +190,22 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.3564 0.0391 248.97);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.95 0.02 235);
+  --sidebar-primary-foreground: oklch(0.25 0.04 249);
+  --sidebar-accent: oklch(0.42 0.04 249);
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(0.45 0.04 249);
+  --sidebar-ring: oklch(0.65 0.03 235);
 
   /* Role-specific colors in OKLCH */
-  /* Universitas - Púrpura (autoridad, realeza) */
-  --role-universitas: oklch(0.58 0.21 300);
-  --role-universitas-foreground: oklch(1 0 0);
-
   /* Ente - Azul oscuro (confianza, profesionalidad) */
-  --role-ente: oklch(0.53 0.15 250);
-  --role-ente-foreground: oklch(1 0 0);
+  --role-admin-ente: oklch(0.53 0.15 250);
+  --role-admin-ente-foreground: oklch(1 0 0);
 
   /* Supervisor - Verde (validación, seguridad) */
-  --role-supervisor: oklch(0.6 0.15 145);
+  --role-supervisor: oklch(0.7653 0.165 119.86);
   --role-supervisor-foreground: oklch(1 0 0);
 
   /* Visualizador - Gris/Plata (neutralidad, observación) */
@@ -110,13 +215,192 @@
   /* Ejecutor - Naranja (acción, energía) */
   --role-ejecutor: oklch(0.65 0.19 40);
   --role-ejecutor-foreground: oklch(1 0 0);
+
+  /* Login colors */
+  --izq-login: oklch(0.7345 0.0106 267.33);
+  --login-gris: oklch(0.74 0.015 274);
+  --color-boton-1: oklch(0.3832 0.0857 251.07);
+  --color-titulos: oklch(0.397 0.0444 249);
+  --color-subtitulos: oklch(0.5162 0.004 247.9);
+  --color-boton-2: oklch(0.35 0.088 251);
+  --color-boton-hover: oklch(0.28 0.042 251);
+  --df-bg: oklch(0.92 0.022 228);
+  --navy: oklch(0.3462 0.0736 256.04);
+  --navy-hover: oklch(0.2911 0.0624 255.82);
+  --dropzone-border: oklch(0.75 0.019 212);
+  --dropzone-bg: oklch(0.76 0.01 230 / 0.1);
+  --section-docs: oklch(0.68 0.16 222);
+  --success: oklch(0.7653 0.165 119.86);
+  --success-bg: oklch(0.96 0.04 119.86);
+  --success-text: oklch(0.45 0.12 119.86);
+
+  /* Conocenos */
+  --conocenos-bg: oklch(0.96 0.012 245);
+  --color-boton-2-hover: oklch(0.24 0.065 255);
+
+  /* Tipo (Area) colors */
+  --tipo-obras: oklch(0.5795 0.2169 27.16);
+  --tipo-obras-bg: oklch(0.8826 0.0769 20.4);
+  --tipo-obras-border: oklch(0.7049 0.1649 22.22);
+  --tipo-bienes: oklch(0.5463 0.2332 261.36);
+  --tipo-bienes-bg: oklch(0.8832 0.0727 241.21);
+  --tipo-bienes-border: oklch(0.7038 0.1489 246.87);
+  --tipo-servicios: oklch(0.4084 0.0433 256.14);
+  --tipo-servicios-bg: oklch(0.9161 0.023 250.8);
+  --tipo-servicios-border: oklch(0.6841 0.0411 252.08);
+  --vigente: oklch(0.7653 0.165 119.86);
+  --vigente-bg: oklch(0.96 0.04 119.86);
+  --vigente-border: oklch(0.65 0.12 119.86);
+  --vencido: oklch(0.4414 0.1526 35.65);
+  --vencido-bg: oklch(0.9522 0.057 79.62);
+  --vencido-border: oklch(0.7003 0.2048 50.05);
+  --pendiente: oklch(0.5232 0.1463 71.77);
+  --pendiente-bg: oklch(0.9887 0.029 97.41);
+  --pendiente-border: oklch(0.9388 0.1299 100.31);
+  --rechazado: oklch(0.4825 0.1999 27.25);
+  --rechazado-bg: oklch(0.9694 0.0191 21.4);
+  --rechazado-border: oklch(0.8826 0.0769 20.4);
+  --patrimonio: oklch(0.7653 0.165 119.86);
+
+  /* Expediente - Fases */
+  --fase-1: oklch(0.7 0.015 260);
+  --fase-2: oklch(0.75 0.16 85);
+  --fase-3: oklch(0.65 0.17 145);
+  --fase-4: oklch(0.4 0.08 255);
+  --progress-bar: oklch(0.7653 0.165 119.86);
+  --card-accent-border: oklch(0.5 0.13 250);
+  /* Fase 3 — badge evaluado (#EBF8E1 en OKLCH) */
+  --evaluado-bg: oklch(0.963 0.048 145.77);
+  --obs-button: oklch(0.6131 0.1018 250.2);
+  --obs-bg: oklch(0.9575 0.0163 216.5);
+
+  /* Icono de Edificio (Oferente) - #B4C1CF */
+  --edificio-bg: oklch(0.795 0.027 248);
+  --edificio-icon: oklch(0.45 0.04 248);
+
+  /* Documentos desactualizados — rojo claro */
+  --doc-warning: oklch(0.628 0.2 25.33);
+  --doc-warning-bg: oklch(0.971 0.025 22);
+  --doc-warning-border: oklch(0.87 0.08 22);
+
+  /* Motivo de Descalificación */
+  --motivo-bg: oklch(0.45 0.18 27);
+  --motivo-border: oklch(0.85 0.05 27);
+  --motivo-icon: oklch(0.55 0.22 27);
+
+  /* Proveedor incompleto — naranja muy claro */
+  --proveedor-incompleto-bg: oklch(0.982 0.022 65);
+  --proveedor-incompleto-icon: oklch(0.72 0.18 65);
+  --proveedor-incompleto-icon-hover: oklch(0.58 0.2 65);
+
+  /* Hardcoded color refactor */
+  --heading-dark: oklch(0.2795 0.0368 260.03);
+  --text-muted-dark: oklch(0.4455 0.0374 257.28);
+  --heading-secondary: oklch(0.3268 0.0348 250.53);
+  --navy-deep: oklch(0.3044 0.0682 252.27);
+  --blue-accent: oklch(0.4226 0.1043 244.05);
+  --lime: oklch(0.7681 0.2044 130.85);
+  --danger: oklch(0.6368 0.2078 25.33);
+  --amber-dark: oklch(0.4732 0.1247 46.2);
+  --indigo: oklch(0.5854 0.2041 277.12);
+  --slate-bg: oklch(0.9842 0.0034 247.86);
+  --border-light: oklch(0.9219 0 89.88);
+
+  /* Calendar semantic colors */
+  --cal-disponibilidad: oklch(0.66 0.2 45);
+  --cal-modificaciones: oklch(0.39 0.17 337);
+  --cal-recepcion: oklch(0.5 0.22 263);
+  --cal-notificacion: oklch(0.85 0.19 119);
+  --cal-garantias: oklch(0.54 0.29 295);
+  --cal-solicitud-aclaratorias: oklch(0.62 0.13 227);
+  --cal-respuesta-aclaratorias: oklch(0.48 0.2 14);
+  --cal-adjudicacion: oklch(0.82 0.18 141);
+  --cal-evaluacion: oklch(0.56 0.25 24);
+  --cal-firma: oklch(0.66 0.18 144);
+  --cal-llamado: oklch(0.55 0.03 250);
+  --icon-people: oklch(0.38 0.05 254);
+  --icon-terminados: oklch(0.31 0.08 255);
+  --icon-bg-terminados: oklch(0.88 0 0);
+
+  /* Repositorio Legal — tipos de documentos (OKLCH conversions) */
+  /* #E3DBE2 → Ley Orgánica (lavanda suave) */
+  --legal-organica: oklch(0.892 0.025 320);
+  /* #D1E7D0 → Ley Ordinaria (verde menta suave) */
+  --legal-ordinaria: oklch(0.906 0.048 148);
+  /* #D9E5EF → Norma General (azul cielo suave) */
+  --legal-norma: oklch(0.907 0.033 240);
+  /* #ECE0C5 → Resolución (arena cálida) */
+  --legal-resolucion: oklch(0.91 0.043 88);
+  /* Reglamento → tono gris-azulado neutro */
+  --legal-reglamento: oklch(0.905 0.02 250);
+  /* Ley Especial → tono lila-rosa suave */
+  --legal-especial: oklch(0.895 0.035 350);
+  /* Ley Constitucional → dorado institucional suave */
+  --legal-constitucional: oklch(0.918 0.055 75);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
+}
+
+/* ── Animación de advertencia de documento desactualizado ── */
+@keyframes doc-icon-hide {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes doc-icon-warn {
+  0%,
+  45% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+.doc-icon-normal {
+  animation: doc-icon-hide 2.4s ease-in-out infinite;
+}
+.doc-icon-warning {
+  animation: doc-icon-warn 2.4s ease-in-out infinite;
+}
+
+/* ── Animación de advertencia de proveedor incompleto (lápiz ↔ exclamación) ── */
+@keyframes pencil-hide {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pencil-warn {
+  0%,
+  45% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+.pencil-icon-normal {
+  animation: pencil-hide 2.4s ease-in-out infinite;
+}
+.pencil-icon-warning {
+  animation: pencil-warn 2.4s ease-in-out infinite;
 }

@@ -4,8 +4,7 @@ import { ROLES, type UserRole } from "@/types/role.types";
  * Rutas base por rol
  */
 export const ROLE_BASE_ROUTES = {
-  [ROLES.UNIVERSITAS]: "/universitas",
-  [ROLES.ENTE]: "/ente",
+  [ROLES.ENTE]: "/admin_ente",
   [ROLES.SUPERVISOR]: "/supervisor",
   [ROLES.VISUALIZADOR]: "/visualizador",
   [ROLES.EJECUTOR]: "/ejecutor",
@@ -15,8 +14,7 @@ export const ROLE_BASE_ROUTES = {
  * Rutas de dashboard por rol
  */
 export const DASHBOARD_ROUTES = {
-  [ROLES.UNIVERSITAS]: "/universitas/dashboard",
-  [ROLES.ENTE]: "/ente/dashboard",
+  [ROLES.ENTE]: "/admin_ente/dashboard",
   [ROLES.SUPERVISOR]: "/supervisor/dashboard",
   [ROLES.VISUALIZADOR]: "/visualizador/dashboard",
   [ROLES.EJECUTOR]: "/ejecutor/dashboard",
@@ -26,19 +24,25 @@ export const DASHBOARD_ROUTES = {
  * Rutas adicionales por rol
  */
 export const ROLE_ROUTES = {
-  [ROLES.UNIVERSITAS]: {
-    dashboard: "/universitas/dashboard",
-    contratos: "/universitas/contratos",
-    proveedores: "/universitas/proveedores",
-    reportes: "/universitas/reportes",
-    analytics: "/universitas/analytics",
-  },
   [ROLES.ENTE]: {
-    dashboard: "/ente/dashboard",
-    licitaciones: "/ente/licitaciones",
-    propuestas: "/ente/propuestas",
-    adjudicaciones: "/ente/adjudicaciones",
-    fiscalizacion: "/ente/fiscalizacion",
+    dashboard: "/admin_ente/dashboard",
+    licitaciones: "/admin_ente/licitaciones",
+    propuestas: "/admin_ente/propuestas",
+    adjudicaciones: "/admin_ente/adjudicaciones",
+    fiscalizacion: "/admin_ente/fiscalizacion",
+    maximaAutoridad: "/admin_ente/configuracion/maxima-autoridad",
+    unidadUsuaria: "/admin_ente/configuracion/unidad-usuaria",
+    unidadContratante: "/admin_ente/configuracion/unidad-contratante",
+    comisionContrataciones: "/admin_ente/configuracion/comision-contrataciones",
+    cambiarContrasena: "/admin_ente/cambiar-contrasena",
+    completarEnte: "/admin_ente/completar-ente",
+    consultorIA: "/consultor-ia",
+    conocenos: "/conocenos",
+    repositorioLegal: "/repositorio-legal",
+    registroProveedores: "/registro-proveedores",
+    perfilEnte: "/gestion-datos/perfil",
+    estructuraOrganizativa: "/gestion-datos/estructura-organizativa",
+    usuarios: "/admin_ente/gestion-datos/usuarios",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",
@@ -46,19 +50,31 @@ export const ROLE_ROUTES = {
     validaciones: "/supervisor/validaciones",
     observaciones: "/supervisor/observaciones",
     procesos: "/supervisor/procesos",
+    registroProveedores: "/registro-proveedores",
   },
   [ROLES.VISUALIZADOR]: {
     dashboard: "/visualizador/dashboard",
-    consultas: "/visualizador/consultas",
-    reportes: "/visualizador/reportes",
-    transparencia: "/visualizador/transparencia",
+    perfilEnte: "/gestion-datos/perfil",
+    estructuraOrganizativa: "/gestion-datos/estructura-organizativa",
+    registroProveedores: "/registro-proveedores",
+    elaboracionExpediente: "/elaboracion-expediente",
+    completarEnte: "/admin_ente/completar-ente",
+    configuracion: "/admin_ente/configuracion",
+    consultorIA: "/consultor-ia",
+    conocenos: "/conocenos",
+    repositorioLegal: "/repositorio-legal",
   },
   [ROLES.EJECUTOR]: {
     dashboard: "/ejecutor/dashboard",
-    tareas: "/ejecutor/tareas",
-    documentos: "/ejecutor/documentos",
-    procesos: "/ejecutor/procesos",
-    notificaciones: "/ejecutor/notificaciones",
+    perfilEnte: "/gestion-datos/perfil",
+    estructuraOrganizativa: "/gestion-datos/estructura-organizativa",
+    registroProveedores: "/registro-proveedores",
+    elaboracionExpediente: "/elaboracion-expediente",
+    completarEnte: "/admin_ente/completar-ente",
+    configuracion: "/admin_ente/configuracion",
+    consultorIA: "/consultor-ia",
+    conocenos: "/conocenos",
+    repositorioLegal: "/repositorio-legal",
   },
 } as const;
 
