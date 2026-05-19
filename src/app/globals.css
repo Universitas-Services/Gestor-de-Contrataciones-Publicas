@@ -123,6 +123,10 @@
   --color-progress-bar: var(--progress-bar);
   --color-card-accent-border: var(--card-accent-border);
   --color-evaluado-bg: var(--evaluado-bg);
+  --color-notificacion-creado-bg: var(--notificacion-creado-bg);
+  --color-notificacion-creado-text: var(--notificacion-creado-text);
+  --color-notificacion-crear-border: var(--notificacion-crear-border);
+  --color-notificacion-crear-text: var(--notificacion-crear-text);
   --color-doc-warning: var(--doc-warning);
   --color-doc-warning-bg: var(--doc-warning-bg);
   --color-doc-warning-border: var(--doc-warning-border);
@@ -271,6 +275,12 @@
   --card-accent-border: oklch(0.5 0.13 250);
   /* Fase 3 — badge evaluado (#EBF8E1 en OKLCH) */
   --evaluado-bg: oklch(0.963 0.048 145.77);
+
+  /* Fase 4 — badges de notificación */
+  --notificacion-creado-bg: oklch(0.7653 0.165 119.86);
+  --notificacion-creado-text: oklch(1 0 0);
+  --notificacion-crear-border: oklch(0.7653 0.165 119.86);
+  --notificacion-crear-text: oklch(0.45 0.12 119.86);
   --obs-button: oklch(0.6131 0.1018 250.2);
   --obs-bg: oklch(0.9575 0.0163 216.5);
 

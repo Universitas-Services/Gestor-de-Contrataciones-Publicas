@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Fase1Panel } from "./fase-1/Fase1Panel";
 import { Fase2Panel } from "./fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
+import { Fase4Panel } from "./fase4/Fase4Panel";
 
 import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
 import type { CronogramaFormValues } from "@/lib/schemas/expedienteSchema";
@@ -563,6 +564,15 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
             {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
             <TabsContent value="fase-3" className="mt-6">
               <Fase3Panel expedienteId={data.id} readOnly={readOnly} />
+            </TabsContent>
+
+            {/* ── TabsContent: Fase 4 — Decisión y formalización ── */}
+            <TabsContent value="fase-4" className="mt-6">
+              <Fase4Panel
+                expedienteId={data.id}
+                readOnly={readOnly}
+                montoEstimadoBs={data.modalidad?.montoEstimadoBs}
+              />
             </TabsContent>
           </Tabs>
         </div>
