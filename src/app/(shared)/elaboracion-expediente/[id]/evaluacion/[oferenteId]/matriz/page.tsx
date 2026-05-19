@@ -37,6 +37,7 @@ import {
   descargarListaCotejoEvaluacion,
 } from "@/services/generadorDocumentosService";
 import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
+import { useRoleAccess } from "@/hooks/use-role-access";
 
 const OPCIONES_CRITERIOS = {
   Bienes: [
@@ -104,6 +105,7 @@ export default function MatrizEvaluacionPage({
   const router = useRouter();
   const unwrappedParams = React.use(params);
   const { id, oferenteId } = unwrappedParams;
+  const { readOnly } = useRoleAccess();
 
   const [loading, setLoading] = useState(true);
   const [oferente, setOferente] = useState<any>(null);
@@ -241,6 +243,9 @@ export default function MatrizEvaluacionPage({
   );
 
   const handleAddCriterio = () => {
+    if (readOnly) {
+      return;
+    }
     if (!currentCriterio) {
       toast.error("Seleccione un criterio");
       return;
@@ -256,10 +261,16 @@ export default function MatrizEvaluacionPage({
   };
 
   const handleRemoveCriterio = (criterioId: string) => {
+    if (readOnly) {
+      return;
+    }
     setCriteriosEvaluados(criteriosEvaluados.filter((c) => c.id !== criterioId));
   };
 
   const handleGuardarEvaluacion = async () => {
+    if (readOnly) {
+      return;
+    }
     // Basic validation
     if (criteriosEvaluados.length !== 4) {
       toast.error("Debe agregar exactamente 4 criterios técnicos evaluados");
@@ -443,7 +454,11 @@ export default function MatrizEvaluacionPage({
                   <label className="block text-[13px] font-bold text-color-titulos mb-2">
                     Criterio de selección
                   </label>
-                  <Select value={currentCriterio} onValueChange={setCurrentCriterio}>
+                  <Select
+                    value={currentCriterio}
+                    onValueChange={readOnly ? undefined : setCurrentCriterio}
+                    disabled={readOnly}
+                  >
                     <SelectTrigger className="w-full h-11 text-[13px]">
                       <SelectValue placeholder="Seleccione criterios..." />
                     </SelectTrigger>
@@ -472,6 +487,7 @@ export default function MatrizEvaluacionPage({
                       min="0"
                       max="100"
                       value={currentPuntaje}
+                      disabled={readOnly}
                       onChange={(e) => {
                         let val = Number(e.target.value);
                         if (val < 0) val = 0;
@@ -487,21 +503,24 @@ export default function MatrizEvaluacionPage({
                         min="0"
                         max="100"
                         value={currentPuntaje}
+                        disabled={readOnly}
                         onChange={(e) => setCurrentPuntaje(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-navy"
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-navy disabled:cursor-not-allowed disabled:opacity-60"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="md:col-span-2">
-                  <Button
-                    className="w-full h-11 bg-navy hover:bg-navy-hover text-white font-semibold rounded-md"
-                    onClick={handleAddCriterio}
-                  >
-                    Guardar
-                  </Button>
-                </div>
+                {!readOnly && (
+                  <div className="md:col-span-2">
+                    <Button
+                      className="w-full h-11 bg-navy hover:bg-navy-hover text-white font-semibold rounded-md"
+                      onClick={handleAddCriterio}
+                    >
+                      Guardar
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Lista de criterios evaluados */}
@@ -534,13 +553,15 @@ export default function MatrizEvaluacionPage({
                           <span className="text-[14px] font-bold text-color-titulos tabular-nums w-8 text-right">
                             {item.puntaje}
                           </span>
-                          <button
-                            onClick={() => handleRemoveCriterio(item.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                            title="Eliminar criterio"
-                          >
-                            <LuTrash2 className="w-5 h-5" />
-                          </button>
+                          {!readOnly && (
+                            <button
+                              onClick={() => handleRemoveCriterio(item.id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                              title="Eliminar criterio"
+                            >
+                              <LuTrash2 className="w-5 h-5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -565,6 +586,7 @@ export default function MatrizEvaluacionPage({
                   type="text"
                   placeholder="Ej: 1500.50"
                   value={montoEconomico}
+                  disabled={readOnly}
                   onChange={(e) => setMontoEconomico(e.target.value)}
                   className="h-11"
                 />
@@ -588,6 +610,7 @@ export default function MatrizEvaluacionPage({
                   type="number"
                   placeholder="Ej: 20"
                   value={van}
+                  disabled={readOnly}
                   onChange={(e) => setVan(e.target.value)}
                   className="h-11"
                 />
@@ -605,7 +628,11 @@ export default function MatrizEvaluacionPage({
                 </label>
                 <p className="text-[11px] text-white/70 italic mb-4">Ejemplo: Primera opción</p>
 
-                <Select value={ordenPrelacion} onValueChange={setOrdenPrelacion}>
+                <Select
+                  value={ordenPrelacion}
+                  onValueChange={readOnly ? undefined : setOrdenPrelacion}
+                  disabled={readOnly}
+                >
                   <SelectTrigger className="w-full sm:w-[300px] h-11 text-[13px] bg-white text-navy font-bold">
                     <SelectValue placeholder="Seleccione opciones..." />
                   </SelectTrigger>
@@ -635,6 +662,7 @@ export default function MatrizEvaluacionPage({
           </Button>
 
           <Button
+            hidden={readOnly}
             className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white disabled:opacity-50"
             onClick={handleGuardarEvaluacion}
             disabled={isSaving}

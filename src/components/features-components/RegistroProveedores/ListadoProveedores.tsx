@@ -47,7 +47,7 @@ interface Provider {
   estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
 
-export function ListadoProveedores() {
+export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean }) {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -95,6 +95,7 @@ export function ListadoProveedores() {
   }, [page, limit, statusFilter, search]);
 
   const handleToggleApproval = async (id: string, currentStatus: string) => {
+    if (readOnly) return;
     try {
       // API only accepts APROBADO or RECHAZADO
       const nextStatus = currentStatus === "APROBADO" ? "RECHAZADO" : "APROBADO";
@@ -109,6 +110,7 @@ export function ListadoProveedores() {
   };
 
   const handleDelete = async (id: string) => {
+    if (readOnly) return;
     setIsDeleting(true);
     try {
       await eliminarProveedor(id);
@@ -147,11 +149,13 @@ export function ListadoProveedores() {
               Gestiona la base de datos centralizada de tus proveedores
             </p>
           </div>
-          <Link href="/registro-proveedores/nuevo">
-            <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
-              + Agregar nuevo proveedor
-            </Button>
-          </Link>
+          {!readOnly && (
+            <Link href="/registro-proveedores/nuevo">
+              <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md">
+                + Agregar nuevo proveedor
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Toolbar */}
@@ -283,7 +287,11 @@ export function ListadoProveedores() {
 
                         {/* Aprobación Switch */}
                         <td className="px-4 py-3 text-center">
-                          {incompleto ? (
+                          {readOnly ? (
+                            <span className="text-xs font-semibold text-slate-400">
+                              Solo lectura
+                            </span>
+                          ) : incompleto ? (
                             <TooltipProvider delayDuration={100}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -338,75 +346,80 @@ export function ListadoProveedores() {
                             </Link>
 
                             {/* Lápiz — animado si proveedor incompleto */}
-                            {incompleto ? (
-                              <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Link href={`/registro-proveedores/editar/${provider.id}`}>
-                                      <button className="relative w-[18px] h-[18px]">
-                                        {/* Lápiz normal — se desvanece */}
-                                        <span className="pencil-icon-normal absolute inset-0 flex items-center justify-center">
-                                          <BsPencilSquare
-                                            className="w-[16px] h-[16px]"
-                                            style={{ color: "var(--proveedor-incompleto-icon)" }}
-                                          />
-                                        </span>
-                                        {/* Icono advertencia — aparece */}
-                                        <span className="pencil-icon-warning absolute inset-0 flex items-center justify-center">
-                                          <IoMdWarning
-                                            className="w-[16px] h-[16px]"
-                                            style={{ color: "var(--proveedor-incompleto-icon)" }}
-                                          />
-                                        </span>
-                                      </button>
-                                    </Link>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="top"
-                                    className="max-w-[200px] text-center text-xs"
-                                  >
-                                    Proveedor incompleto. Haz clic para completar su información.
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            ) : (
-                              <Link href={`/registro-proveedores/editar/${provider.id}`}>
-                                <button className="text-slate-500 hover:text-navy transition-colors">
-                                  <BsPencilSquare className="w-4.5 h-4.5" />
-                                </button>
-                              </Link>
-                            )}
+                            {!readOnly &&
+                              (incompleto ? (
+                                <TooltipProvider delayDuration={100}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                                        <button className="relative w-[18px] h-[18px]">
+                                          {/* Lápiz normal — se desvanece */}
+                                          <span className="pencil-icon-normal absolute inset-0 flex items-center justify-center">
+                                            <BsPencilSquare
+                                              className="w-[16px] h-[16px]"
+                                              style={{ color: "var(--proveedor-incompleto-icon)" }}
+                                            />
+                                          </span>
+                                          {/* Icono advertencia — aparece */}
+                                          <span className="pencil-icon-warning absolute inset-0 flex items-center justify-center">
+                                            <IoMdWarning
+                                              className="w-[16px] h-[16px]"
+                                              style={{ color: "var(--proveedor-incompleto-icon)" }}
+                                            />
+                                          </span>
+                                        </button>
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="top"
+                                      className="max-w-[200px] text-center text-xs"
+                                    >
+                                      Proveedor incompleto. Haz clic para completar su información.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <Link href={`/registro-proveedores/editar/${provider.id}`}>
+                                  <button className="text-slate-500 hover:text-navy transition-colors">
+                                    <BsPencilSquare className="w-4.5 h-4.5" />
+                                  </button>
+                                </Link>
+                              ))}
 
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <button className="text-red-400 hover:text-red-600 transition-colors">
-                                  <FaRegTrashAlt className="w-4 h-4" />
-                                </button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta acción eliminará al proveedor{" "}
-                                    <strong>{provider.nombre}</strong> de forma lógica. Podrás
-                                    seguir viendo su historial si es necesario, pero ya no aparecerá
-                                    en las listas activas.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel disabled={isDeleting}>
-                                    Cancelar
-                                  </AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDelete(provider.id)}
-                                    className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
-                                    disabled={isDeleting}
-                                  >
-                                    {isDeleting ? "Eliminando..." : "Eliminar"}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {!readOnly && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <button className="text-red-400 hover:text-red-600 transition-colors">
+                                    <FaRegTrashAlt className="w-4 h-4" />
+                                  </button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      ¿Estás completamente seguro?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción eliminará al proveedor{" "}
+                                      <strong>{provider.nombre}</strong> de forma lógica. Podrás
+                                      seguir viendo su historial si es necesario, pero ya no
+                                      aparecerá en las listas activas.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel disabled={isDeleting}>
+                                      Cancelar
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(provider.id)}
+                                      className="bg-navy hover:bg-navy-hover text-white transition-all duration-300 font-bold"
+                                      disabled={isDeleting}
+                                    >
+                                      {isDeleting ? "Eliminando..." : "Eliminar"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </div>
                         </td>
                       </tr>

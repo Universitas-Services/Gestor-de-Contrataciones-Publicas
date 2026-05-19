@@ -8,6 +8,7 @@ import { FaCheckCircle } from "react-icons/fa";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useRoleAccess } from "@/hooks/use-role-access";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ export default function Sobre2Page({
   const router = useRouter();
   const unwrappedParams = React.use(params);
   const { id, oferenteId } = unwrappedParams;
+  const { readOnly } = useRoleAccess();
 
   const [loading, setLoading] = useState(true);
   const [oferente, setOferente] = useState<any>(null);
@@ -163,19 +165,31 @@ export default function Sobre2Page({
   }, [id, oferenteId]);
 
   const handleToggle = (id: number, valor: "SI" | "NO") => {
+    if (readOnly) {
+      return;
+    }
     setRespuestas((prev) => ({ ...prev, [id]: valor }));
   };
 
   const toggleObs = (id: number) => {
+    if (readOnly) {
+      return;
+    }
     setObsAbiertas((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const saveObs = (id: number) => {
+    if (readOnly) {
+      return;
+    }
     toast.success("Observación guardada localmente");
     setObsAbiertas((prev) => ({ ...prev, [id]: false }));
   };
 
   const handleGuardarDescalificacion = async () => {
+    if (readOnly) {
+      return;
+    }
     if (!motivoDescalificacion.trim()) {
       toast.error("Debe escribir un motivo de descalificación");
       return;
@@ -231,6 +245,9 @@ export default function Sobre2Page({
   };
 
   const handleNext = () => {
+    if (readOnly) {
+      return;
+    }
     if (!allAnswered) {
       toast.error("Debe responder todas las preguntas antes de continuar");
       return;
@@ -360,31 +377,34 @@ export default function Sobre2Page({
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleToggle(q.id, "SI")}
+                        disabled={readOnly}
                         className={`px-4 h-8 rounded text-[11px] font-bold border transition-colors ${
                           respuestas[q.id] === "SI"
                             ? "bg-navy text-white border-navy"
                             : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                        }`}
+                        } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         SI
                       </button>
                       <button
                         onClick={() => handleToggle(q.id, "NO")}
+                        disabled={readOnly}
                         className={`px-4 h-8 rounded text-[11px] font-bold border transition-colors ${
                           respuestas[q.id] === "NO"
                             ? "bg-navy text-white border-navy"
                             : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                        }`}
+                        } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         NO
                       </button>
                       <button
                         onClick={() => toggleObs(q.id)}
+                        disabled={readOnly}
                         className={`flex items-center gap-1.5 px-3 h-8 rounded text-[11px] font-bold border transition-colors ${
                           hasObs || obsAbiertas[q.id]
                             ? "bg-[var(--obs-bg)] text-[var(--obs-button)] border-[var(--obs-button)]"
                             : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                        }`}
+                        } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         <IoEyeOutline className="w-[14px] h-[14px]" />
                         OBSERVACIÓN
@@ -401,12 +421,14 @@ export default function Sobre2Page({
                           onChange={(e) =>
                             setObservaciones((prev) => ({ ...prev, [q.id]: e.target.value }))
                           }
+                          disabled={readOnly}
                           placeholder="Escriba su observación aquí..."
-                          className="w-full text-[12px] border border-[var(--obs-button)] bg-[var(--obs-bg)] text-color-titulos font-medium rounded-md py-2.5 pl-3 pr-10 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic"
+                          className="w-full text-[12px] border border-[var(--obs-button)] bg-[var(--obs-bg)] text-color-titulos font-medium rounded-md py-2.5 pl-3 pr-10 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic disabled:cursor-not-allowed disabled:opacity-70"
                         />
                         <button
                           onClick={() => saveObs(q.id)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[var(--obs-button)] hover:opacity-75 rounded-md transition-colors"
+                          disabled={readOnly}
+                          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[var(--obs-button)] hover:opacity-75 rounded-md transition-colors ${readOnly ? "hidden" : ""}`}
                           title="Guardar observación"
                         >
                           <IoSaveOutline className="w-[18px] h-[18px]" />
@@ -432,33 +454,41 @@ export default function Sobre2Page({
               <div className="flex gap-3">
                 <button
                   onClick={() => {
+                    if (readOnly) {
+                      return;
+                    }
                     if (!allAnswered) {
                       toast.error("Debe responder todas las preguntas arriba primero.");
                       return;
                     }
                     setResultadoFinal("SI");
                   }}
+                  disabled={readOnly || !allAnswered}
                   className={`w-16 h-10 rounded text-[12px] font-bold border transition-colors ${!allAnswered ? "opacity-50 cursor-not-allowed" : ""} ${
                     resultadoFinal === "SI"
                       ? "bg-navy text-white border-navy"
                       : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                  }`}
+                  } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                 >
                   SI
                 </button>
                 <button
                   onClick={() => {
+                    if (readOnly) {
+                      return;
+                    }
                     if (!allAnswered) {
                       toast.error("Debe responder todas las preguntas arriba primero.");
                       return;
                     }
                     setResultadoFinal("NO");
                   }}
+                  disabled={readOnly || !allAnswered}
                   className={`w-16 h-10 rounded text-[12px] font-bold border transition-colors ${!allAnswered ? "opacity-50 cursor-not-allowed" : ""} ${
                     resultadoFinal === "NO"
                       ? "bg-navy text-white border-navy"
                       : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-                  }`}
+                  } ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
                 >
                   NO
                 </button>
@@ -478,13 +508,14 @@ export default function Sobre2Page({
                     <div className="relative">
                       <textarea
                         value={motivoDescalificacion}
+                        disabled={readOnly}
                         onChange={(e) => setMotivoDescalificacion(e.target.value)}
-                        className="w-full h-24 text-[12px] border border-[var(--motivo-border)] bg-white text-color-titulos font-medium rounded-md py-2.5 pl-3 pr-10 focus:outline-none focus:ring-1 focus:ring-[var(--motivo-border)] resize-none"
+                        className="w-full h-24 text-[12px] border border-[var(--motivo-border)] bg-white text-color-titulos font-medium rounded-md py-2.5 pl-3 pr-10 focus:outline-none focus:ring-1 focus:ring-[var(--motivo-border)] resize-none disabled:cursor-not-allowed disabled:opacity-70"
                       />
                       <button
                         onClick={handleGuardarDescalificacion}
-                        disabled={isSaving}
-                        className="absolute right-2 top-2 p-1.5 text-[var(--motivo-icon)] hover:bg-slate-50 rounded-md transition-colors disabled:opacity-50"
+                        disabled={readOnly || isSaving}
+                        className={`absolute right-2 top-2 p-1.5 text-[var(--motivo-icon)] hover:bg-slate-50 rounded-md transition-colors disabled:opacity-50 ${readOnly ? "hidden" : ""}`}
                         title="Guardar descalificación"
                       >
                         {isSaving ? (
@@ -514,7 +545,7 @@ export default function Sobre2Page({
           </Button>
 
           {/* El botón Siguiente solo aparece si el resultado es SI */}
-          {resultadoFinal === "SI" && (
+          {!readOnly && resultadoFinal === "SI" && (
             <Button
               className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white animate-in fade-in zoom-in duration-300"
               onClick={handleNext}

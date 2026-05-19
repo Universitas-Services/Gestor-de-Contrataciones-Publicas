@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { crearInformeRecomendacion, obtenerInformeRecomendacion } from "@/services/oferenteService";
 import { generarDocumento } from "@/services/generadorDocumentosService";
+import { useRoleAccess } from "@/hooks/use-role-access";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -53,12 +54,14 @@ function PreguntaCard({
   referencia,
   valor,
   onToggle,
+  disabled = false,
   children,
 }: {
   pregunta: string;
   referencia: string;
   valor: "SI" | "NO" | null;
   onToggle: (v: "SI" | "NO") => void;
+  disabled?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -71,21 +74,23 @@ function PreguntaCard({
         <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
           <button
             onClick={() => onToggle("SI")}
+            disabled={disabled}
             className={`px-4 h-8 rounded text-[11px] font-bold border transition-colors ${
               valor === "SI"
                 ? "bg-navy text-white border-navy"
                 : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-            }`}
+            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
           >
             SI
           </button>
           <button
             onClick={() => onToggle("NO")}
+            disabled={disabled}
             className={`px-4 h-8 rounded text-[11px] font-bold border transition-colors ${
               valor === "NO"
                 ? "bg-navy text-white border-navy"
                 : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500"
-            }`}
+            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
           >
             NO
           </button>
@@ -104,12 +109,14 @@ function CampoCondicional({
   value,
   onChange,
   placeholder,
+  disabled = false,
 }: {
   label: string;
   referencia: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="px-4 pb-3 pt-0 bg-[var(--obs-bg)] border-t border-slate-200">
@@ -122,8 +129,9 @@ function CampoCondicional({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         placeholder={placeholder || "Escriba aquí..."}
-        className="w-full text-[12px] border border-[var(--obs-button)] bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 mt-1 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic"
+        className="w-full text-[12px] border border-[var(--obs-button)] bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 mt-1 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic disabled:cursor-not-allowed disabled:opacity-70"
       />
     </div>
   );
@@ -135,6 +143,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
   const router = useRouter();
   const unwrappedParams = React.use(params);
   const { id } = unwrappedParams;
+  const { readOnly } = useRoleAccess();
 
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -204,11 +213,17 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
     form.plazoEjecucionOfertaGanadora.trim() !== "";
 
   const handleSaveLocal = () => {
+    if (readOnly) {
+      return;
+    }
     toast.success("Campos guardados localmente");
   };
 
   // ── Guardar + Generar documento ──
   const handleGuardar = async () => {
+    if (readOnly) {
+      return;
+    }
     if (!todasRespondidas) {
       toast.error("Debe responder todas las preguntas antes de guardar");
       return;
@@ -289,13 +304,18 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             referencia="Artículos 58, 59 LCP; 91, 93, 94 RLCP; 25 NORMAS DE CONTROL INTERNO SUNAI."
             valor={form.actualizacionPresupuesto}
             onToggle={(v) => set("actualizacionPresupuesto", v)}
+            disabled={readOnly}
           >
             {form.actualizacionPresupuesto === "SI" && (
-              <div className="bg-[var(--obs-bg)] border-t border-slate-200 px-4 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2">
+              <fieldset
+                disabled={readOnly}
+                className="bg-[var(--obs-bg)] border-t border-slate-200 px-4 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2"
+              >
                 <div className="flex items-center justify-end">
                   <button
                     onClick={handleSaveLocal}
-                    className="p-1 hover:opacity-75 transition-opacity"
+                    disabled={readOnly}
+                    className={`p-1 hover:opacity-75 transition-opacity ${readOnly ? "hidden" : ""}`}
                     title="Guardar campos"
                   >
                     <IoSaveOutline className="w-[18px] h-[18px] text-[var(--obs-button)]" />
@@ -311,9 +331,10 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
                   <input
                     type="number"
                     value={form.montoNuevoPresupuesto}
+                    disabled={readOnly}
                     onChange={(e) => set("montoNuevoPresupuesto", e.target.value)}
                     placeholder="0001-020-316"
-                    className="w-full text-[12px] border border-[var(--obs-button)] bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic"
+                    className="w-full text-[12px] border border-[var(--obs-button)] bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic disabled:cursor-not-allowed disabled:opacity-70"
                   />
                 </div>
                 <div>
@@ -325,12 +346,13 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
                   </p>
                   <input
                     value={form.justificacionActualizacionPresup}
+                    disabled={readOnly}
                     onChange={(e) => set("justificacionActualizacionPresup", e.target.value)}
                     placeholder="Escriba la justificación..."
-                    className="w-full text-[12px] border border-[var(--obs-button)] bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic"
+                    className="w-full text-[12px] border border-[var(--obs-button)] bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-[var(--obs-button)] italic disabled:cursor-not-allowed disabled:opacity-70"
                   />
                 </div>
-              </div>
+              </fieldset>
             )}
           </PreguntaCard>
 
@@ -340,6 +362,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             referencia="Artículos 64 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI."
             valor={form.indVerificadoGarantia}
             onToggle={(v) => set("indVerificadoGarantia", v)}
+            disabled={readOnly}
           />
 
           {/* P3: Compromiso de Responsabilidad Social */}
@@ -348,6 +371,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             referencia="Artículos 66.15 LCP; 5 NORMAS DE CONTROL INTERNO SUNAI."
             valor={form.indVerificadoCrs}
             onToggle={(v) => set("indVerificadoCrs", v)}
+            disabled={readOnly}
           />
 
           {/* P4: Formalidades / Omisiones */}
@@ -356,13 +380,18 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             referencia="Artículo 22 NORMAS DE CONTROL INTERNO SUNAI."
             valor={form.observacionFormalidades}
             onToggle={(v) => set("observacionFormalidades", v)}
+            disabled={readOnly}
           >
             {form.observacionFormalidades === "SI" && (
-              <div className="bg-[var(--obs-bg)] border-t border-slate-200 px-4 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2">
+              <fieldset
+                disabled={readOnly}
+                className="bg-[var(--obs-bg)] border-t border-slate-200 px-4 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2"
+              >
                 <div className="flex items-center justify-end">
                   <button
                     onClick={handleSaveLocal}
-                    className="p-1 hover:opacity-75 transition-opacity"
+                    disabled={readOnly}
+                    className={`p-1 hover:opacity-75 transition-opacity ${readOnly ? "hidden" : ""}`}
                     title="Guardar campos"
                   >
                     <IoSaveOutline className="w-[18px] h-[18px] text-[var(--obs-button)]" />
@@ -389,7 +418,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
                   onChange={(v) => set("datosActoSubsanacion", v)}
                   placeholder="Datos del acto..."
                 />
-              </div>
+              </fieldset>
             )}
           </PreguntaCard>
 
@@ -407,9 +436,10 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
                 type="number"
                 min={1}
                 value={form.plazoEjecucionOfertaGanadora}
+                disabled={readOnly}
                 onChange={(e) => set("plazoEjecucionOfertaGanadora", e.target.value)}
                 placeholder="Ej: 30"
-                className="w-full sm:w-[220px] text-[12px] border border-slate-200 bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-navy italic"
+                className="w-full sm:w-[220px] text-[12px] border border-slate-200 bg-white text-color-titulos font-medium rounded-md py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-navy italic disabled:cursor-not-allowed disabled:opacity-70"
               />
             </div>
           </div>
@@ -425,6 +455,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             Anterior
           </Button>
           <Button
+            hidden={readOnly}
             className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white disabled:opacity-50"
             onClick={handleGuardar}
             disabled={isSaving || !todasRespondidas}

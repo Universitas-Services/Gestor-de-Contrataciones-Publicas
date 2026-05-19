@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function UnidadContratanteForm() {
+export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -67,6 +67,7 @@ export function UnidadContratanteForm() {
   }, [editId, form]);
 
   const onSubmit = async (values: UnidadContratanteFormValues) => {
+    if (readOnly) return;
     setIsLoading(true);
     try {
       if (editId) {

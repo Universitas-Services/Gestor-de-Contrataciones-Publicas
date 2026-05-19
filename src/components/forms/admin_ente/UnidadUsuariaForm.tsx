@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function UnidadUsuariaForm() {
+export function UnidadUsuariaForm({ readOnly = false }: { readOnly?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -68,6 +68,7 @@ export function UnidadUsuariaForm() {
   }, [editId, form]);
 
   const onSubmit = async (values: UnidadUsuariaFormValues) => {
+    if (readOnly) return;
     setIsLoading(true);
     try {
       if (editId) {

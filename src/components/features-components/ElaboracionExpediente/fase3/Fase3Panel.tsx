@@ -82,9 +82,10 @@ function BadgeEstado({ calificado }: { calificado: boolean | null }) {
 
 interface Fase3PanelProps {
   expedienteId: string;
+  readOnly?: boolean;
 }
 
-export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
+export function Fase3Panel({ expedienteId, readOnly = false }: Fase3PanelProps) {
   const router = useRouter();
   const [participantes, setParticipantes] = useState<ParticipanteEvaluacion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -361,6 +362,7 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                           <button
                             className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy-hover transition-colors font-semibold text-[10px] min-w-[75px]"
                             title="Iniciar evaluación"
+                            disabled={readOnly}
                             onClick={() =>
                               router.push(
                                 `/elaboracion-expediente/${expedienteId}/evaluacion/${p.id}/sobre-1`
@@ -374,6 +376,7 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                           <button
                             className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-navy transition-colors font-semibold text-[10px] min-w-[75px]"
                             title="Editar evaluación"
+                            disabled={readOnly}
                             onClick={() =>
                               router.push(
                                 `/elaboracion-expediente/${expedienteId}/evaluacion/${p.id}/sobre-1`
@@ -604,6 +607,7 @@ export function Fase3Panel({ expedienteId }: Fase3PanelProps) {
                 <button
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-navy text-white hover:bg-navy-hover transition-colors font-semibold text-[11px] w-full"
                   title={informeGenerado ? "Editar informe" : "Iniciar informe"}
+                  disabled={readOnly}
                   onClick={() => router.push(`/elaboracion-expediente/${expedienteId}/informe`)}
                 >
                   <IoMdPlay className="w-[14px] h-[14px]" />

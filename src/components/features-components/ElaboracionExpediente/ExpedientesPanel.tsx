@@ -67,7 +67,7 @@ const ITEMS_PER_PAGE = 5;
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export function ExpedientesPanel() {
+export function ExpedientesPanel({ readOnly = false }: { readOnly?: boolean }) {
   const params = useSearchParams();
   const initialTipo = params.get("tipo") || "todos";
 
@@ -139,6 +139,7 @@ export function ExpedientesPanel() {
 
   // Selection
   const toggleSelect = (id: string) => {
+    if (readOnly) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -148,6 +149,7 @@ export function ExpedientesPanel() {
   };
 
   const toggleSelectAll = () => {
+    if (readOnly) return;
     if (selectedIds.size === paginatedData.length) {
       setSelectedIds(new Set());
     } else {
@@ -157,6 +159,7 @@ export function ExpedientesPanel() {
 
   // ─── Delete handler ─────────────────────────────────────────────
   const handleDelete = async () => {
+    if (readOnly) return;
     if (!deleteId) return;
     setIsDeleting(true);
 
@@ -194,12 +197,14 @@ export function ExpedientesPanel() {
               Gestione y monitoree el progreso de los expedientes de selección contratista
             </p>
           </div>
-          <Link href="/elaboracion-expediente/nuevo">
-            <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
-              <Plus className="w-5 h-5" />
-              Crear nuevo expediente
-            </Button>
-          </Link>
+          {!readOnly && (
+            <Link href="/elaboracion-expediente/nuevo">
+              <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
+                <Plus className="w-5 h-5" />
+                Crear nuevo expediente
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Filters */}
@@ -270,8 +275,13 @@ export function ExpedientesPanel() {
               <tr>
                 <th className="px-4 py-3 w-10">
                   <Checkbox
-                    checked={selectedIds.size === paginatedData.length && paginatedData.length > 0}
-                    onCheckedChange={toggleSelectAll}
+                    checked={
+                      !readOnly &&
+                      selectedIds.size === paginatedData.length &&
+                      paginatedData.length > 0
+                    }
+                    onCheckedChange={readOnly ? undefined : toggleSelectAll}
+                    disabled={readOnly}
                     className="border-slate-300"
                   />
                 </th>
@@ -309,6 +319,7 @@ export function ExpedientesPanel() {
                     onToggle={() => toggleSelect(exp.id)}
                     onDelete={() => setDeleteId(exp.id)}
                     isAnulado={exp.estatusProceso === "ANULADO"}
+                    readOnly={readOnly}
                   />
                 ))
               ) : (
@@ -405,6 +416,7 @@ function ExpedienteRow({
   onToggle,
   onDelete,
   isAnulado,
+  readOnly = false,
 }: {
   expediente: ExpedienteListItem;
   isEven: boolean;
@@ -412,6 +424,7 @@ function ExpedienteRow({
   onToggle: () => void;
   onDelete: () => void;
   isAnulado?: boolean;
+  readOnly?: boolean;
 }) {
   // Map backend tipo to display from nested modalidad object
   const tipoBackend = expediente.modalidad?.tipoContratacion || "BIENES";
@@ -449,8 +462,8 @@ function ExpedienteRow({
       <td className="px-4 py-3">
         <Checkbox
           checked={isAnulado ? false : isSelected}
-          onCheckedChange={isAnulado ? undefined : onToggle}
-          disabled={isAnulado}
+          onCheckedChange={isAnulado || readOnly ? undefined : onToggle}
+          disabled={isAnulado || readOnly}
           className="border-slate-300"
         />
       </td>
@@ -547,12 +560,14 @@ function ExpedienteRow({
                   <Eye className="w-4.5 h-4.5" />
                 </button>
               </Link>
-              <button
-                onClick={onDelete}
-                className="text-red-400 hover:text-red-600 transition-colors cursor-pointer"
-              >
-                <FaRegTrashAlt className="w-4 h-4" />
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={onDelete}
+                  className="text-red-400 hover:text-red-600 transition-colors cursor-pointer"
+                >
+                  <FaRegTrashAlt className="w-4 h-4" />
+                </button>
+              )}
             </>
           )}
         </div>

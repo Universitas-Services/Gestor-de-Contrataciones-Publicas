@@ -182,9 +182,10 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
 interface Props {
   data: ExpedienteResponse;
   initialTab?: Fase1TabValue;
+  readOnly?: boolean;
 }
 
-export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
+export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
@@ -231,6 +232,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
 
   // ─── D&D handler ───────────────────────────────────────────────────
   const handleEventDrop = (eventId: string, diffInDays: number) => {
+    if (readOnly) return;
     if (!cronogramaData || diffInDays === 0) return;
     const tipo = (tipoRaw as TipoContratacionBackend) || "BIENES";
     const result = moverFechaCronograma(
@@ -253,6 +255,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
 
   // ─── Guardar cronograma ───────────────────────────────────────────
   const handleGuardarCronograma = async () => {
+    if (readOnly) return;
     if (!cronogramaData) return;
     setIsSaving(true);
     try {
@@ -501,15 +504,17 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
               </div>
 
               {/* ── Botones de acción: Editar Ficha  ── */}
-              <div className="flex justify-end mt-6 mb-2">
-                <Button
-                  onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
-                  className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
-                >
-                  <Pencil className="w-4 h-4" />
-                  Editar Ficha
-                </Button>
-              </div>
+              {!readOnly && (
+                <div className="flex justify-end mt-6 mb-2">
+                  <Button
+                    onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
+                    className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Editar Ficha
+                  </Button>
+                </div>
+              )}
 
               {/* ── Calendario de Actividades ── */}
               {/* El título y la navegación de meses ya los provee PlanificacionStep internamente. */}
@@ -520,7 +525,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
                     initialMonth={initialMonth}
                     onBack={() => {}}
                     onFinish={() => {}}
-                    onEventDrop={handleEventDrop}
+                    onEventDrop={readOnly ? undefined : handleEventDrop}
                     isLoading={false}
                     hideButtons
                   />
@@ -528,7 +533,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
               </Card>
 
               {/* ── Botón Guardar Cronograma — alineado a la derecha ── */}
-              {cronogramaData && (
+              {cronogramaData && !readOnly && (
                 <div className="flex justify-end mt-6">
                   <Button
                     onClick={handleGuardarCronograma}
@@ -543,17 +548,21 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0" }: Props) {
             </TabsContent>
 
             <TabsContent value="fase-1" className="mt-6">
-              <Fase1Panel expedienteId={data.id} fase1Creada={Boolean(data["fasePreparatoria"])} />
+              <Fase1Panel
+                expedienteId={data.id}
+                fase1Creada={Boolean(data["fasePreparatoria"])}
+                readOnly={readOnly}
+              />
             </TabsContent>
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
             <TabsContent value="fase-2" className="mt-6">
-              <Fase2Panel expedienteId={data.id} />
+              <Fase2Panel expedienteId={data.id} readOnly={readOnly} />
             </TabsContent>
 
             {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
             <TabsContent value="fase-3" className="mt-6">
-              <Fase3Panel expedienteId={data.id} />
+              <Fase3Panel expedienteId={data.id} readOnly={readOnly} />
             </TabsContent>
           </Tabs>
         </div>

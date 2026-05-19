@@ -70,7 +70,7 @@ const TIPO_MAP: Record<ActorTipo, string> = {
   MAXIMA_AUTORIDAD: "Máxima autoridad",
 };
 
-export function ListadoUsuarios() {
+export function ListadoUsuarios({ readOnly = false }: { readOnly?: boolean }) {
   const [usuarios, setUsuarios] = useState<Actor[]>([]);
   const [selectedUser, setSelectedUser] = useState<Actor | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -135,6 +135,8 @@ export function ListadoUsuarios() {
   };
 
   const handleEditRedirect = (usuario: Actor) => {
+    if (readOnly) return;
+
     switch (usuario.tipo) {
       case "MAXIMA_AUTORIDAD":
         router.push(`/admin_ente/configuracion/maxima-autoridad?id=${usuario.id}`);
@@ -190,6 +192,8 @@ export function ListadoUsuarios() {
   };
 
   const handleToggleClick = (usuario: Actor) => {
+    if (readOnly) return;
+
     if (usuario.tipo === "MAXIMA_AUTORIDAD" && !usuario.estatus) {
       const activeExists = usuarios.some((u) => u.tipo === "MAXIMA_AUTORIDAD" && u.estatus);
       if (activeExists) {
@@ -214,42 +218,44 @@ export function ListadoUsuarios() {
             </p>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-navy hover:bg-navy-deep text-white rounded-md px-6 py-5 h-10 flex items-center justify-center gap-2 font-sans font-semibold text-[14.81px] leading-[1.5] tracking-[-0.01em] shadow-md min-w-[150px]">
-                Crear <Plus className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-[200px] bg-navy text-white border-none rounded-md py-2"
-            >
-              <DropdownMenuItem
-                onClick={() => router.push("/admin_ente/configuracion/maxima-autoridad")}
-                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+          {!readOnly && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-navy hover:bg-navy-deep text-white rounded-md px-6 py-5 h-10 flex items-center justify-center gap-2 font-sans font-semibold text-[14.81px] leading-[1.5] tracking-[-0.01em] shadow-md min-w-[150px]">
+                  Crear <Plus className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-[200px] bg-navy text-white border-none rounded-md py-2"
               >
-                Máxima Autoridad
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/admin_ente/configuracion/unidad-usuaria")}
-                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
-              >
-                Unidad Usuaria
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/admin_ente/configuracion/unidad-contratante")}
-                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
-              >
-                Unidad Contratante
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/admin_ente/configuracion/comision-contrataciones")}
-                className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
-              >
-                Comisión de Contrataciones
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin_ente/configuracion/maxima-autoridad")}
+                  className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                >
+                  Máxima Autoridad
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin_ente/configuracion/unidad-usuaria")}
+                  className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                >
+                  Unidad Usuaria
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin_ente/configuracion/unidad-contratante")}
+                  className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                >
+                  Unidad Contratante
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin_ente/configuracion/comision-contrataciones")}
+                  className="focus:bg-navy-deep focus:text-white cursor-pointer font-medium py-2 px-4 rounded-sm text-[15px]"
+                >
+                  Comisión de Contrataciones
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Table Container */}
@@ -313,19 +319,23 @@ export function ListadoUsuarios() {
                           : "-"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => handleToggleClick(usuario)}
-                          className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-color-boton-2 focus:ring-offset-2 ${
-                            usuario.estatus ? "bg-success" : "bg-slate-300"
-                          }`}
-                        >
-                          <span className="sr-only">Cambiar estatus</span>
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              usuario.estatus ? "translate-x-4" : "translate-x-0"
+                        {readOnly ? (
+                          <span className="text-xs font-semibold text-slate-400">Solo lectura</span>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleClick(usuario)}
+                            className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-color-boton-2 focus:ring-offset-2 ${
+                              usuario.estatus ? "bg-success" : "bg-slate-300"
                             }`}
-                          />
-                        </button>
+                          >
+                            <span className="sr-only">Cambiar estatus</span>
+                            <span
+                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                usuario.estatus ? "translate-x-4" : "translate-x-0"
+                              }`}
+                            />
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <DropdownMenu>
@@ -348,12 +358,14 @@ export function ListadoUsuarios() {
                             >
                               <BsEye className="w-[15px] h-[15px]" /> Ver detalles
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleEditRedirect(usuario)}
-                              className="cursor-pointer flex items-center gap-2 hover:bg-slate-50 focus:bg-slate-50 text-[13px] text-slate-700 font-medium py-2 outline-none"
-                            >
-                              <BsPencilSquare className="w-[15px] h-[15px]" /> Editar
-                            </DropdownMenuItem>
+                            {!readOnly && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditRedirect(usuario)}
+                                className="cursor-pointer flex items-center gap-2 hover:bg-slate-50 focus:bg-slate-50 text-[13px] text-slate-700 font-medium py-2 outline-none"
+                              >
+                                <BsPencilSquare className="w-[15px] h-[15px]" /> Editar
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -693,12 +705,14 @@ export function ListadoUsuarios() {
 
               {/* Action Buttons */}
               <div className="p-8 pt-6 flex justify-end gap-3 pb-12 mt-auto border-t border-slate-100 bg-slate-50/50">
-                <Button
-                  onClick={() => handleEditRedirect(selectedUser)}
-                  className="bg-color-boton-2 hover:bg-color-boton-hover text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"
-                >
-                  Editar
-                </Button>
+                {!readOnly && (
+                  <Button
+                    onClick={() => handleEditRedirect(selectedUser)}
+                    className="bg-color-boton-2 hover:bg-color-boton-hover text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"
+                  >
+                    Editar
+                  </Button>
+                )}
                 <Button
                   onClick={() => setIsSheetOpen(false)}
                   className="bg-color-boton-2 hover:bg-color-boton-hover text-white font-bold px-6 py-2 h-11 flex-1 rounded-md transition-all"

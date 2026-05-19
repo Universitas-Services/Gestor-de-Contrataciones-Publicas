@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { Fase1Form } from "@/components/features-components/ElaboracionExpediente/fase-1/Fase1Form";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { obtenerEnte } from "@/services/enteService";
 import { obtenerExpediente } from "@/services/expedienteService";
 import { listarPresupuestoItems, obtenerFasePreparatoria } from "@/services/fase1Service";
@@ -54,6 +55,7 @@ export default async function Fase1Page({ params, searchParams }: Props) {
         hasPersistedItems={presupuestoItemsResponse.meta.total > 0}
         isEditMode={initialFasePreparatoria !== null}
         initialFase1IdFromQuery={queryFase1Id}
+        readOnly={isReadOnlyRole(user.role)}
       />
     </div>
   );

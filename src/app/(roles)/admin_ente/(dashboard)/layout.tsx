@@ -3,7 +3,6 @@ import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Header } from "@/components/shared/Header";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { getCurrentUser } from "@/lib/auth/auth";
-import { ROLES } from "@/types/role.types";
 
 export const metadata: Metadata = {
   title: "Admin Ente | Dashboard",
@@ -21,7 +20,7 @@ export default async function EnteDashboardLayout({ children }: { children: Reac
 
   return (
     <DashboardLayout
-      role={ROLES.ENTE}
+      role={authenticatedUser.role}
       userName={authenticatedUser.name}
       userEmail={authenticatedUser.email}
       notificationCount={3}

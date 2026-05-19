@@ -69,6 +69,7 @@ export interface Fase1FormProps {
   hasPersistedItems: boolean;
   isEditMode: boolean;
   initialFase1IdFromQuery?: string;
+  readOnly?: boolean;
 }
 
 function scrollToTop() {
@@ -216,6 +217,7 @@ export function Fase1Form({
   initialFasePreparatoria,
   hasPersistedItems,
   isEditMode,
+  readOnly = false,
 }: Fase1FormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -289,6 +291,7 @@ export function Fase1Form({
   }
 
   function handleOpenItemSheet() {
+    if (readOnly) return;
     window.setTimeout(() => {
       setIsSheetOpen(true);
     }, 0);
@@ -331,6 +334,7 @@ export function Fase1Form({
   };
 
   const handleAddItem = async (values: ProductoItemFormValues) => {
+    if (readOnly) return;
     setIsSavingItem(true);
 
     try {
@@ -349,6 +353,7 @@ export function Fase1Form({
   };
 
   const handleFinalSubmit = async () => {
+    if (readOnly) return;
     if (showBudgetStep && items.length === 0) {
       setIsConfirmOpen(false);
 

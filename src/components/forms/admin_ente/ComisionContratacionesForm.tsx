@@ -65,7 +65,7 @@ const FIXED_SLOTS = [
   { areaRepresentacion: "SECRETARIO_A", tipoMiembro: "MIEMBRO_SUPLENTE" },
 ] as const;
 
-export function ComisionContratacionesForm() {
+export function ComisionContratacionesForm({ readOnly = false }: { readOnly?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -173,6 +173,7 @@ export function ComisionContratacionesForm() {
   }, [editId, form]);
 
   const onSubmit = async (values: ComisionContratacionesFormValues) => {
+    if (readOnly) return;
     setIsLoading(true);
     try {
       const payload = {

@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function MaximaAutoridadForm() {
+export function MaximaAutoridadForm({ readOnly = false }: { readOnly?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -143,6 +143,11 @@ export function MaximaAutoridadForm() {
   }, [editId, form]);
 
   const handleNextStep = async () => {
+    if (readOnly) {
+      setStep(2);
+      return;
+    }
+
     // Validamos solo campos de paso 1
     const isValid = await form.trigger([
       "nombreCompletoAutoridad",
@@ -165,6 +170,7 @@ export function MaximaAutoridadForm() {
   };
 
   const onSubmit = async (values: MaximaAutoridadFormValues) => {
+    if (readOnly) return;
     setIsLoading(true);
     try {
       const payload = values.esDelegado

@@ -146,9 +146,10 @@ function GenerarDocBtn({ tipo, adquirentesCount, oferentesCount, onGenerar }: Ge
 
 interface Fase2PanelProps {
   expedienteId: string;
+  readOnly?: boolean;
 }
 
-export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
+export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) {
   // ── Estado de Adquirentes ──
   const [adquirentes, setAdquirentes] = useState<Adquirente[]>([]);
   const [adquirenteSheetOpen, setAdquirenteSheetOpen] = useState(false);
@@ -262,6 +263,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
 
   // ── Handlers de Adquirentes ──
   const handleAddAdquirente = async (data: AdquirenteFormValues) => {
+    if (readOnly) return;
     try {
       const payload = {
         expedienteId,
@@ -292,6 +294,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   };
 
   const handleDeleteAdquirente = async () => {
+    if (readOnly) return;
     if (adquirenteToDelete) {
       try {
         await eliminarAdquirente(adquirenteToDelete);
@@ -308,6 +311,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
 
   // ── Handlers de Oferentes ──
   const handleAddOferente = async (data: OferenteFormValues, isNewProvider: boolean) => {
+    if (readOnly) return;
     try {
       const sobresNum = parseInt(data.cantidadSobres, 10) || 0;
       const montoNum = parseFloat(data.montoOferta.replace(/\./g, "").replace(",", ".")) || 0;
@@ -368,6 +372,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   };
 
   const handleDeleteOferente = async () => {
+    if (readOnly) return;
     if (oferenteToDelete) {
       try {
         await eliminarOferente(oferenteToDelete);
@@ -384,6 +389,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
 
   // ── Handlers de Documentos ──
   const handleGenerarDocumento = async (tipo: string) => {
+    if (readOnly) return;
     const endpoint = TIPO_TO_ENDPOINT[tipo];
     if (!endpoint || !expedienteId) return;
 
@@ -400,6 +406,7 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
   };
 
   const handleRegenerarDocumento = async (doc: DocumentoStatus) => {
+    if (readOnly) return;
     if (!doc.documento?.id) return;
     setProcesandoDoc((prev) => ({ ...prev, [doc.tipo]: true }));
     try {
@@ -480,16 +487,18 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                 Registro de Adquirentes
               </CardTitle>
             </div>
-            <Button
-              onClick={() => {
-                setAdquirenteEditando(null);
-                setAdquirenteSheetOpen(true);
-              }}
-              variant="ghost"
-              className="text-navy hover:text-navy-hover hover:bg-slate-100 font-bold text-[13px] p-0"
-            >
-              + Añadir Adquirentes
-            </Button>
+            {!readOnly && (
+              <Button
+                onClick={() => {
+                  setAdquirenteEditando(null);
+                  setAdquirenteSheetOpen(true);
+                }}
+                variant="ghost"
+                className="text-navy hover:text-navy-hover hover:bg-slate-100 font-bold text-[13px] p-0"
+              >
+                + Añadir Adquirentes
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
             <Table className="table-fixed w-full">
@@ -570,15 +579,17 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                           >
                             <BsEye className="w-[18px] h-[18px]" />
                           </button>
-                          <button
-                            className="text-red-400 hover:text-red-600 transition-colors"
-                            onClick={() => {
-                              setAdquirenteToDelete(adq.id);
-                              setDeleteAdquirenteOpen(true);
-                            }}
-                          >
-                            <FaRegTrashAlt className="w-4 h-4" />
-                          </button>
+                          {!readOnly && (
+                            <button
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              onClick={() => {
+                                setAdquirenteToDelete(adq.id);
+                                setDeleteAdquirenteOpen(true);
+                              }}
+                            >
+                              <FaRegTrashAlt className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -751,16 +762,17 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                           {!doc.generado ? (
                             <GenerarDocBtn
                               tipo={doc.tipo}
-                              adquirentesCount={adquirentes.length}
-                              oferentesCount={oferentes.length}
+                              adquirentesCount={readOnly ? 0 : adquirentes.length}
+                              oferentesCount={readOnly ? 0 : oferentes.length}
                               onGenerar={handleGenerarDocumento}
                             />
                           ) : desactualizado ? (
                             // Regenerar — activo solo cuando estaDesactualizado
                             <button
-                              className="text-red-400 hover:text-red-600 transition-colors"
+                              className="text-red-400 hover:text-red-600 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
                               onClick={() => handleRegenerarDocumento(doc)}
                               title="Regenerar documento"
+                              disabled={readOnly}
                             >
                               <BsArrowClockwise className="w-[20px] h-[20px]" />
                             </button>
@@ -793,16 +805,18 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
               Registro de Oferentes
             </CardTitle>
           </div>
-          <Button
-            onClick={() => {
-              setOferenteEditando(null);
-              setOferenteSheetOpen(true);
-            }}
-            variant="ghost"
-            className="text-navy hover:text-navy-hover hover:bg-slate-100 font-bold text-[13px] p-0"
-          >
-            + Añadir Oferentes
-          </Button>
+          {!readOnly && (
+            <Button
+              onClick={() => {
+                setOferenteEditando(null);
+                setOferenteSheetOpen(true);
+              }}
+              variant="ghost"
+              className="text-navy hover:text-navy-hover hover:bg-slate-100 font-bold text-[13px] p-0"
+            >
+              + Añadir Oferentes
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0 overflow-hidden">
           <Table className="table-fixed w-full">
@@ -896,15 +910,17 @@ export function Fase2Panel({ expedienteId }: Fase2PanelProps) {
                         >
                           <BsEye className="w-[18px] h-[18px]" />
                         </button>
-                        <button
-                          className="text-red-400 hover:text-red-600 transition-colors"
-                          onClick={() => {
-                            setOferenteToDelete(ofe.id);
-                            setDeleteOferenteOpen(true);
-                          }}
-                        >
-                          <FaRegTrashAlt className="w-4 h-4" />
-                        </button>
+                        {!readOnly && (
+                          <button
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                            onClick={() => {
+                              setOferenteToDelete(ofe.id);
+                              setDeleteOferenteOpen(true);
+                            }}
+                          >
+                            <FaRegTrashAlt className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

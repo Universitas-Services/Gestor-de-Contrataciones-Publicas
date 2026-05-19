@@ -56,6 +56,7 @@ function formatBs(value: number) {
 }
 
 function buildColumns({
+  readOnly,
   onEdit,
   onDelete,
 }: Pick<
@@ -101,6 +102,14 @@ function buildColumns({
       id: "acciones",
       header: () => <span className="block text-center">Acciones</span>,
       cell: ({ row }) => {
+        if (readOnly) {
+          return (
+            <span className="block text-center text-xs font-semibold text-slate-400">
+              Solo lectura
+            </span>
+          );
+        }
+
         const isEditDisabled = !onEdit;
         const isDeleteDisabled = !onDelete;
 

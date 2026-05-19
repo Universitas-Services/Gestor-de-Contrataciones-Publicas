@@ -180,6 +180,7 @@ export interface CrearExpedienteWizardProps {
   datosIniciales?: ExpedienteResponse;
   /** Activa el modo edición (omite el paso 4 de cronograma) */
   modoEdicion?: boolean;
+  readOnly?: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
@@ -188,6 +189,7 @@ export function CrearExpedienteWizard({
   expedienteId: expedienteIdProp,
   datosIniciales,
   modoEdicion = false,
+  readOnly = false,
 }: CrearExpedienteWizardProps = {}) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -242,6 +244,7 @@ export function CrearExpedienteWizard({
 
   // ─── Paso 1 "Siguiente" — valida, navega y dispara SDK en paralelo ─
   const handleStep1Next = async (formData: DatosBasicosFormValues) => {
+    if (readOnly) return;
     const base = buildAnalisisBase(formData);
     setAnalisisData(base);
     goToStep(2);
@@ -282,6 +285,7 @@ export function CrearExpedienteWizard({
 
   // ─── Paso 2 "Confirmar" — POST borrador o PATCH si ya existe ────
   const handleStep2Confirm = async () => {
+    if (readOnly) return;
     setIsLoading(true);
     try {
       const formData = datosBasicosForm.getValues();
@@ -325,6 +329,7 @@ export function CrearExpedienteWizard({
 
   // ─── Paso 3 "Siguiente" — PATCH completo + navegación ───────────
   const handleStep3Next = async (actores: ConfiguracionActoresFormValues) => {
+    if (readOnly) return;
     if (!expedienteId) {
       toast.error("No se encontró el ID del expediente. Vuelva al paso anterior.");
       return;
@@ -393,6 +398,7 @@ export function CrearExpedienteWizard({
 
   // ─── Paso 4 "Guardar Cronograma" — PUT cronograma → detalle ──────
   const handleFinish = async () => {
+    if (readOnly) return;
     if (!expedienteId || !cronogramaData) {
       toast.error("Error interno: ID del expediente o cronograma perdidos.");
       return;
@@ -413,6 +419,7 @@ export function CrearExpedienteWizard({
 
   // ─── Drag & Drop Event ──────────────────────────────────────────
   const handleEventDrop = (eventId: string, diffInDays: number) => {
+    if (readOnly) return;
     if (!cronogramaData || diffInDays === 0) return;
 
     const tipo = datosBasicosForm.getValues("tipoContratacion");
