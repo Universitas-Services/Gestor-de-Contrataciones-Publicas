@@ -226,6 +226,7 @@ export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: 
       />
 
       <ActaAdjudicacionSheet
+        expedienteId={expedienteId}
         open={actaSheetOpen}
         onOpenChange={setActaSheetOpen}
         readOnly={readOnly}

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaCheckCircle } from "react-icons/fa";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -31,8 +32,16 @@ import {
 import { Button } from "@/components/ui/button";
 
 import { actaAdjudicacionSchema, type ActaAdjudicacionFormValues } from "@/lib/schemas/fase4Schema";
+import {
+  ACTA_ADJUDICACION_EMPTY_VALUES,
+  toActaFormValues,
+  toAdjudicacionPayload,
+} from "@/lib/utils/adjudicacionMapper";
+import { crearAdjudicacion, obtenerAdjudicacion } from "@/services/expedienteService";
+import { generarDocumento } from "@/services/generadorDocumentosService";
 
 interface ActaAdjudicacionSheetProps {
+  expedienteId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   readOnly?: boolean;
@@ -76,42 +85,92 @@ function MontoInput({ value, onChange, onBlur, disabled, placeholder, name }: Mo
 }
 
 export function ActaAdjudicacionSheet({
+  expedienteId,
   open,
   onOpenChange,
   readOnly = false,
 }: ActaAdjudicacionSheetProps) {
   const [successOpen, setSuccessOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const form = useForm<ActaAdjudicacionFormValues>({
     resolver: zodResolver(actaAdjudicacionSchema),
-    defaultValues: {
-      montoContratacionConIva: "",
-      partidaPresupuestaria: "",
-      montoResponsabilidadSocial: "",
-      referenciaRecomendacion: "",
-    },
+    defaultValues: ACTA_ADJUDICACION_EMPTY_VALUES,
     mode: "onChange",
   });
 
   useEffect(() => {
-    if (open) {
-      form.reset({
-        montoContratacionConIva: "",
-        partidaPresupuestaria: "",
-        montoResponsabilidadSocial: "",
-        referenciaRecomendacion: "",
-      });
-    }
-  }, [open, form]);
+    if (!open || !expedienteId) return;
 
-  const handleFormSubmit = () => {
-    onOpenChange(false);
-    setSuccessOpen(true);
+    let cancelled = false;
+
+    const loadAdjudicacion = async () => {
+      setIsLoading(true);
+      try {
+        const data = await obtenerAdjudicacion(expedienteId);
+        if (cancelled) return;
+        form.reset(data ? toActaFormValues(data) : ACTA_ADJUDICACION_EMPTY_VALUES);
+      } catch (error) {
+        if (!cancelled) {
+          toast.error(error instanceof Error ? error.message : "Error al cargar la adjudicación");
+          form.reset(ACTA_ADJUDICACION_EMPTY_VALUES);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadAdjudicacion();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, expedienteId, form]);
+
+  const handleFormSubmit = async (values: ActaAdjudicacionFormValues) => {
+    if (readOnly) return;
+
+    setIsSaving(true);
+    try {
+      await crearAdjudicacion(expedienteId, toAdjudicacionPayload(values));
+      toast.success("Adjudicación guardada correctamente.");
+      onOpenChange(false);
+      setSuccessOpen(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al guardar la adjudicación";
+      const requiereFase3 = /fase de evaluaci[oó]n|fase 3/i.test(message);
+
+      if (requiereFase3) {
+        toast.error(message, {
+          description:
+            "Antes de la adjudicación, complete la Fase 3: evaluaciones de oferentes e Informe de Recomendación (guardar y generar el informe).",
+          duration: 10000,
+        });
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleGenerarActa = () => {
-    toast.info("La generación del acta de adjudicación estará disponible próximamente.");
-    setSuccessOpen(false);
+  const handleGenerarActa = async () => {
+    if (readOnly) return;
+
+    setIsGenerating(true);
+    try {
+      await generarDocumento("acta-adjudicacion", expedienteId);
+      toast.success("Acta de adjudicación generada correctamente.");
+      setSuccessOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al generar el acta de adjudicación"
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -132,7 +191,13 @@ export function ActaAdjudicacionSheet({
               </SheetDescription>
             </SheetHeader>
 
-            <div className="flex-1 px-8 py-4">
+            <div className="flex-1 px-8 py-4 relative">
+              {isLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
+                  <Loader2 className="h-8 w-8 animate-spin text-navy" />
+                </div>
+              )}
+
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(handleFormSubmit)}
@@ -156,7 +221,7 @@ export function ActaAdjudicacionSheet({
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            disabled={readOnly}
+                            disabled={readOnly || isLoading}
                             placeholder="Bs. 0,00"
                           />
                         </FormControl>
@@ -181,7 +246,7 @@ export function ActaAdjudicacionSheet({
                           <div className={MONTO_WRAPPER_CLASS}>
                             <input
                               {...field}
-                              disabled={readOnly}
+                              disabled={readOnly || isLoading}
                               placeholder="0001-020-316"
                               className={MONTO_INPUT_CLASS}
                             />
@@ -209,7 +274,7 @@ export function ActaAdjudicacionSheet({
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            disabled={readOnly}
+                            disabled={readOnly || isLoading}
                             placeholder="Bs. 0,00"
                           />
                         </FormControl>
@@ -235,7 +300,7 @@ export function ActaAdjudicacionSheet({
                           <div className={MONTO_WRAPPER_CLASS}>
                             <textarea
                               {...field}
-                              disabled={readOnly}
+                              disabled={readOnly || isLoading}
                               rows={4}
                               placeholder="Escriba la referencia de la recomendación..."
                               className={`${MONTO_INPUT_CLASS} min-h-[72px] resize-y`}
@@ -255,6 +320,7 @@ export function ActaAdjudicacionSheet({
                 variant="outline"
                 type="button"
                 onClick={() => onOpenChange(false)}
+                disabled={isSaving}
                 className="font-semibold flex-1 h-11 rounded-md"
               >
                 Cancelar
@@ -262,10 +328,17 @@ export function ActaAdjudicacionSheet({
               <Button
                 type="submit"
                 form="acta-adjudicacion-form"
-                disabled={readOnly}
+                disabled={readOnly || isLoading || isSaving}
                 className="bg-navy hover:bg-navy-hover text-white font-semibold flex-1 h-11 rounded-md"
               >
-                Guardar
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Guardando...
+                  </span>
+                ) : (
+                  "Guardar"
+                )}
               </Button>
             </div>
           </div>
@@ -289,10 +362,17 @@ export function ActaAdjudicacionSheet({
             <Button
               type="button"
               onClick={handleGenerarActa}
-              disabled={readOnly}
+              disabled={readOnly || isGenerating}
               className="w-full sm:w-[200px] bg-navy hover:bg-navy-hover text-white font-bold h-11 rounded-md"
             >
-              Generar acta
+              {isGenerating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generando...
+                </span>
+              ) : (
+                "Generar acta"
+              )}
             </Button>
             <p className="w-full text-sm italic text-muted-foreground text-center">
               El sistema está listo para generar el acta de adjudicación.

@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerToken } from "@/lib/auth/session";
+import { parseAdjudicacionApiResponse } from "@/lib/utils/adjudicacionMapper";
 import { revalidatePath } from "next/cache";
 import type {
   DatosBasicosFormValues,
@@ -407,4 +408,87 @@ export const eliminarExpediente = async (id: string): Promise<void> => {
   }
 
   revalidatePath("/elaboracion-expediente");
+};
+
+// ─── Adjudicación (Fase 4) ───────────────────────────────────────────
+
+export interface AdjudicacionPayload {
+  montoAdjudicadoBs: number;
+  partidaPresupuestariaGasto: string;
+  montoCrsBs: number;
+  referenciaRecomendacion: string;
+}
+
+export interface AdjudicacionResponse extends AdjudicacionPayload {
+  id?: string;
+  expedienteId?: string;
+}
+
+/**
+ * GET /expedientes/{expedienteId}/adjudicacion
+ */
+export const obtenerAdjudicacion = async (
+  expedienteId: string
+): Promise<AdjudicacionResponse | null> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${expedienteId}/adjudicacion`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al obtener la adjudicación"
+    );
+  }
+
+  const json = await response.json();
+  return parseAdjudicacionApiResponse(json);
+};
+
+/**
+ * POST /expedientes/{expedienteId}/adjudicacion
+ */
+export const crearAdjudicacion = async (
+  expedienteId: string,
+  payload: AdjudicacionPayload
+): Promise<AdjudicacionResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${expedienteId}/adjudicacion`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al guardar la adjudicación"
+    );
+  }
+
+  const json = await response.json();
+  const parsed = parseAdjudicacionApiResponse(json);
+  if (!parsed) {
+    return payload;
+  }
+
+  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  return parsed;
 };
