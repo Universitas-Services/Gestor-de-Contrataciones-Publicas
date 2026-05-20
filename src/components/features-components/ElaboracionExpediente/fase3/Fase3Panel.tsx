@@ -39,44 +39,15 @@ import {
   descargarListaCotejoEvaluacion,
   type DocumentoStatus,
 } from "@/services/generadorDocumentosService";
-
-// ─── Tipos locales ────────────────────────────────────────────────────
-
-interface ParticipanteEvaluacion {
-  id: string;
-  ofertaId: string;
-  nombreEmpresa: string;
-  representanteLegal: string;
-  rif: string;
-  oferenteCalificado: boolean | null;
-  prelacion: string | null;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────
+import {
+  parseEvaluacionesResponse,
+  mapToParticipanteEvaluacion,
+  sortByPrelacion,
+  type ParticipanteEvaluacion,
+} from "@/lib/utils/evaluacionesFase3Utils";
+import { EvaluacionBadgeEstado } from "../shared/EvaluacionBadgeEstado";
 
 const ITEMS_PER_PAGE = 4;
-
-function BadgeEstado({ calificado }: { calificado: boolean | null }) {
-  if (calificado === true) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--evaluado-bg)] text-[var(--success-text)]">
-        ● Evaluado
-      </span>
-    );
-  }
-  if (calificado === false) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--rechazado-bg)] text-[var(--rechazado)]">
-        ● Descalificado
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
-      ● Por evaluar
-    </span>
-  );
-}
 
 // ─── Componente Principal ─────────────────────────────────────────────
 
@@ -126,60 +97,8 @@ export function Fase3Panel({ expedienteId, readOnly = false }: Fase3PanelProps) 
         obtenerMetricasEvaluacionFase3(expedienteId).catch(() => null),
       ]);
 
-      // Extraer array de evaluaciones sin importar el formato de respuesta
-      let evaluacionesList: any[] = [];
-      if (Array.isArray(rawResponse)) {
-        evaluacionesList = rawResponse;
-      } else if (rawResponse && typeof rawResponse === "object") {
-        const rawObj = rawResponse as any;
-        if (Array.isArray(rawObj.data)) {
-          evaluacionesList = rawObj.data;
-        } else if (Array.isArray(rawObj.evaluaciones)) {
-          evaluacionesList = rawObj.evaluaciones;
-        }
-      }
-
-      // Orden de prelación para ordenar de menor a mayor
-      // Orden de prelación para ordenar de menor a mayor
-      const PRELACION_ORDER = [
-        "primera opción",
-        "segunda opción",
-        "tercera opción",
-        "cuarta opción",
-        "quinta opción",
-        "sexta opción",
-        "séptima opción",
-        "octava opción",
-        "novena opción",
-        "décima opción",
-        "undécima opción",
-        "duodécima opción",
-        "decimotercera opción",
-        "decimocuarta opción",
-        "decimoquinta opción",
-      ];
-
-      const mapped: ParticipanteEvaluacion[] = evaluacionesList
-        .map((item: any) => ({
-          id: item.id,
-          ofertaId: item.ofertaId,
-          nombreEmpresa: item.nombreProveedorEvaluado ?? "—",
-          representanteLegal: item.nombreRepLegalEvaluado ?? "—",
-          rif: item.rifProveedorEvaluado ?? "—",
-          oferenteCalificado: item.oferenteCalificado,
-          prelacion: item.posicionPrelacion,
-        }))
-        .sort((a, b) => {
-          const idxA = a.prelacion ? PRELACION_ORDER.indexOf(a.prelacion.toLowerCase()) : -1;
-          const idxB = b.prelacion ? PRELACION_ORDER.indexOf(b.prelacion.toLowerCase()) : -1;
-
-          // Sin prelación van al final
-          if (idxA === -1 && idxB === -1) return 0;
-          if (idxA === -1) return 1;
-          if (idxB === -1) return -1;
-
-          return idxA - idxB;
-        });
+      const evaluacionesList = parseEvaluacionesResponse(rawResponse);
+      const mapped = sortByPrelacion(evaluacionesList.map(mapToParticipanteEvaluacion));
       setParticipantes(mapped);
 
       if (statsData) {
@@ -348,7 +267,7 @@ export function Fase3Panel({ expedienteId, readOnly = false }: Fase3PanelProps) 
 
                       {/* Estado actual */}
                       <TableCell className="text-center px-2 py-3">
-                        <BadgeEstado calificado={p.oferenteCalificado} />
+                        <EvaluacionBadgeEstado calificado={p.oferenteCalificado} />
                       </TableCell>
 
                       {/* Prelación */}

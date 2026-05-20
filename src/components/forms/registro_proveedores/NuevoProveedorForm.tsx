@@ -217,14 +217,13 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
         const normalizeFormaJuridica = (val: string) => {
           if (!val) return "";
           const v = val.toUpperCase();
-          if (v === "COOPERATIVA" || v === "COOPERATIVAS") return "Cooperativas";
-          if (v === "PYME" || v === "PYMES") return "Pymes";
+          if (v === "COOPERATIVA" || v === "COOPERATIVA") return "COOPERATIVA";
+          if (v === "PYME" || v === "PYME") return "PYME";
           if (v === "COMPANIA_ANONIMA" || v === "C.A." || v === "C.A" || v.includes("ANONIMA"))
-            return "Compañía Anónima";
-          if (v === "ASOCIACION_CIVIL") return "Asociación Civil";
-          if (v === "SRL" || v.includes("LIMITADA"))
-            return "Sociedades de Responsabilidad Limitada (S.R.L.)";
-          if (v === "FUNDACION" || v === "FUNDACIONES") return "Fundaciones";
+            return "COMPANIA_ANONIMA";
+          if (v === "ASOCIACION_CIVIL") return "ASOCIACION_CIVIL";
+          if (v === "SRL" || v.includes("LIMITADA")) return "SRL";
+          if (v === "FUNDACION" || v === "FUNDACION") return "FUNDACION";
           return val;
         };
 
@@ -663,26 +662,22 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                             </FormControl>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                            <DropdownMenuItem onClick={() => field.onChange("Compañía Anónima")}>
+                            <DropdownMenuItem onClick={() => field.onChange("COMPANIA_ANONIMA")}>
                               Compañía Anónima (C.A)
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("Asociación Civil")}>
+                            <DropdownMenuItem onClick={() => field.onChange("ASOCIACION_CIVIL")}>
                               Asociación Civil
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                field.onChange("Sociedades de Responsabilidad Limitada (S.R.L.)")
-                              }
-                            >
+                            <DropdownMenuItem onClick={() => field.onChange("SRL")}>
                               Sociedades de Responsabilidad Limitada (S.R.L.)
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("Fundaciones")}>
+                            <DropdownMenuItem onClick={() => field.onChange("FUNDACION")}>
                               Fundaciones
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("Cooperativas")}>
+                            <DropdownMenuItem onClick={() => field.onChange("COOPERATIVA")}>
                               Cooperativas
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("Pymes")}>
+                            <DropdownMenuItem onClick={() => field.onChange("PYME")}>
                               Pymes
                             </DropdownMenuItem>
                           </DropdownMenuContent>

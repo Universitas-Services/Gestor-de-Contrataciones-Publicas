@@ -15,9 +15,11 @@ declare global {
 export function getUniversitas(): UniversitasAPI {
   if (globalThis.universitasGlobal) return globalThis.universitasGlobal;
 
-  const url = process.env.UNIVERSITAS_SDK_URL;
+  const url = process.env.UNIVERSITAS_SDK_URL ?? process.env.NEXT_PUBLIC_UNIVERSITAS_SDK_URL;
   if (!url) {
-    throw new Error("[Universitas SDK] UNIVERSITAS_SDK_URL no está definida. Agrégala en tu .env");
+    throw new Error(
+      "[Universitas SDK] Define UNIVERSITAS_SDK_URL o NEXT_PUBLIC_UNIVERSITAS_SDK_URL en tu .env"
+    );
   }
 
   const instance = new UniversitasAPI(url);
