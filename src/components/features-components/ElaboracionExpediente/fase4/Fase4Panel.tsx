@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { BsEye, BsArrowClockwise } from "react-icons/bs";
@@ -151,6 +152,7 @@ function DocumentosProcesoCard({ readOnly }: { readOnly?: boolean }) {
 }
 
 export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: Fase4PanelProps) {
+  const router = useRouter();
   const [participantes, setParticipantes] = useState<ParticipanteEvaluacion[]>([]);
   const [loading, setLoading] = useState(false);
   const [actaSheetOpen, setActaSheetOpen] = useState(false);
@@ -181,8 +183,8 @@ export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expedienteId]);
 
-  const handleMockCrear = () => {
-    toast.info("Esta acción estará disponible próximamente.");
+  const handleCrearContrato = () => {
+    router.push(`/elaboracion-expediente/${expedienteId}/contrato`);
   };
 
   return (
@@ -205,7 +207,7 @@ export function Fase4Panel({ expedienteId, readOnly = false, montoEstimadoBs }: 
             <Button
               type="button"
               disabled={readOnly}
-              onClick={handleMockCrear}
+              onClick={handleCrearContrato}
               className="bg-navy hover:bg-navy-hover text-white font-semibold text-sm gap-2"
             >
               <Plus className="w-4 h-4" />

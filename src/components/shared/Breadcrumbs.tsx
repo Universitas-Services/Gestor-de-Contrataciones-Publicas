@@ -13,6 +13,33 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Fragment } from "react";
 
+/** Subrutas bajo /elaboracion-expediente/[id] que muestran una tercera miga */
+const EXPEDIENTE_ID_SUB_ROUTES = new Set(["contrato", "informe", "fase-1", "editar"]);
+
+const EXPEDIENTE_SUB_ROUTE_LABELS: Record<string, string> = {
+  contrato: "Elaboración del contrato",
+  informe: "Informe de recomendación",
+  "fase-1": "Fase preparatoria",
+  editar: "Editar expediente",
+};
+
+const ROUTE_SEGMENT_LABELS: Record<string, string> = {
+  "elaboracion-expediente": "Elaboración de expediente",
+};
+
+function trimExpedienteSegments(segments: string[]): string[] {
+  if (segments[0] !== "elaboracion-expediente" || segments.length <= 2) {
+    return segments;
+  }
+
+  const subRoute = segments[2];
+  if (EXPEDIENTE_ID_SUB_ROUTES.has(subRoute)) {
+    return segments.slice(0, 3);
+  }
+
+  return segments.slice(0, 2);
+}
+
 /**
  * Componente de Breadcrumbs que genera automáticamente la navegación desde la URL
  * Utiliza los componentes de shadcn/ui para mejor accesibilidad y estilo
@@ -25,10 +52,7 @@ export function Breadcrumbs() {
   // Dividir el pathname en segmentos
   let segments = pathname.split("/").filter((segment) => segment !== "");
 
-  // Evitar migajas largas y rotas en flujos profundos de elaboración de expediente
-  if (segments[0] === "elaboracion-expediente" && segments.length > 2) {
-    segments = segments.slice(0, 2);
-  }
+  segments = trimExpedienteSegments(segments);
 
   // Si estamos en la raíz, no mostrar breadcrumbs
   if (segments.length === 0) {
@@ -37,16 +61,21 @@ export function Breadcrumbs() {
 
   // Función para formatear nombres de ruta
   const formatSegment = (segment: string, index: number, segments: string[]): string => {
-    // Si el segmento es un UUID o un ID largo de proveedor, determinar según el contexto
+    if (ROUTE_SEGMENT_LABELS[segment]) {
+      return ROUTE_SEGMENT_LABELS[segment];
+    }
+
+    if (EXPEDIENTE_SUB_ROUTE_LABELS[segment]) {
+      return EXPEDIENTE_SUB_ROUTE_LABELS[segment];
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
-      // Si el segmento anterior es 'usuarios', mostrar 'Editar usuario'
       if (index > 0 && segments[index - 1] === "usuarios") {
         return "Editar usuario";
       }
-      // Verificamos el segmento anterior para determinar el contexto
       if (index > 0 && segments[index - 1] === "elaboracion-expediente") {
-        return "Detalle de Expediente";
+        return "Detalle de expediente";
       }
       return "Perfil del proveedor";
     }
@@ -59,9 +88,20 @@ export function Breadcrumbs() {
 
   // Construir breadcrumbs
   const breadcrumbs = segments.map((segment, index) => {
-    const href = "/" + segments.slice(0, index + 1).join("/");
+    let href = "/" + segments.slice(0, index + 1).join("/");
     const label = formatSegment(segment, index, segments);
     const isLast = index === segments.length - 1;
+
+    const expedienteId = segments[1];
+    const subRoute = segments[2];
+    if (
+      segments[0] === "elaboracion-expediente" &&
+      subRoute === "contrato" &&
+      index === 1 &&
+      expedienteId
+    ) {
+      href = `/elaboracion-expediente/${expedienteId}?tab=fase-4`;
+    }
 
     return {
       href,

@@ -45,7 +45,11 @@ export default async function ExpedienteDetallePage({ params, searchParams }: Pr
           </div>
         }
       >
-        <ExpedienteDetalle data={expediente} readOnly={isReadOnlyRole(user.role)} />
+        <ExpedienteDetalle
+          data={expediente}
+          initialTab={initialTab}
+          readOnly={isReadOnlyRole(user.role)}
+        />
       </Suspense>
     </div>
   );

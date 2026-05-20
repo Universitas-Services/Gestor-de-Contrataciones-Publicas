@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -178,6 +178,26 @@ function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
   return events;
 }
 
+// ─── Tabs desde query ?tab= ────────────────────────────────────────────
+
+const VALID_FASE_TABS: Fase1TabValue[] = ["fase-0", "fase-1", "fase-2", "fase-3", "fase-4"];
+
+function resolveTabFromParam(
+  tabParam: string | null,
+  fallback: Fase1TabValue = "fase-0"
+): Fase1TabValue {
+  if (!tabParam) return fallback;
+  if (VALID_FASE_TABS.includes(tabParam as Fase1TabValue)) {
+    return tabParam as Fase1TabValue;
+  }
+  const match = tabParam.match(/fase-?(\d+)/i);
+  if (match) {
+    const value = `fase-${match[1]}` as Fase1TabValue;
+    if (VALID_FASE_TABS.includes(value)) return value;
+  }
+  return fallback;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────
 
 interface Props {
@@ -189,8 +209,21 @@ interface Props {
 export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<Fase1TabValue>(() =>
+    resolveTabFromParam(searchParams.get("tab"), initialTab)
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(resolveTabFromParam(searchParams.get("tab"), initialTab));
+  }, [searchParams, initialTab]);
+
+  const handleTabChange = (value: string) => {
+    const tab = value as Fase1TabValue;
+    setActiveTab(tab);
+    router.replace(`/elaboracion-expediente/${data.id}?tab=${tab}`, { scroll: false });
+  };
 
   // Estado del cronograma (editable)
   const rawCronograma = data.cronograma as CronogramaData | undefined;
@@ -325,18 +358,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
 
         {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
         <div className="w-full">
-          {/* Map query ?tab=fase3 → "fase-3", default "fase-0" */}
-          <Tabs
-            defaultValue={(() => {
-              const tabParam = searchParams.get("tab");
-              if (tabParam) {
-                const match = tabParam.match(/fase(\d+)/);
-                if (match) return `fase-${match[1]}`;
-              }
-              return "fase-0";
-            })()}
-            className="w-full"
-          >
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
             <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
               {FASES.map((fase, i) => (
