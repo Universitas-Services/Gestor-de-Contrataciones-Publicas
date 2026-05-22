@@ -7,9 +7,26 @@ export function parseDecimalInputToNumber(value: string): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
-export function formatNumberToDecimalInput(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "";
+export function formatNumberToDecimalInput(value: number | string | null | undefined): string {
+  if (value == null) return "";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    const n = parseDecimalInputToNumber(trimmed);
+    if (!Number.isFinite(n)) return trimmed;
+    return String(n).replace(".", ",");
+  }
+  if (!Number.isFinite(value)) return "";
   return String(value).replace(".", ",");
+}
+
+function parseApiMonto(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = parseDecimalInputToNumber(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
 
 export function parseAdjudicacionApiResponse(json: unknown): AdjudicacionResponse | null {
@@ -21,15 +38,15 @@ export function parseAdjudicacionApiResponse(json: unknown): AdjudicacionRespons
       ? (record.data as Record<string, unknown>)
       : record;
 
-  const montoAdjudicadoBs = raw.montoAdjudicadoBs;
+  const montoAdjudicadoBs = parseApiMonto(raw.montoAdjudicadoBs);
   const partidaPresupuestariaGasto = raw.partidaPresupuestariaGasto;
-  const montoCrsBs = raw.montoCrsBs;
+  const montoCrsBs = parseApiMonto(raw.montoCrsBs);
   const referenciaRecomendacion = raw.referenciaRecomendacion;
 
   if (
-    typeof montoAdjudicadoBs !== "number" ||
+    montoAdjudicadoBs == null ||
     typeof partidaPresupuestariaGasto !== "string" ||
-    typeof montoCrsBs !== "number" ||
+    montoCrsBs == null ||
     typeof referenciaRecomendacion !== "string"
   ) {
     return null;

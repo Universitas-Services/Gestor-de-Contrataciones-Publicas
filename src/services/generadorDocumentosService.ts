@@ -333,3 +333,121 @@ export const descargarListaCotejoEvaluacion = async (
 
   return { data, fileName };
 };
+
+/**
+ * POST /generador-documentos/generar/notificaciones-fase4/{expedienteId}
+ * Genera las notificaciones masivas de Fase 4 (adjudicado y no adjudicados).
+ */
+export interface NotificacionFase4Item {
+  id: string;
+  url: string;
+  fileName: string;
+  tipoDocumento: string;
+  generatedAt: string;
+}
+
+export const generarNotificacionesFase4 = async (
+  expedienteId: string
+): Promise<NotificacionFase4Item[]> => {
+  const token = await getServerToken();
+
+  const response = await fetch(
+    `${API_URL}/generador-documentos/generar/notificaciones-fase4/${expedienteId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as Record<string, string>)?.message ??
+        "Error al generar las notificaciones masivas"
+    );
+  }
+
+  const json = (await response.json()) as { data: NotificacionFase4Item[] };
+  return json.data;
+};
+
+/**
+ * GET /generador-documentos/preview/notificacion/evaluacion/{evaluacionId}
+ * Preview de la notificación (adjudicado o no adjudicado) por evaluación.
+ */
+export const previewNotificacionEvaluacion = async (
+  evaluacionId: string
+): Promise<PreviewResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(
+    `${API_URL}/generador-documentos/preview/notificacion/evaluacion/${evaluacionId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Notificación no encontrada. Genere primero el acta de adjudicación.");
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as Record<string, string>)?.message ?? "Error al previsualizar la notificación"
+    );
+  }
+
+  return response.json() as Promise<PreviewResponse>;
+};
+
+/**
+ * GET /generador-documentos/download/notificacion/evaluacion/{evaluacionId}
+ * Descarga la notificación (adjudicado o no adjudicado) por evaluación.
+ */
+export const descargarNotificacionEvaluacion = async (
+  evaluacionId: string
+): Promise<{ data: Uint8Array; fileName: string }> => {
+  const token = await getServerToken();
+
+  const response = await fetch(
+    `${API_URL}/generador-documentos/download/notificacion/evaluacion/${evaluacionId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Notificación no encontrada. Genere primero el acta de adjudicación.");
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as Record<string, string>)?.message ?? "Error al descargar la notificación"
+    );
+  }
+
+  const contentDisposition = response.headers.get("Content-Disposition");
+  let fileName = "notificacion.docx";
+
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+    if (match?.[1]) {
+      fileName = match[1];
+    }
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const data = new Uint8Array(arrayBuffer);
+
+  return { data, fileName };
+};

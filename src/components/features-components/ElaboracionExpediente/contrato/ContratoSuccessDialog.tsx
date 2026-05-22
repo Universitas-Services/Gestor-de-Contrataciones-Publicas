@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaCheckCircle } from "react-icons/fa";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -12,12 +14,15 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { generarDocumento } from "@/services/generadorDocumentosService";
 
 interface ContratoSuccessDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   expedienteId: string;
   readOnly?: boolean;
+  isEditing?: boolean;
+  onContratoGenerado?: () => void;
 }
 
 export function ContratoSuccessDialog({
@@ -25,14 +30,31 @@ export function ContratoSuccessDialog({
   onOpenChange,
   expedienteId,
   readOnly = false,
+  isEditing = false,
+  onContratoGenerado,
 }: ContratoSuccessDialogProps) {
   const router = useRouter();
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleGenerarContrato = () => {
+  const handleGenerarContrato = async () => {
     if (readOnly) return;
-    onOpenChange(false);
-    toast.success("El contrato se generó correctamente.");
-    router.replace(`/elaboracion-expediente/${expedienteId}?tab=fase-4`);
+
+    setIsGenerating(true);
+    try {
+      await generarDocumento("contrato", expedienteId);
+      toast.success(
+        isEditing ? "Contrato regenerado correctamente." : "Contrato generado correctamente."
+      );
+      onOpenChange(false);
+      onContratoGenerado?.();
+      router.replace(`/elaboracion-expediente/${expedienteId}?tab=fase-4`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al generar el contrato formalizado"
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -46,20 +68,33 @@ export function ContratoSuccessDialog({
             ¡Excelente!
           </DialogTitle>
           <DialogDescription className="text-sm text-foreground w-full text-center">
-            Ha completado la carga de datos del contrato.
+            {isEditing
+              ? "Los datos del contrato han sido actualizados."
+              : "Ha completado la carga de datos del contrato."}
           </DialogDescription>
         </DialogHeader>
         <div className="w-full mt-4 flex flex-col items-center gap-3">
           <Button
             type="button"
             onClick={handleGenerarContrato}
-            disabled={readOnly}
+            disabled={readOnly || isGenerating}
             className="w-full sm:w-[200px] bg-navy hover:bg-navy-hover text-white font-bold h-11 rounded-md"
           >
-            Generar contrato
+            {isGenerating ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generando...
+              </span>
+            ) : isEditing ? (
+              "Regenerar contrato"
+            ) : (
+              "Generar contrato"
+            )}
           </Button>
           <p className="w-full text-sm italic text-muted-foreground text-center">
-            El sistema está listo para generar el contrato.
+            {isEditing
+              ? "Puedes regenerar el contrato con los datos actualizados."
+              : "El sistema está listo para generar el contrato."}
           </p>
         </div>
       </DialogContent>

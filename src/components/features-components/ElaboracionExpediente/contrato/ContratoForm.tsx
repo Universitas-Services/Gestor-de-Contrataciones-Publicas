@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Form } from "@/components/ui/form";
@@ -16,6 +17,12 @@ import {
   type ContratoFormValues,
 } from "@/lib/schemas/contratoSchema";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import { toContratoFormValues, toContratoFormalizadoPayload } from "@/lib/utils/contratoMapper";
+import {
+  guardarContratoFormalizado,
+  editarContratoFormalizado,
+  obtenerContratoFormalizado,
+} from "@/services/expedienteService";
 
 import { ContratoSectionA } from "./ContratoSectionA";
 import { ContratoSectionB } from "./ContratoSectionB";
@@ -38,6 +45,9 @@ export function ContratoForm({
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<ContratoFormValues>({
     resolver: zodResolver(contratoFormSchema),
@@ -46,6 +56,43 @@ export function ContratoForm({
   });
 
   const currentStepMeta = CONTRATO_WIZARD_STEPS[step - 1];
+
+  useEffect(() => {
+    if (!expedienteId) return;
+
+    let cancelled = false;
+
+    const loadContrato = async () => {
+      setIsLoading(true);
+      try {
+        const data = await obtenerContratoFormalizado(expedienteId);
+        if (cancelled) return;
+        if (data) {
+          form.reset(toContratoFormValues(data));
+          setIsEditing(true);
+        } else {
+          form.reset(contratoFormDefaultValues);
+          setIsEditing(false);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast.error(
+            error instanceof Error ? error.message : "Error al cargar el contrato formalizado"
+          );
+          form.reset(contratoFormDefaultValues);
+          setIsEditing(false);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadContrato();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expedienteId, form]);
 
   const validateCurrentStep = async () => {
     const fields = getContratoFieldsForStep(step);
@@ -74,8 +121,26 @@ export function ContratoForm({
       toast.error("Revise los campos del formulario antes de guardar.");
       return;
     }
-    toast.success("Datos del contrato guardados localmente (mock).");
-    setSuccessOpen(true);
+
+    setIsSaving(true);
+    try {
+      const values = form.getValues();
+      const payload = toContratoFormalizadoPayload(values);
+      if (isEditing) {
+        await editarContratoFormalizado(expedienteId, payload);
+        toast.success("Contrato formalizado actualizado correctamente.");
+      } else {
+        await guardarContratoFormalizado(expedienteId, payload);
+        toast.success("Contrato formalizado guardado correctamente.");
+      }
+      setSuccessOpen(true);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al guardar el contrato formalizado"
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderSection = () => {
@@ -121,7 +186,13 @@ export function ContratoForm({
           <CardDescription className="text-slate-500 italic mt-1 font-inter text-base"></CardDescription>
         </CardHeader>
 
-        <CardContent className="px-10 pt-8 pb-10">
+        <CardContent className="px-10 pt-8 pb-10 relative">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 rounded-lg">
+              <Loader2 className="h-8 w-8 animate-spin text-navy" />
+            </div>
+          )}
+
           <ContratoStepProgressBar currentStep={step} />
 
           <div className="mb-8 pb-4 border-b border-slate-100">
@@ -156,7 +227,7 @@ export function ContratoForm({
                 {step < CONTRATO_WIZARD_STEPS.length ? (
                   <Button
                     type="button"
-                    disabled={readOnly}
+                    disabled={readOnly || isLoading}
                     className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white"
                     onClick={handleSiguiente}
                   >
@@ -165,11 +236,18 @@ export function ContratoForm({
                 ) : (
                   <Button
                     type="button"
-                    disabled={readOnly}
+                    disabled={readOnly || isLoading || isSaving}
                     className="h-11 px-8 rounded-md font-semibold bg-navy hover:bg-navy-hover text-white"
                     onClick={handleGuardar}
                   >
-                    Guardar
+                    {isSaving ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Guardando...
+                      </span>
+                    ) : (
+                      "Guardar"
+                    )}
                   </Button>
                 )}
               </div>
@@ -183,6 +261,7 @@ export function ContratoForm({
         onOpenChange={setSuccessOpen}
         expedienteId={expedienteId}
         readOnly={readOnly}
+        isEditing={isEditing}
       />
     </>
   );

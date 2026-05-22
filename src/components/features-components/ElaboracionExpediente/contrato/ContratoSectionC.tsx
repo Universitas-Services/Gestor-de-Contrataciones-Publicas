@@ -21,7 +21,7 @@ export function ContratoSectionC({ control, readOnly }: ContratoSectionCProps) {
         control={control}
         name="montoFielCumplimientoBsAuAu"
         readOnly={readOnly}
-        label="Indique el monto en Bs. y en  letras (incluyendo IVA) del porcentaje (%) de la Garantía de Fiel Cumplimiento."
+        label="Indique el monto en bolívares incluyendo el IVA del porcentaje (%) de la Garantía de Fiel Cumplimiento."
         legal="Artículos 123 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI."
         placeholder="0,00"
       />
@@ -47,7 +47,7 @@ export function ContratoSectionC({ control, readOnly }: ContratoSectionCProps) {
         control={control}
         name="montoGarantiaLaboralBsAuAu"
         readOnly={readOnly}
-        label="Indique el monto en Bs. y en  letras del porcentaje (%) de la garantía laboral."
+        label="Indique el monto en bolívares del porcentaje (%) de la garantía laboral."
         legal="Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI."
         placeholder="0,00"
       />
@@ -73,7 +73,7 @@ export function ContratoSectionC({ control, readOnly }: ContratoSectionCProps) {
         control={control}
         name="montoResponsabilidadCivilBsAuAu"
         readOnly={readOnly}
-        label="Indique el monto en bolívares (Bs) y en letras el porcentaje (%) de la póliza de responsabilidad civil."
+        label="Indique el monto en bolívares del porcentaje (%) de la póliza de responsabilidad civil."
         legal="Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI."
         placeholder="0,00"
       />
