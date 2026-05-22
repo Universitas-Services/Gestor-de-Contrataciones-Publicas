@@ -2,6 +2,7 @@
 
 import { getServerToken } from "@/lib/auth/session";
 import { parseAdjudicacionApiResponse } from "@/lib/utils/adjudicacionMapper";
+import { parseContratoFormalizadoApiResponse } from "@/lib/utils/contratoMapper";
 import { revalidatePath } from "next/cache";
 import type {
   DatosBasicosFormValues,
@@ -490,5 +491,184 @@ export const crearAdjudicacion = async (
   }
 
   revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  return parsed;
+};
+
+/**
+ * PATCH /expedientes/{expedienteId}/adjudicacion
+ * Edita los datos de una adjudicación existente.
+ */
+export const editarAdjudicacion = async (
+  expedienteId: string,
+  payload: AdjudicacionPayload
+): Promise<AdjudicacionResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${expedienteId}/adjudicacion`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al actualizar la adjudicación"
+    );
+  }
+
+  const json = await response.json();
+  const parsed = parseAdjudicacionApiResponse(json);
+  if (!parsed) return payload;
+
+  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  return parsed;
+};
+
+// ─── Contrato formalizado (Fase 4) ───────────────────────────────────
+
+export interface ContratoFormalizadoPayload {
+  fechaInicioVigencia: string;
+  fechaFinVigencia: string;
+  montoContratoBs: number;
+  plazoEjecucionDias: number;
+  plazoGarantiaCalidadFuncionamiento: string;
+  nombreSupervisor: string;
+  cedulaSupervisor: string;
+  cargoSupervisor: string;
+  criterioAceptacionContrato: string;
+  plazoConsignacionFacturas: number;
+  montoFielCumplimientoBs: number;
+  requiereGarantiaLaboral: boolean;
+  porcentajeGarantiaLaboral: number;
+  montoGarantiaLaboralBs: number;
+  polizaResponsabilidadCivil: boolean;
+  porcentajeResponsabilidadCivil: number;
+  montoResponsabilidadCivilBs: number;
+  anticipoContrato: boolean;
+  formaCumplimientoCrs: string;
+  unidadRespCumplimientoCrs: string;
+  porcentajeMultaDiaria: number;
+  baseCalculoMultaDiaria: number;
+  plazoRegularizarIncumplimiento: string;
+  porcentajeProcedimientoRescision: number;
+  formulaAjustePrecios: string;
+  evaluacionDesempeno: string;
+  garantiaPostEjecucion: string;
+  lugarTribunal: string;
+}
+
+export interface ContratoFormalizadoResponse extends ContratoFormalizadoPayload {
+  id?: string;
+  expedienteId?: string;
+}
+
+/**
+ * GET /expedientes/{expedienteId}/contrato-formalizado
+ */
+export const obtenerContratoFormalizado = async (
+  expedienteId: string
+): Promise<ContratoFormalizadoResponse | null> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${expedienteId}/contrato-formalizado`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al obtener el contrato formalizado"
+    );
+  }
+
+  const json = await response.json();
+  return parseContratoFormalizadoApiResponse(json);
+};
+
+/**
+ * POST /expedientes/{expedienteId}/contrato-formalizado
+ */
+export const guardarContratoFormalizado = async (
+  expedienteId: string,
+  payload: ContratoFormalizadoPayload
+): Promise<ContratoFormalizadoResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${expedienteId}/contrato-formalizado`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al guardar el contrato formalizado"
+    );
+  }
+
+  const json = await response.json();
+  const parsed = parseContratoFormalizadoApiResponse(json);
+  if (!parsed) {
+    return { ...payload, expedienteId };
+  }
+
+  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidatePath(`/elaboracion-expediente/${expedienteId}/contrato`);
+  return parsed;
+};
+
+/**
+ * PATCH /expedientes/{expedienteId}/contrato-formalizado
+ * Edita los datos de un contrato formalizado existente.
+ */
+export const editarContratoFormalizado = async (
+  expedienteId: string,
+  payload: ContratoFormalizadoPayload
+): Promise<ContratoFormalizadoResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${expedienteId}/contrato-formalizado`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al actualizar el contrato formalizado"
+    );
+  }
+
+  const json = await response.json();
+  const parsed = parseContratoFormalizadoApiResponse(json);
+  if (!parsed) return { ...payload, expedienteId };
+
+  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidatePath(`/elaboracion-expediente/${expedienteId}/contrato`);
   return parsed;
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaCheckCircle } from "react-icons/fa";
@@ -37,14 +38,23 @@ import {
   toActaFormValues,
   toAdjudicacionPayload,
 } from "@/lib/utils/adjudicacionMapper";
-import { crearAdjudicacion, obtenerAdjudicacion } from "@/services/expedienteService";
-import { generarDocumento } from "@/services/generadorDocumentosService";
+import {
+  crearAdjudicacion,
+  editarAdjudicacion,
+  obtenerAdjudicacion,
+} from "@/services/expedienteService";
+import {
+  generarDocumento,
+  generarNotificacionesFase4,
+} from "@/services/generadorDocumentosService";
 
 interface ActaAdjudicacionSheetProps {
   expedienteId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   readOnly?: boolean;
+  onAdjudicacionSaved?: () => void;
+  onActaGenerada?: () => void;
 }
 
 function sanitizeMontoInput(value: string): string {
@@ -89,11 +99,15 @@ export function ActaAdjudicacionSheet({
   open,
   onOpenChange,
   readOnly = false,
+  onAdjudicacionSaved,
+  onActaGenerada,
 }: ActaAdjudicacionSheetProps) {
+  const router = useRouter();
   const [successOpen, setSuccessOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<ActaAdjudicacionFormValues>({
     resolver: zodResolver(actaAdjudicacionSchema),
@@ -111,11 +125,18 @@ export function ActaAdjudicacionSheet({
       try {
         const data = await obtenerAdjudicacion(expedienteId);
         if (cancelled) return;
-        form.reset(data ? toActaFormValues(data) : ACTA_ADJUDICACION_EMPTY_VALUES);
+        if (data) {
+          form.reset(toActaFormValues(data));
+          setIsEditing(true);
+        } else {
+          form.reset(ACTA_ADJUDICACION_EMPTY_VALUES);
+          setIsEditing(false);
+        }
       } catch (error) {
         if (!cancelled) {
           toast.error(error instanceof Error ? error.message : "Error al cargar la adjudicación");
           form.reset(ACTA_ADJUDICACION_EMPTY_VALUES);
+          setIsEditing(false);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -134,8 +155,15 @@ export function ActaAdjudicacionSheet({
 
     setIsSaving(true);
     try {
-      await crearAdjudicacion(expedienteId, toAdjudicacionPayload(values));
-      toast.success("Adjudicación guardada correctamente.");
+      const payload = toAdjudicacionPayload(values);
+      if (isEditing) {
+        await editarAdjudicacion(expedienteId, payload);
+        toast.success("Adjudicación actualizada correctamente.");
+      } else {
+        await crearAdjudicacion(expedienteId, payload);
+        toast.success("Adjudicación guardada correctamente.");
+      }
+      onAdjudicacionSaved?.();
       onOpenChange(false);
       setSuccessOpen(true);
     } catch (error) {
@@ -162,8 +190,20 @@ export function ActaAdjudicacionSheet({
     setIsGenerating(true);
     try {
       await generarDocumento("acta-adjudicacion", expedienteId);
-      toast.success("Acta de adjudicación generada correctamente.");
+      // Generar notificaciones masivas (adjudicado + no adjudicados) en paralelo
+      try {
+        await generarNotificacionesFase4(expedienteId);
+      } catch {
+        toast.warning("Acta generada, pero hubo un problema al generar las notificaciones.");
+      }
+      toast.success(
+        isEditing
+          ? "Acta de adjudicación regenerada correctamente."
+          : "Acta de adjudicación generada correctamente."
+      );
       setSuccessOpen(false);
+      onActaGenerada?.();
+      router.replace(`/elaboracion-expediente/${expedienteId}?tab=fase-4`);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Error al generar el acta de adjudicación"
@@ -355,7 +395,9 @@ export function ActaAdjudicacionSheet({
               ¡Excelente!
             </DialogTitle>
             <DialogDescription className="text-sm text-foreground w-full text-center">
-              Ha completado la carga de datos de la adjudicación.
+              {isEditing
+                ? "Los datos de la adjudicación han sido actualizados."
+                : "Ha completado la carga de datos de la adjudicación."}
             </DialogDescription>
           </DialogHeader>
           <div className="w-full mt-4 flex flex-col items-center gap-3">
@@ -370,12 +412,16 @@ export function ActaAdjudicacionSheet({
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Generando...
                 </span>
+              ) : isEditing ? (
+                "Regenerar acta"
               ) : (
                 "Generar acta"
               )}
             </Button>
             <p className="w-full text-sm italic text-muted-foreground text-center">
-              El sistema está listo para generar el acta de adjudicación.
+              {isEditing
+                ? "Puedes regenerar el acta con los datos actualizados."
+                : "El sistema está listo para generar el acta de adjudicación."}
             </p>
           </div>
         </DialogContent>
