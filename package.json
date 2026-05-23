@@ -2,6 +2,7 @@
   "name": "gestor-contrataciones",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.2.2",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -78,8 +79,5 @@
       "vitest related --run"
     ],
     "*.{json,css,md}": "prettier --write"
-  },
-  "overrides": {
-    "minimatch": ">=10.2.1"
   }
 }
