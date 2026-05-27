@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifySession } from "@/lib/auth/session";
+import { resolveProtectedRouteRedirect } from "@/lib/auth/onboardingGuard";
+import { getSessionFromRequest } from "@/lib/auth/session";
 import { SESSION_CONSTANTS } from "@/types/auth.types";
 import { isPublicRoute, isRouteAllowedForRole } from "@/lib/constants/routes";
 
@@ -24,14 +25,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Verificar y validar el token
-  const session = await verifySession(sessionCookie.value);
+  // Verificar sesión (token + payload con flags de onboarding)
+  const session = await getSessionFromRequest(request);
 
   if (!session) {
     // Token inválido o expirado, redirigir a login
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete(SESSION_CONSTANTS.COOKIE_NAME);
+    response.cookies.delete(`${SESSION_CONSTANTS.COOKIE_NAME}_payload`);
     return response;
+  }
+
+  const onboardingRedirect = resolveProtectedRouteRedirect(session, pathname);
+  if (onboardingRedirect) {
+    return NextResponse.redirect(new URL(onboardingRedirect, request.url));
   }
 
   // Verificar si la ruta está permitida para el rol del usuario

@@ -10,6 +10,7 @@ export interface SessionPayload {
   email: string;
   enteId: string | null;
   cambioPasswordDefault?: boolean;
+  passwordPerdido?: boolean;
   datosConfirmados?: boolean;
   iat?: number;
   exp?: number;
@@ -53,6 +54,7 @@ export interface LoginResponse {
     email: string;
     rol: string;
     cambioPasswordDefault: boolean;
+    passwordPerdido?: boolean;
     ente: LoginResponseEnte | null;
   };
 }

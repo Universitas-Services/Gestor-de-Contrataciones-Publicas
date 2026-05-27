@@ -13,7 +13,7 @@ import {
 } from "@/lib/schemas/completarEnteSchema";
 import { UniversitasAPI, Estado, Municipio, Ciudad, Parroquia } from "@universitas/sdk-global";
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
-import { generarManual } from "@/services/manualService";
+import { markDatosConfirmadosAction } from "@/lib/auth/auth";
 
 // Lazy getter: el SDK solo se instancia cuando se invoca por primera vez (en runtime),
 // no durante la importación del módulo (build-time). Evita el crash en Vercel.
@@ -344,12 +344,10 @@ export function CompletarEnteForm({
       };
 
       await actualizarEnte(enteId, payload);
+      await markDatosConfirmadosAction();
 
-      toast.loading("Generando manual del ente...", { id: toastId });
-      await generarManual();
-
-      toast.success("Datos guardados y manual generado correctamente", { id: toastId });
-      router.push("/admin_ente/dashboard");
+      toast.success("Datos guardados correctamente", { id: toastId });
+      router.replace("/admin_ente/dashboard");
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error al guardar los datos del ente";

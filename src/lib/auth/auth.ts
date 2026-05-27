@@ -4,7 +4,12 @@ import type { SessionPayload } from "@/types/auth.types";
 import type { LoginCredentials } from "@/types/user.types";
 import type { UserRole } from "@/types/role.types";
 import { ROLES } from "@/types/role.types";
-import { setSessionCookie, deleteSessionCookie, getSessionCookie } from "./session";
+import {
+  setSessionCookie,
+  deleteSessionCookie,
+  getSessionCookie,
+  updateSessionPayload,
+} from "./session";
 import { getDashboardRoute } from "@/lib/constants/routes";
 import * as authService from "@/services/authService";
 
@@ -21,6 +26,7 @@ export interface AuthResult {
     avatar?: string;
     enteId: string | null;
     cambioPasswordDefault: boolean;
+    passwordPerdido: boolean;
     datosConfirmados: boolean;
   };
   error?: string;
@@ -48,6 +54,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResult> 
       name: `${user.nombre} ${user.apellido}`,
       enteId: user.ente?.id ?? null,
       cambioPasswordDefault: user.cambioPasswordDefault,
+      passwordPerdido: user.passwordPerdido ?? false,
       datosConfirmados: user.ente?.datosConfirmados ?? false,
     };
 
@@ -63,6 +70,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResult> 
         role: normalizedRole,
         enteId: user.ente?.id ?? null,
         cambioPasswordDefault: user.cambioPasswordDefault,
+        passwordPerdido: user.passwordPerdido ?? false,
         datosConfirmados: user.ente?.datosConfirmados ?? false,
       },
     };
@@ -80,6 +88,25 @@ export async function login(credentials: LoginCredentials): Promise<AuthResult> 
  */
 export async function logout(): Promise<void> {
   await deleteSessionCookie();
+}
+
+/**
+ * Marca en sesión que el usuario ya cambió su contraseña temporal.
+ */
+export async function markPasswordChangedAction(): Promise<void> {
+  await updateSessionPayload({
+    cambioPasswordDefault: true,
+    passwordPerdido: false,
+  });
+}
+
+/**
+ * Marca en sesión que el ente ya confirmó sus datos.
+ */
+export async function markDatosConfirmadosAction(): Promise<void> {
+  await updateSessionPayload({
+    datosConfirmados: true,
+  });
 }
 
 /**
@@ -124,10 +151,19 @@ export async function loginAction(credentials: LoginCredentials): Promise<LoginA
   const result = await login(credentials);
 
   if (result.success && result.user) {
-    const { role, cambioPasswordDefault, datosConfirmados } = result.user;
+    const { role, cambioPasswordDefault, passwordPerdido, datosConfirmados } = result.user;
 
     // Lógica de redirección especial para Admin_Ente (flujo de primer login)
     if (role === ROLES.ENTE) {
+      // Flujo de recuperación de clave temporal:
+      // tras cambiar contraseña debe ir directo al dashboard.
+      if (passwordPerdido) {
+        return {
+          success: true,
+          redirectUrl: "/admin_ente/cambiar-contrasena?next=/admin_ente/dashboard",
+        };
+      }
+
       if (!cambioPasswordDefault) {
         return {
           success: true,

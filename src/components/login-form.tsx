@@ -52,7 +52,7 @@ export default function LoginForm() {
       });
 
       if (result.success) {
-        router.push(result.redirectUrl || "/");
+        router.replace(result.redirectUrl || "/");
         router.refresh();
       } else {
         setError(result.error || "Error al iniciar sesión");

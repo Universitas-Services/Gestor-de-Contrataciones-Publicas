@@ -477,63 +477,6 @@ export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean })
             </Button>
           </div>
         </div>
-
-        {/* Footer KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-2.5">
-              <div className="flex justify-between items-start mb-0">
-                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Total Proveedores
-                </h3>
-                <div className="transition-colors">
-                  <BsFillPeopleFill className="w-4 h-4 text-navy" />
-                </div>
-              </div>
-              <div className="text-xl font-extrabold text-navy leading-tight">
-                {stats?.resumen?.totalRegistrados || totalCount}
-              </div>
-              <p className="text-[9px] font-bold text-success-text">
-                {stats?.crecimientoMensual?.registradosEsteMes >= 0 ? "+" : ""}
-                {stats?.crecimientoMensual?.registradosEsteMes || 0} este mes
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-2.5">
-              <div className="flex justify-between items-start mb-0">
-                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Documentación vencida
-                </h3>
-                <div className="transition-colors">
-                  <BsFillCheckSquareFill className="w-4 h-4 text-navy" />
-                </div>
-              </div>
-              <div className="text-xl font-extrabold text-danger leading-tight">
-                {stats?.resumen?.totalRechazados || 0}
-              </div>
-              <p className="text-[9px] font-bold text-danger">Requiere atención</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-2.5">
-              <div className="flex justify-between items-start mb-0">
-                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Proceso de aprobación
-                </h3>
-                <div className="transition-colors">
-                  <IoAlertCircleOutline className="w-5 h-5 text-navy" />
-                </div>
-              </div>
-              <div className="text-xl font-extrabold text-navy leading-tight">
-                {stats?.resumen?.totalPendientes || 0}
-              </div>
-              <p className="text-[9px] font-bold text-amber-dark">Pendiente revisión</p>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

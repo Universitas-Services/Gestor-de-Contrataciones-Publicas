@@ -598,10 +598,6 @@ export function MaximaAutoridadForm({ readOnly = false }: { readOnly?: boolean }
                             Indique Ley(es) que le confieren las atribuciones al Funcionario
                             autorizado para firmar.
                           </FormLabel>
-                          <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
-                            Ejemplo: Resolución N° 000/00 de fecha 00-00-0000 publicado en Gaceta N°
-                            0000 de fecha 00-00-0000
-                          </p>
                           <FormControl>
                             <Input
                               {...field}

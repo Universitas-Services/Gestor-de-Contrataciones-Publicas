@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { getAdminEnteOnboardingRedirect, needsCompletarEnte } from "@/lib/auth/onboardingGuard";
+import { getDashboardRoute } from "@/lib/constants/routes";
 import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { redirect } from "next/navigation";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
@@ -16,6 +18,15 @@ export default async function CompletarEntePage() {
 
   if (!user || !user.enteId) {
     redirect("/login");
+  }
+
+  const onboardingRedirect = getAdminEnteOnboardingRedirect(user);
+  if (onboardingRedirect && onboardingRedirect !== "/admin_ente/completar-ente") {
+    redirect(onboardingRedirect);
+  }
+
+  if (!needsCompletarEnte(user)) {
+    redirect(getDashboardRoute(user.role));
   }
 
   const readOnly = isReadOnlyRole(user.role);

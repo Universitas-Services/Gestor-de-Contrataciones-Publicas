@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { List, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { List, ArrowUpDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
 import { IoAlertCircleOutline } from "react-icons/io5";
 import { IoIosBriefcase, IoIosHammer, IoIosPrint, IoMdWarning } from "react-icons/io";
@@ -122,10 +122,9 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
             Resume general y control de solicitudes pendientes
           </p>
         </div>
-        <Link href="/registro-proveedores/listado">
+        <Link href="/registro-proveedores/nuevo">
           <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
-            <List className="w-5 h-5" />
-            Ver lista de proveedores
+            + Agregar nuevo proveedor
           </Button>
         </Link>
       </div>
@@ -220,9 +219,17 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
 
       {/* Table Section */}
       <div className="pt-6">
-        <h2 className="text-2xl font-bold text-heading-dark tracking-tight mb-6">
-          Lista de proveedores por aprobar
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-heading-dark tracking-tight">
+            Lista de proveedores por aprobar
+          </h2>
+          <Link href="/registro-proveedores/listado">
+            <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
+              <List className="w-5 h-5" />
+              Ver lista de proveedores
+            </Button>
+          </Link>
+        </div>
 
         <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm relative min-h-[200px]">
           {loading && (

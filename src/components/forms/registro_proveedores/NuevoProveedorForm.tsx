@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   AlertCircle,
   MinusIcon,
-  ImageIcon,
   Trash2,
   Loader2,
 } from "lucide-react";
@@ -57,6 +56,7 @@ import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { CalendarIcon, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -87,6 +87,15 @@ const TIPOS_DOCUMENTO = [
   { value: "doc_licencia_municipal", label: "Licencia de funcionamiento Municipal" },
 ] as const;
 
+const FORMA_JURIDICA_LABELS: Record<string, string> = {
+  COMPANIA_ANONIMA: "Compañía Anónima (C.A)",
+  ASOCIACION_CIVIL: "Asociación Civil",
+  SRL: "Sociedades de Responsabilidad Limitada (S.R.L.)",
+  FUNDACION: "Fundaciones",
+  COOPERATIVA: "Cooperativas",
+  PYME: "Pymes",
+};
+
 interface NuevoProveedorFormProps {
   providerId?: string;
   readOnly?: boolean;
@@ -113,8 +122,11 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
   const [phoneBody, setPhoneBody] = useState("");
 
   // Estado Local para Documentos
-  const [tipoDocActual, setTipoDocActual] = useState("");
-  const [obsActual, setObsActual] = useState("");
+  const [docStepIndex, setDocStepIndex] = useState(0);
+  const tipoDocActual = TIPOS_DOCUMENTO[docStepIndex].value;
+  // Observaciones persistidas por tipo de documento
+  const [obsMap, setObsMap] = useState<Record<string, string>>({});
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   const [documentos, setDocumentos] = useState<
     {
@@ -128,6 +140,23 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       observaciones: string;
     }[]
   >([]);
+
+  // Bytes totales ocupados por los archivos adjuntos (debe ir después de documentos)
+  //
+  // LÍMITE MOSTRADO AL USUARIO (UI): 10 MB — es lo que ve en el banner y el contador.
+  // LÍMITE REAL DE VALIDACIÓN: 9.5 MB — margen silencioso de ~512 KB para el JSON del
+  // formulario + overhead multipart que también consume cuota en el endpoint.
+  const DISPLAY_LIMIT_BYTES = 10 * 1024 * 1024; // 10.00 MB  (solo para UI)
+  const MAX_UPLOAD_BYTES = 9.5 * 1024 * 1024; //  9.50 MB  (validación real)
+
+  const totalUploadedBytes = documentos.reduce((acc, d) => acc + d.file.size, 0);
+  // Métricas de UI calculadas sobre el límite visible (10 MB) para que los números cuadren
+  const usedMB = (totalUploadedBytes / (1024 * 1024)).toFixed(2);
+  const remainingMB = Math.max(
+    0,
+    (DISPLAY_LIMIT_BYTES - totalUploadedBytes) / (1024 * 1024)
+  ).toFixed(2);
+  const storagePercent = Math.min(100, (totalUploadedBytes / DISPLAY_LIMIT_BYTES) * 100);
 
   const form = useForm<NuevoProveedorFormValues>({
     resolver: zodResolver(nuevoProveedorSchema),
@@ -439,6 +468,38 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // ── Validación 1: Solo se permiten archivos PDF ──
+    const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPDF) {
+      toast.error("Formato no permitido", {
+        description:
+          "Solo se aceptan archivos en formato PDF. Por favor selecciona un archivo .pdf.",
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    // ── Validación 2: La suma total no puede superar los 10 MB ──
+    // Si ya existe un doc del mismo tipo, su tamaño será reemplazado, no sumado.
+    const bytesExistentes = documentos
+      .filter((d) => d.tipoDoc !== tipoDocActual)
+      .reduce((acc, d) => acc + d.file.size, 0);
+    const proyectadoBytes = bytesExistentes + file.size;
+    if (proyectadoBytes > MAX_UPLOAD_BYTES) {
+      const proyectadoMB = (proyectadoBytes / (1024 * 1024)).toFixed(2);
+      const archivoMB = (file.size / (1024 * 1024)).toFixed(2);
+      toast.warning("Límite de almacenamiento superado", {
+        description: `Este archivo pesa ${archivoMB} MB y haría que el total llegara a ${proyectadoMB} MB, superando el límite de 10 MB. Elimina algún documento o selecciona un archivo más pequeño.`,
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setIsUploadingFile(true);
+
+    // Capturamos la observación actual del mapa para este tipo de doc
+    const obsParaDoc = obsMap[tipoDocActual] ?? "";
+
     const newDoc = {
       id: Math.random().toString(36).substr(2, 9),
       tipoDoc: tipoDocActual,
@@ -446,18 +507,21 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       name: file.name,
       size: (file.size / 1024).toFixed(0) + " KB",
       time: "Cargado justo ahora",
-      type: file.type.includes("pdf") ? "PDF File" : "Image",
-      observaciones: obsActual,
+      type: "PDF File",
+      observaciones: obsParaDoc,
     };
 
-    // Agregar reemplazando si ya existe un documento de ese tipo
-    setDocumentos((prev) => [...prev.filter((d) => d.tipoDoc !== tipoDocActual), newDoc]);
-    setObsActual(""); // Limpiar observaciones
+    // Simular latencia de carga para dar feedback visual al usuario
+    setTimeout(() => {
+      // Agregar reemplazando si ya existe un documento de ese tipo
+      setDocumentos((prev) => [...prev.filter((d) => d.tipoDoc !== tipoDocActual), newDoc]);
+      setIsUploadingFile(false);
 
-    // Resetear input real
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+      // Resetear input real
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }, 900);
   };
 
   const handleDeleteDocument = (id: string) => {
@@ -542,7 +606,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="font-bold text-color-subtitulos">
-                          Nombre de la empresa o Razón Social
+                          Nombre del Proveedor / Empresa o Razón Social
                         </FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">
                           Ejemplo: Industrias Carabobo C.A
@@ -632,61 +696,6 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     )}
                   </div>
 
-                  {/* Forma Jurídica */}
-                  <FormField
-                    control={form.control}
-                    name="formaJuridica"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Forma jurídica (Si aplica)
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: C.A., S.A., S.R.L.
-                        </p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <span className={field.value ? "text-slate-700" : ""}>
-                                  {field.value || "Seleccionar opciones"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                            <DropdownMenuItem onClick={() => field.onChange("COMPANIA_ANONIMA")}>
-                              Compañía Anónima (C.A)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("ASOCIACION_CIVIL")}>
-                              Asociación Civil
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("SRL")}>
-                              Sociedades de Responsabilidad Limitada (S.R.L.)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("FUNDACION")}>
-                              Fundaciones
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("COOPERATIVA")}>
-                              Cooperativas
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("PYME")}>
-                              Pymes
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {/* Tipo de Persona */}
                   <FormField
                     control={form.control}
@@ -719,6 +728,63 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => field.onChange("JURIDICA")}>
                               JURIDICA
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Forma Jurídica */}
+                  <FormField
+                    control={form.control}
+                    name="formaJuridica"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-bold text-color-subtitulos">
+                          Forma jurídica (Si aplica)
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground italic mb-2">
+                          Ejemplo: C.A., S.A., S.R.L.
+                        </p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <span className={field.value ? "text-slate-700" : ""}>
+                                  {field.value
+                                    ? FORMA_JURIDICA_LABELS[field.value] || field.value
+                                    : "Seleccionar opciones"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                            <DropdownMenuItem onClick={() => field.onChange("COMPANIA_ANONIMA")}>
+                              Compañía Anónima (C.A)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("ASOCIACION_CIVIL")}>
+                              Asociación Civil
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("SRL")}>
+                              Sociedades de Responsabilidad Limitada (S.R.L.)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("FUNDACION")}>
+                              Fundaciones
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("COOPERATIVA")}>
+                              Cooperativas
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => field.onChange("PYME")}>
+                              Pymes
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -1244,7 +1310,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                                 )}
                               >
                                 {field.value ? (
-                                  format(new Date(field.value), "PPP")
+                                  format(new Date(field.value), "PPP", { locale: es })
                                 ) : (
                                   <span>Seleccionar fecha</span>
                                 )}
@@ -1260,6 +1326,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                               toYear={new Date().getFullYear()}
                               selected={field.value ? new Date(field.value) : undefined}
                               onSelect={(date) => field.onChange(date?.toISOString())}
+                              locale={es}
                               disabled={(date) =>
                                 date > new Date() || date < new Date("1900-01-01")
                               }
@@ -1317,186 +1384,341 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           )}
 
           {step === 2 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-              {/* Sección 4: Carga de documentos */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-1 h-6 bg-section-docs rounded-full"></div>
-                  <h2 className="text-xl font-bold text-color-titulos">4. Carga de documentos</h2>
-                </div>
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+              {/* Header de sección */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-1 h-6 bg-section-docs rounded-full"></div>
+                <h2 className="text-xl font-bold text-color-titulos">4. Carga de documentos</h2>
+              </div>
 
-                <div className="max-w-[700px]">
-                  <FormItem className="mb-6">
-                    <FormLabel className="font-bold text-color-subtitulos">
-                      Tipo de documento
-                    </FormLabel>
-                    <p className="text-xs text-muted-foreground italic mb-2">
-                      Seleccione el tipo de documento.
+              {/* Contador dinámico de espacio de almacenamiento */}
+              <div className="p-3 bg-slate-bg border border-border-light rounded-lg mb-6 shadow-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-section-docs shrink-0" />
+                    <p className="text-xs text-color-subtitulos font-medium">
+                      <strong>Límite de carga:</strong> máx. <strong>10 MB</strong> en total
                     </p>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] font-semibold">
+                    <span className="text-muted-foreground">
+                      Usado: <span className="text-color-titulos">{usedMB} MB</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "px-2 py-0.5 rounded-full font-bold",
+                        storagePercent >= 90
+                          ? "bg-destructive/10 text-destructive"
+                          : storagePercent >= 70
+                            ? "bg-yellow-50 text-yellow-700"
+                            : "bg-success-bg text-success-text"
+                      )}
+                    >
+                      {remainingMB} MB libres
+                    </span>
+                  </div>
+                </div>
+                {/* Barra de uso */}
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      storagePercent >= 90
+                        ? "bg-destructive"
+                        : storagePercent >= 70
+                          ? "bg-yellow-400"
+                          : "bg-success"
+                    )}
+                    style={{ width: `${storagePercent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Layout dividido: Stepper izquierda + Panel derecha */}
+              <div className="flex gap-6 min-h-[520px]">
+                {/* ── SIDEBAR STEPPER VERTICAL ── */}
+                <aside className="w-64 flex-shrink-0 flex flex-col gap-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-1">
+                    Documentos requeridos
+                  </p>
+                  {TIPOS_DOCUMENTO.map((tipo, idx) => {
+                    const isUploaded = documentos.some((d) => d.tipoDoc === tipo.value);
+                    const isActive = idx === docStepIndex;
+                    const isCompleted = isUploaded;
+                    return (
+                      <button
+                        key={tipo.value}
+                        type="button"
+                        onClick={() => {
+                          setDocStepIndex(idx);
+                        }}
+                        className={cn(
+                          "w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 group",
+                          isActive
+                            ? "bg-navy/10 border border-navy/20 shadow-sm"
+                            : "hover:bg-muted border border-transparent"
+                        )}
+                      >
+                        {/* Indicador de estado circular */}
+                        <div
                           className={cn(
-                            "w-full h-11 justify-between text-left font-normal border-border focus-visible:ring-color-boton-2 transition-all bg-white",
-                            !tipoDocActual && "text-muted-foreground",
-                            documentos.some((d) => d.tipoDoc === tipoDocActual) &&
-                              "border-success bg-success-bg/50 hover:bg-success-bg/70 text-success-text font-medium"
+                            "mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 text-xs font-bold",
+                            isCompleted
+                              ? "bg-success text-white"
+                              : isActive
+                                ? "bg-navy text-white"
+                                : "bg-muted border-2 border-border text-muted-foreground"
                           )}
                         >
-                          <div className="flex items-center gap-2 truncate">
-                            <span>
-                              {tipoDocActual
-                                ? TIPOS_DOCUMENTO.find((t) => t.value === tipoDocActual)?.label
-                                : "Selecciona el tipo de documento"}
-                            </span>
-                            {documentos.some((d) => d.tipoDoc === tipoDocActual) && (
-                              <CheckCircle2 className="h-4 w-4 text-success-text" />
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            <span>{idx + 1}</span>
+                          )}
+                        </div>
+                        {/* Texto del paso */}
+                        <div className="flex flex-col min-w-0">
+                          <span
+                            className={cn(
+                              "text-[12.5px] font-semibold leading-snug truncate",
+                              isActive
+                                ? "text-navy"
+                                : isCompleted
+                                  ? "text-success-text"
+                                  : "text-color-subtitulos"
                             )}
-                          </div>
-                          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
-                        {TIPOS_DOCUMENTO.map((tipo) => {
-                          const isUploaded = documentos.some((d) => d.tipoDoc === tipo.value);
-                          return (
-                            <DropdownMenuItem
-                              key={tipo.value}
-                              onClick={() => setTipoDocActual(tipo.value)}
-                              className="cursor-pointer"
-                            >
-                              <div className="flex items-center justify-between w-full min-w-[300px]">
-                                <span>{tipo.label}</span>
-                                {isUploaded && (
-                                  <div className="flex items-center gap-1.5 text-success-text font-bold text-[10px] bg-success-bg px-2 py-0.5 rounded-full">
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                    <span>CARGADO</span>
-                                  </div>
-                                )}
-                              </div>
-                            </DropdownMenuItem>
-                          );
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </FormItem>
+                          >
+                            {tipo.label}
+                          </span>
+                          <span className="text-[10px] mt-0.5 font-medium">
+                            {isCompleted ? (
+                              <span className="text-success-text">Cargado ✓</span>
+                            ) : isActive ? (
+                              <span className="text-navy/70">En curso</span>
+                            ) : (
+                              <span className="text-muted-foreground">Pendiente</span>
+                            )}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
 
-                  {/* Mensaje Informativo sobre Límite de Tamaño */}
-                  <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-6 shadow-sm">
-                    <AlertCircle className="h-4 w-4 text-blue-600 shrink-0" />
-                    <p className="text-xs text-blue-800 font-medium leading-tight">
-                      <strong>Nota importante:</strong> La suma total de los 7 archivos a cargar no
-                      puede exceder <strong>1 MB</strong>.
-                    </p>
-                  </div>
-
-                  {/* Dropzone Simulada */}
-                  <div
-                    className="w-full h-64 border-2 border-dashed border-dropzone-border rounded-xl bg-dropzone-bg flex flex-col items-center justify-center cursor-pointer hover:bg-dropzone-border/20 transition-colors mb-6 group relative"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className="w-16 h-16 bg-dropzone-border rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform">
-                      <BsCloudUploadFill className="w-8 h-8 text-white" />
+                  {/* Progreso global */}
+                  <div className="mt-4 px-3">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[10px] text-muted-foreground font-medium">
+                        Progreso
+                      </span>
+                      <span className="text-[10px] font-bold text-color-titulos">
+                        {documentos.length}/{TIPOS_DOCUMENTO.length}
+                      </span>
                     </div>
-                    <span className="text-color-titulos font-bold text-lg mb-1">
-                      Adjunta el archivo aquí
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      Arrastra y suelta o haz click para buscar
-                    </span>
-
-                    <input
-                      type="file"
-                      className="hidden"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept=".pdf,.png,.jpg,.jpeg"
-                    />
-                  </div>
-
-                  {/* Observaciones extra */}
-                  <FormItem className="mb-6">
-                    <FormLabel className="font-bold text-color-subtitulos">Observaciones</FormLabel>
-                    <p className="text-xs text-muted-foreground italic mb-2">
-                      Ingrese comentarios adicionales sobre este documento
-                    </p>
-                    <FormControl>
-                      <Textarea
-                        value={obsActual}
-                        onChange={(e) => setObsActual(e.target.value)}
-                        placeholder="Ingrese comentarios adicionales sobre este documento..."
-                        className="resize-none min-h-[120px] border-border focus-visible:ring-color-boton-2"
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-success rounded-full transition-all duration-500"
+                        style={{ width: `${(documentos.length / TIPOS_DOCUMENTO.length) * 100}%` }}
                       />
-                    </FormControl>
-                  </FormItem>
+                    </div>
+                  </div>
+                </aside>
 
-                  {/* Lista de Documentos Cargados */}
-                  {documentos.length > 0 && (
-                    <div className="space-y-4">
+                {/* ── PANEL CENTRAL DE CARGA ── */}
+                <div className="flex-1 flex flex-col bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                  {/* Header del panel */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-bg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-navy flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {docStepIndex + 1}
+                      </div>
                       <div>
-                        <FormLabel className="font-bold text-color-subtitulos block">
-                          Documentos cargados
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic">
-                          Detalles de los archivos
+                        <p className="text-sm font-bold text-color-titulos leading-tight">
+                          {TIPOS_DOCUMENTO[docStepIndex].label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Paso {docStepIndex + 1} de {TIPOS_DOCUMENTO.length}
                         </p>
                       </div>
-
-                      <div className="flex flex-col gap-3">
-                        {documentos.map((doc) => (
-                          <Card key={doc.id} className="border border-border shadow-sm">
-                            <div className="flex items-center justify-between p-4">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded bg-slate-200 flex items-center justify-center flex-shrink-0">
-                                  <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-color-titulos">
-                                    {doc.name}
-                                  </span>
-                                  <span className="text-[11px] text-muted-foreground font-medium">
-                                    {doc.type} • {doc.size} • {doc.time}
-                                  </span>
-                                </div>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => handleDeleteDocument(doc.id)}
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </Button>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
                     </div>
-                  )}
-                </div>
+                    {isUploadingFile ? (
+                      <div className="flex items-center gap-1.5 bg-muted text-color-subtitulos text-[11px] font-bold px-3 py-1 rounded-full">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Cargando...</span>
+                      </div>
+                    ) : (
+                      documentos.some((d) => d.tipoDoc === tipoDocActual) && (
+                        <div className="flex items-center gap-1.5 bg-success-bg text-success-text text-[11px] font-bold px-3 py-1 rounded-full">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Documento cargado</span>
+                        </div>
+                      )
+                    )}
+                  </div>
 
-                {/* Controles de avance final */}
-                <div className="flex justify-between pt-8 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 px-8 font-semibold rounded-md border-border text-muted-foreground shadow-sm"
-                    onClick={() => setStep(1)}
-                    disabled={isSubmitting}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-navy hover:bg-navy-hover h-12 px-8 text-white font-semibold rounded-md shadow"
-                  >
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {providerId ? "Guardar cambios" : "Registrar"}
-                  </Button>
+                  {/* Cuerpo del panel */}
+                  <div className="flex-1 px-6 py-5 flex flex-col gap-5 overflow-y-auto">
+                    {/* Dropzone */}
+                    <div
+                      className={cn(
+                        "w-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all group py-10",
+                        isUploadingFile
+                          ? "border-navy/40 bg-navy/5 cursor-not-allowed pointer-events-none"
+                          : "border-dropzone-border bg-dropzone-bg cursor-pointer hover:bg-dropzone-border/20"
+                      )}
+                      onClick={() => !readOnly && !isUploadingFile && fileInputRef.current?.click()}
+                    >
+                      {isUploadingFile ? (
+                        /* Estado: cargando */
+                        <>
+                          <div className="relative w-14 h-14 mb-3 flex items-center justify-center">
+                            <div className="absolute inset-0 rounded-full border-4 border-navy/20" />
+                            <div className="absolute inset-0 rounded-full border-4 border-t-navy border-l-transparent border-r-transparent border-b-transparent animate-spin" />
+                            <Loader2 className="w-6 h-6 text-navy animate-spin" />
+                          </div>
+                          <span className="text-navy font-bold text-base mb-1">
+                            Cargando archivo...
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            Por favor espera un momento
+                          </span>
+                        </>
+                      ) : (
+                        /* Estado: idle */
+                        <>
+                          <div className="w-14 h-14 bg-dropzone-border rounded-full flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                            <BsCloudUploadFill className="w-7 h-7 text-white" />
+                          </div>
+                          <span className="text-color-titulos font-bold text-base mb-1">
+                            Adjunta el archivo aquí
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            Arrastra y suelta o haz click para buscar
+                          </span>
+                          <span className="text-[11px] text-muted-foreground mt-2">
+                            Solo PDF — máx. 10 MB en total entre todos los documentos
+                          </span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="application/pdf,.pdf"
+                        disabled={isUploadingFile}
+                      />
+                    </div>
+
+                    {/* Documento cargado para este paso */}
+                    {(() => {
+                      const docActivo = documentos.find((d) => d.tipoDoc === tipoDocActual);
+                      return docActivo ? (
+                        <Card className="border border-success/40 bg-success-bg/30 shadow-sm">
+                          <div className="flex items-center justify-between px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-lg bg-success/20 flex items-center justify-center flex-shrink-0">
+                                <FileText className="w-4 h-4 text-success-text" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-color-titulos leading-tight">
+                                  {docActivo.name}
+                                </span>
+                                <span className="text-[11px] text-muted-foreground font-medium">
+                                  {docActivo.type} • {docActivo.size} • {docActivo.time}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteDocument(docActivo.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </Card>
+                      ) : null;
+                    })()}
+
+                    {/* Observaciones (persistidas por tipo de documento) */}
+                    <FormItem>
+                      <FormLabel className="font-bold text-color-subtitulos text-sm">
+                        Observaciones
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground italic mb-2">
+                        Comentarios adicionales sobre este documento (opcional)
+                      </p>
+                      <FormControl>
+                        <Textarea
+                          value={obsMap[tipoDocActual] ?? ""}
+                          onChange={(e) =>
+                            setObsMap((prev) => ({ ...prev, [tipoDocActual]: e.target.value }))
+                          }
+                          placeholder="Ingrese comentarios adicionales sobre este documento..."
+                          className="resize-none min-h-[90px] border-border focus-visible:ring-color-boton-2"
+                          readOnly={readOnly}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  </div>
+
+                  {/* Footer de navegación del panel */}
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-slate-bg">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 px-5 text-sm font-semibold rounded-lg border-border text-muted-foreground"
+                      disabled={docStepIndex === 0}
+                      onClick={() => {
+                        setDocStepIndex((i) => Math.max(0, i - 1));
+                      }}
+                    >
+                      ← Anterior doc.
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {docStepIndex + 1} / {TIPOS_DOCUMENTO.length}
+                    </span>
+                    {docStepIndex < TIPOS_DOCUMENTO.length - 1 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 px-5 text-sm font-semibold rounded-lg border-navy/30 text-navy hover:bg-navy/5"
+                        onClick={() => {
+                          setDocStepIndex((i) => Math.min(TIPOS_DOCUMENTO.length - 1, i + 1));
+                        }}
+                      >
+                        Siguiente doc. →
+                      </Button>
+                    ) : (
+                      <span className="text-[11px] text-success-text font-semibold">
+                        Último paso
+                      </span>
+                    )}
+                  </div>
                 </div>
+              </div>
+
+              {/* Controles de avance final del formulario */}
+              <div className="flex justify-between pt-8 mt-6 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 px-8 font-semibold rounded-md border-border text-muted-foreground shadow-sm"
+                  onClick={() => setStep(1)}
+                  disabled={isSubmitting}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-navy hover:bg-navy-hover h-12 px-8 text-white font-semibold rounded-md shadow"
+                >
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {providerId ? "Guardar cambios" : "Registrar"}
+                </Button>
               </div>
             </div>
           )}
