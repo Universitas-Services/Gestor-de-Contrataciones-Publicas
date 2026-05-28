@@ -44,6 +44,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { MoneyInput } from "@/components/ui/money-input";
 
 import {
   InputOTP,
@@ -76,16 +77,126 @@ function getClient(): UniversitasAPI {
   return _universitasClient;
 }
 
-// Tipos de documento para la carga de documentos del proveedor
-const TIPOS_DOCUMENTO = [
-  { value: "doc_registro_mercantil", label: "Acta constitutiva" },
-  { value: "doc_rif", label: "RIF" },
-  { value: "doc_referencias_bancarias", label: "Fotocopia de la cédula del representante legal" },
-  { value: "doc_rnc", label: "Certificado RNC" },
-  { value: "doc_estados_financieros", label: "Resumen informativo RNC" },
-  { value: "doc_solvencia_laboral", label: "Solvencia Laboral" },
-  { value: "doc_licencia_municipal", label: "Licencia de funcionamiento Municipal" },
-] as const;
+// Tipos de documento para la carga de documentos del proveedor — dinámicos por tipo de persona
+type TipoDocItem = { value: string; label: string; shortLabel: string; description: string };
+
+const TIPOS_DOCUMENTO_BY_PERSONA: Record<string, TipoDocItem[]> = {
+  JURIDICA: [
+    {
+      value: "doc_acta_constitutiva",
+      label: "Acta constitutiva",
+      shortLabel: "Acta constitutiva",
+      description: "Cargue el documento completo en PDF",
+    },
+    {
+      value: "doc_rif",
+      label: "Registro de Información Fiscal (RIF)",
+      shortLabel: "RIF",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_cedula",
+      label: "Fotocopia de la cédula del representante legal",
+      shortLabel: "Cédula",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_rnc",
+      label:
+        "Planilla de inscripción, actualización o calificación ante el Registro Nacional de Contratista (RNC)",
+      shortLabel: "RNC",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_solvencia_laboral",
+      label: "Solvencia Laboral",
+      shortLabel: "Solvencia Laboral",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_licencia_municipal",
+      label: "Licencia de funcionamiento Municipal",
+      shortLabel: "Licencia Municipal",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_islr",
+      label: "Declaración de Impuesto Sobre la Renta del último ejercicio fiscal",
+      shortLabel: "ISLR",
+      description: "Cargue documento vigente en PDF",
+    },
+  ],
+  NATURAL: [
+    {
+      value: "doc_rif",
+      label: "Registro de Información Fiscal",
+      shortLabel: "RIF",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_cedula",
+      label: "Fotocopia de la cédula del proveedor",
+      shortLabel: "Cédula",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_rnc",
+      label:
+        "Planilla de inscripción, actualización o calificación ante el Registro Nacional de Contratista (RNC)",
+      shortLabel: "RNC",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_curriculum",
+      label: "Curriculum Vitae",
+      shortLabel: "Curriculum",
+      description: "Cargue documento en PDF",
+    },
+    {
+      value: "doc_titulo",
+      label: "Fondo negro del Título Universitario",
+      shortLabel: "Título",
+      description: "Cargue documento en PDF",
+    },
+    {
+      value: "doc_islr",
+      label: "Declaración de Impuesto Sobre la Renta del último ejercicio fiscal",
+      shortLabel: "ISLR",
+      description: "Cargue documento vigente en PDF",
+    },
+  ],
+  ADMINISTRACION_PUBLICA: [
+    {
+      value: "doc_rif",
+      label: "Registro de Información Fiscal",
+      shortLabel: "RIF",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_cedula",
+      label:
+        "Fotocopia de la cédula de la Máxima Autoridad del Órgano o Ente de la Administración Pública",
+      shortLabel: "Cédula",
+      description: "Cargue documento vigente en PDF",
+    },
+    {
+      value: "doc_resolucion",
+      label:
+        "Resolución, Decreto, Acta o Acuerdo de designación de la Máxima Autoridad del Órgano o Ente de la Administración Pública",
+      shortLabel: "Resolución",
+      description: "Cargue documento en PDF",
+    },
+    {
+      value: "doc_gaceta",
+      label: "Gaceta de creación del Órgano o Ente de la Administración Pública",
+      shortLabel: "Gaceta",
+      description: "Cargue documento en PDF",
+    },
+  ],
+};
+
+// Fallback por si el tipo aún no está seleccionado
+const TIPOS_DOCUMENTO_DEFAULT: TipoDocItem[] = TIPOS_DOCUMENTO_BY_PERSONA.JURIDICA;
 
 const FORMA_JURIDICA_LABELS: Record<string, string> = {
   COMPANIA_ANONIMA: "Compañía Anónima (C.A)",
@@ -94,7 +205,73 @@ const FORMA_JURIDICA_LABELS: Record<string, string> = {
   FUNDACION: "Fundaciones",
   COOPERATIVA: "Cooperativas",
   PYME: "Pymes",
+  SOCIEDAD_CIVIL: "Sociedad Civil",
 };
+
+const TIPO_PERSONA_LABELS: Record<string, string> = {
+  JURIDICA: "Persona Jurídica",
+  NATURAL: "Persona Natural",
+  ADMINISTRACION_PUBLICA: "Órganos y Entes de la Administración Pública",
+};
+
+const STEP1_BASE_FIELDS: (keyof NuevoProveedorFormValues)[] = [
+  "correo",
+  "nombre",
+  "rif",
+  "tipoPersona",
+];
+
+const STEP1_COMMON_DYNAMIC_FIELDS: (keyof NuevoProveedorFormValues)[] = [
+  "telefono",
+  "estado",
+  "municipio",
+  "parroquia",
+  "direccionFiscal",
+  "areaEspecialidad",
+  "nivelContratacion",
+];
+
+const STEP1_FIELDS_BY_PERSONA: Record<string, (keyof NuevoProveedorFormValues)[]> = {
+  JURIDICA: [
+    ...STEP1_BASE_FIELDS,
+    ...STEP1_COMMON_DYNAMIC_FIELDS,
+    "rnc",
+    "formaJuridica",
+    "datosRegistroMercantil",
+    "representanteNombre",
+    "representanteCedula",
+    "solvenciaLaboral",
+    "licenciaMunicipal",
+    "islr",
+    "actividadPrincipal",
+    "anosExperiencia",
+    "patrimonioNeto",
+    "fechaEstadoFinanciero",
+  ],
+  NATURAL: [
+    ...STEP1_BASE_FIELDS,
+    ...STEP1_COMMON_DYNAMIC_FIELDS,
+    "rnc",
+    "cedulaNatural",
+    "islr",
+    "actividadPrincipal",
+    "anosExperiencia",
+  ],
+  ADMINISTRACION_PUBLICA: [
+    ...STEP1_BASE_FIELDS,
+    ...STEP1_COMMON_DYNAMIC_FIELDS,
+    "nombreAutoridad",
+    "cedulaAutoridad",
+    "datosDesignacionAutoridad",
+  ],
+};
+
+function getTipoPersonaFromRifPrefix(prefix: string): string {
+  if (prefix === "J") return "JURIDICA";
+  if (prefix === "G") return "ADMINISTRACION_PUBLICA";
+  if (prefix === "V") return "NATURAL";
+  return "";
+}
 
 interface NuevoProveedorFormProps {
   providerId?: string;
@@ -104,18 +281,23 @@ interface NuevoProveedorFormProps {
 export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProveedorFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousRifTipoRef = useRef<string>("");
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(!!providerId);
 
   // Estados visuales duales (RIF y Cedula)
-  const [rifTipo, setRifTipo] = useState("J");
+  const [rifTipo, setRifTipo] = useState("");
   const [rifCuerpo, setRifCuerpo] = useState(""); // 8 dígitos
   const [rifVerificador, setRifVerificador] = useState(""); // 1 dígito
   const rifVerificadorRef = useRef<HTMLInputElement>(null);
   const [cedulaTipo, setCedulaTipo] = useState("V");
   const [cedulaNumero, setCedulaNumero] = useState("");
+  const [cedulaNaturalTipo, setCedulaNaturalTipo] = useState("V");
+  const [cedulaNaturalNumero, setCedulaNaturalNumero] = useState("");
+  const [cedulaAutoridadTipo, setCedulaAutoridadTipo] = useState("V");
+  const [cedulaAutoridadNumero, setCedulaAutoridadNumero] = useState("");
 
   // Estado para Teléfono
   const [phonePrefix, setPhonePrefix] = useState("0414");
@@ -123,7 +305,6 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
 
   // Estado Local para Documentos
   const [docStepIndex, setDocStepIndex] = useState(0);
-  const tipoDocActual = TIPOS_DOCUMENTO[docStepIndex].value;
   // Observaciones persistidas por tipo de documento
   const [obsMap, setObsMap] = useState<Record<string, string>>({});
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -167,6 +348,10 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       formaJuridica: "",
       tipoPersona: "",
       datosRegistroMercantil: "",
+      cedulaNatural: "",
+      nombreAutoridad: "",
+      cedulaAutoridad: "",
+      datosDesignacionAutoridad: "",
       estado: "",
       parroquia: "",
       representanteNombre: "",
@@ -177,7 +362,8 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       rnc: undefined,
       solvenciaLaboral: undefined,
       licenciaMunicipal: undefined,
-      actividadPrincipal: undefined,
+      islr: undefined,
+      actividadPrincipal: "",
       areaEspecialidad: "",
       anosExperiencia: "",
       patrimonioNeto: "",
@@ -194,6 +380,18 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
 
   const selectedEstado = form.watch("estado");
   const selectedMunicipio = form.watch("municipio");
+  const currentTipoPersona = form.watch("tipoPersona");
+  const hasTipoPersonaSelected = Boolean(currentTipoPersona);
+
+  // Lista de documentos requeridos según el tipo de persona
+  const tiposDocumento: TipoDocItem[] =
+    TIPOS_DOCUMENTO_BY_PERSONA[currentTipoPersona] ?? TIPOS_DOCUMENTO_DEFAULT;
+  const tipoDocActual = tiposDocumento[docStepIndex]?.value ?? tiposDocumento[0]?.value ?? "";
+
+  // Resetear el paso de documentos cuando cambia el tipo de persona
+  useEffect(() => {
+    setDocStepIndex(0);
+  }, [currentTipoPersona]);
 
   // Cargar estados iniciales
   useEffect(() => {
@@ -251,6 +449,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           if (v === "COMPANIA_ANONIMA" || v === "C.A." || v === "C.A" || v.includes("ANONIMA"))
             return "COMPANIA_ANONIMA";
           if (v === "ASOCIACION_CIVIL") return "ASOCIACION_CIVIL";
+          if (v === "SOCIEDAD_CIVIL") return "SOCIEDAD_CIVIL";
           if (v === "SRL" || v.includes("LIMITADA")) return "SRL";
           if (v === "FUNDACION" || v === "FUNDACION") return "FUNDACION";
           return val;
@@ -264,6 +463,10 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           formaJuridica: normalizeFormaJuridica(data.tipoEntidadJuridica),
           tipoPersona: data.tipoPersona || "",
           datosRegistroMercantil: data.datosRegistroMercantil || "",
+          cedulaNatural: data.cedulaNatural || "",
+          nombreAutoridad: data.nombreAutoridad || "",
+          cedulaAutoridad: data.cedulaAutoridad || "",
+          datosDesignacionAutoridad: data.datosDesignacionAutoridad || "",
           estado: data.estado || "",
           municipio: data.municipio || "",
           parroquia: data.parroquia || "",
@@ -274,7 +477,8 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           rnc: data.registroRnc ? "Si" : "No",
           solvenciaLaboral: data.solvenciaLaboral ? "Si" : "No",
           licenciaMunicipal: data.licenciaFuncionamientoMunicipal ? "Si" : "No",
-          actividadPrincipal: data.actividadComercial === "Si" ? "Si" : "No",
+          islr: data.declaracionIslr ? "Si" : "No",
+          actividadPrincipal: data.actividadComercial || "",
           areaEspecialidad:
             data.areaEspecialidad === "SERVICIO" || data.areaEspecialidad === "SERVICIOS"
               ? "SERVICIOS"
@@ -303,6 +507,20 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
             setCedulaNumero(cidParts[1]);
           }
         }
+        if (data.cedulaNatural) {
+          const cidParts = data.cedulaNatural.split("-");
+          if (cidParts.length === 2) {
+            setCedulaNaturalTipo(cidParts[0]);
+            setCedulaNaturalNumero(cidParts[1]);
+          }
+        }
+        if (data.cedulaAutoridad) {
+          const cidParts = data.cedulaAutoridad.split("-");
+          if (cidParts.length === 2) {
+            setCedulaAutoridadTipo(cidParts[0]);
+            setCedulaAutoridadNumero(cidParts[1]);
+          }
+        }
 
         // Fragmentar Teléfono
         if (data.telefono) {
@@ -324,6 +542,46 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
   }, [providerId, form]);
 
   // Efecto para concatenar RIF
+  useEffect(() => {
+    const tipoPersona = getTipoPersonaFromRifPrefix(rifTipo);
+    form.setValue("tipoPersona", tipoPersona, { shouldValidate: Boolean(tipoPersona) });
+  }, [rifTipo, form]);
+
+  useEffect(() => {
+    if (isLoadingInitialData) return;
+    const previousRifTipo = previousRifTipoRef.current;
+    if (previousRifTipo && previousRifTipo !== rifTipo) {
+      form.setValue("formaJuridica", "");
+      form.setValue("datosRegistroMercantil", "");
+      form.setValue("representanteNombre", "");
+      form.setValue("representanteCedula", "");
+      form.setValue("solvenciaLaboral", undefined);
+      form.setValue("licenciaMunicipal", undefined);
+      form.setValue("patrimonioNeto", "");
+      form.setValue("fechaEstadoFinanciero", "");
+      form.setValue("cedulaNatural", "");
+      form.setValue("nombreAutoridad", "");
+      form.setValue("cedulaAutoridad", "");
+      form.setValue("datosDesignacionAutoridad", "");
+      form.setValue("telefono", "");
+      form.setValue("estado", "");
+      form.setValue("municipio", "");
+      form.setValue("parroquia", "");
+      form.setValue("direccionFiscal", "");
+      form.setValue("rnc", undefined);
+      form.setValue("islr", undefined);
+      form.setValue("actividadPrincipal", "");
+      form.setValue("areaEspecialidad", "");
+      form.setValue("anosExperiencia", "");
+      form.setValue("nivelContratacion", "");
+      setCedulaNumero("");
+      setCedulaNaturalNumero("");
+      setCedulaAutoridadNumero("");
+      setPhoneBody("");
+    }
+    previousRifTipoRef.current = rifTipo;
+  }, [rifTipo, form, isLoadingInitialData]);
+
   useEffect(() => {
     if (isLoadingInitialData) return;
     if (rifTipo && rifCuerpo.length === 8 && rifVerificador.length === 1) {
@@ -348,6 +606,28 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
     }
   }, [cedulaTipo, cedulaNumero, form, isLoadingInitialData]);
 
+  useEffect(() => {
+    if (isLoadingInitialData) return;
+    if (cedulaNaturalTipo && cedulaNaturalNumero.length >= 6) {
+      form.setValue("cedulaNatural", `${cedulaNaturalTipo}-${cedulaNaturalNumero}`, {
+        shouldValidate: true,
+      });
+    } else if (cedulaNaturalNumero.length > 0) {
+      form.setValue("cedulaNatural", "");
+    }
+  }, [cedulaNaturalTipo, cedulaNaturalNumero, form, isLoadingInitialData]);
+
+  useEffect(() => {
+    if (isLoadingInitialData) return;
+    if (cedulaAutoridadTipo && cedulaAutoridadNumero.length >= 6) {
+      form.setValue("cedulaAutoridad", `${cedulaAutoridadTipo}-${cedulaAutoridadNumero}`, {
+        shouldValidate: true,
+      });
+    } else if (cedulaAutoridadNumero.length > 0) {
+      form.setValue("cedulaAutoridad", "");
+    }
+  }, [cedulaAutoridadTipo, cedulaAutoridadNumero, form, isLoadingInitialData]);
+
   // Efecto para concatenar Teléfono
   useEffect(() => {
     if (isLoadingInitialData) return;
@@ -367,29 +647,9 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       return;
     }
 
-    // Validar manualmente si los campos requeridos del Paso 1 están listos
-    const isValid = await form.trigger([
-      "correo",
-      "nombre",
-      "rif",
-      "tipoPersona",
-      "estado",
-      "parroquia",
-      "representanteNombre",
-      "municipio",
-      "representanteCedula",
-      "telefono",
-      "direccionFiscal",
-      "rnc",
-      "solvenciaLaboral",
-      "licenciaMunicipal",
-      "actividadPrincipal",
-      "areaEspecialidad",
-      "anosExperiencia",
-      "patrimonioNeto",
-      "fechaEstadoFinanciero",
-      "nivelContratacion",
-    ]);
+    const tipoPersona = form.getValues("tipoPersona");
+    const fieldsToValidate = STEP1_FIELDS_BY_PERSONA[tipoPersona] ?? STEP1_BASE_FIELDS;
+    const isValid = await form.trigger(fieldsToValidate);
 
     if (isValid) {
       setStep(2);
@@ -405,36 +665,58 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
     try {
       const data = form.getValues();
       const formData = new FormData();
+      const tipoPersona = data.tipoPersona;
+      const isJuridica = tipoPersona === "JURIDICA";
+      const isNatural = tipoPersona === "NATURAL";
+      const isAdminPublica = tipoPersona === "ADMINISTRACION_PUBLICA";
+      const appendNullable = (key: string, value?: string) => {
+        formData.append(key, value && value.trim() ? value : "null");
+      };
 
       formData.append("correo", data.correo);
       formData.append("nombre", data.nombre);
       formData.append("rif", data.rif);
       formData.append("tipoPersona", data.tipoPersona);
-      if (data.formaJuridica) formData.append("tipoEntidadJuridica", data.formaJuridica);
-      if (data.datosRegistroMercantil)
-        formData.append("datosRegistroMercantil", data.datosRegistroMercantil);
-      formData.append("estado", data.estado);
-      formData.append("municipio", data.municipio);
-      formData.append("parroquia", data.parroquia);
-      formData.append("direccionFiscal", data.direccionFiscal);
-      formData.append("telefono", data.telefono);
-      formData.append("nombreRepLegal", data.representanteNombre);
-      formData.append("cedulaRepLegal", data.representanteCedula);
-
-      formData.append("registroRnc", data.rnc === "Si" ? "true" : "false");
-      formData.append("solvenciaLaboral", data.solvenciaLaboral === "Si" ? "true" : "false");
-      formData.append(
-        "licenciaFuncionamientoMunicipal",
-        data.licenciaMunicipal === "Si" ? "true" : "false"
+      appendNullable("tipoEntidadJuridica", isJuridica ? data.formaJuridica : undefined);
+      appendNullable(
+        "datosRegistroMercantil",
+        isJuridica ? data.datosRegistroMercantil : undefined
+      );
+      formData.append("estado", data.estado || "");
+      formData.append("municipio", data.municipio || "");
+      formData.append("parroquia", data.parroquia || "");
+      formData.append("direccionFiscal", data.direccionFiscal || "");
+      formData.append("telefono", data.telefono || "");
+      appendNullable("nombreRepLegal", isJuridica ? data.representanteNombre : undefined);
+      appendNullable("cedulaRepLegal", isJuridica ? data.representanteCedula : undefined);
+      appendNullable("cedulaNatural", isNatural ? data.cedulaNatural : undefined);
+      appendNullable("nombreAutoridad", isAdminPublica ? data.nombreAutoridad : undefined);
+      appendNullable("cedulaAutoridad", isAdminPublica ? data.cedulaAutoridad : undefined);
+      appendNullable(
+        "datosDesignacionAutoridad",
+        isAdminPublica ? data.datosDesignacionAutoridad : undefined
       );
 
-      formData.append("actividadComercial", data.actividadPrincipal);
-      formData.append("areaEspecialidad", data.areaEspecialidad);
-      formData.append("anosExperiencia", data.anosExperiencia.toString());
-      if (data.fechaEstadoFinanciero)
-        formData.append("fechaEstadoFinanciero", data.fechaEstadoFinanciero);
-      formData.append("patrimonioReportado", data.patrimonioNeto);
-      formData.append("nivelContratacion", data.nivelContratacion);
+      formData.append("registroRnc", data.rnc === "Si" ? "true" : "false");
+      formData.append(
+        "solvenciaLaboral",
+        isJuridica ? (data.solvenciaLaboral === "Si" ? "true" : "false") : "null"
+      );
+      formData.append(
+        "licenciaFuncionamientoMunicipal",
+        isJuridica ? (data.licenciaMunicipal === "Si" ? "true" : "false") : "null"
+      );
+      formData.append(
+        "declaracionIslr",
+        !isAdminPublica ? (data.islr === "Si" ? "true" : "false") : "null"
+      );
+
+      appendNullable("actividadComercial", !isAdminPublica ? data.actividadPrincipal : undefined);
+      formData.append("areaEspecialidad", data.areaEspecialidad || "");
+      appendNullable("anosExperiencia", !isAdminPublica ? data.anosExperiencia : undefined);
+      appendNullable("fechaEstadoFinanciero", isJuridica ? data.fechaEstadoFinanciero : undefined);
+      appendNullable("patrimonioReportado", isJuridica ? data.patrimonioNeto : undefined);
+      formData.append("nivelContratacion", data.nivelContratacion || "");
 
       // Adjuntar archivos y observaciones
       documentos.forEach((doc) => {
@@ -569,9 +851,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-6 bg-lime rounded-full"></div>
-                  <h2 className="text-xl font-bold text-color-titulos">
-                    1. Identificación y validación
-                  </h2>
+                  <h2 className="text-xl font-bold text-color-titulos">1. Identificación</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-[800px]">
@@ -594,7 +874,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage />
+                        {hasTipoPersonaSelected && <FormMessage />}
                       </FormItem>
                     )}
                   />
@@ -638,11 +918,12 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                             variant="outline"
                             className="w-[80px] h-11 font-normal border border-border bg-white justify-between"
                           >
-                            <span>{rifTipo || "J"}</span>
+                            <span>{rifTipo || "Tipo"}</span>
                             <ChevronDown className="h-4 w-4 opacity-50" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setRifTipo("V")}>V</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setRifTipo("G")}>G</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setRifTipo("J")}>J</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -705,112 +986,13 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                         <FormLabel className="font-bold text-color-subtitulos mb-2">
                           Tipo de Persona
                         </FormLabel>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <span className={field.value ? "text-slate-700" : ""}>
-                                  {field.value || "Selecciona tipo"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                            <DropdownMenuItem onClick={() => field.onChange("NATURAL")}>
-                              NATURAL
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("JURIDICA")}>
-                              JURIDICA
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Forma Jurídica */}
-                  <FormField
-                    control={form.control}
-                    name="formaJuridica"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Forma jurídica (Si aplica)
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: C.A., S.A., S.R.L.
-                        </p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <span className={field.value ? "text-slate-700" : ""}>
-                                  {field.value
-                                    ? FORMA_JURIDICA_LABELS[field.value] || field.value
-                                    : "Seleccionar opciones"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                            <DropdownMenuItem onClick={() => field.onChange("COMPANIA_ANONIMA")}>
-                              Compañía Anónima (C.A)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("ASOCIACION_CIVIL")}>
-                              Asociación Civil
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("SRL")}>
-                              Sociedades de Responsabilidad Limitada (S.R.L.)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("FUNDACION")}>
-                              Fundaciones
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("COOPERATIVA")}>
-                              Cooperativas
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => field.onChange("PYME")}>
-                              Pymes
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Datos Registro Mercantil */}
-                  <FormField
-                    control={form.control}
-                    name="datosRegistroMercantil"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Indique los datos del Registro Mercantil de la empresa oferente
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: Registro Mercantil Segundo del Estado Lara, bajo el N° 0, Tomo
-                          00-A del Año 0000
-                        </p>
                         <FormControl>
                           <Input
-                            placeholder=""
-                            className="h-11 border-border focus-visible:ring-color-boton-2"
-                            {...field}
+                            readOnly
+                            value={
+                              TIPO_PERSONA_LABELS[field.value] || "Seleccione un prefijo de RIF"
+                            }
+                            className="h-11 border-border bg-slate-50 text-slate-700"
                           />
                         </FormControl>
                         <FormMessage />
@@ -818,568 +1000,843 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     )}
                   />
 
-                  {/* Estado */}
-                  <FormField
-                    control={form.control}
-                    name="estado"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="font-bold text-color-subtitulos">Estado</FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">Ejemplo: Lara</p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting || estadosList.length === 0}
-                              >
-                                <span className={field.value ? "text-slate-700" : ""}>
-                                  {field.value || "Selecciona estado"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
-                            {estadosList.map((estado) => (
-                              <DropdownMenuItem
-                                key={estado.id}
-                                onClick={() => {
-                                  field.onChange(estado.nombre);
-                                  form.setValue("municipio", "");
-                                  form.setValue("parroquia", "");
-                                }}
-                                className="cursor-pointer"
-                              >
-                                {estado.nombre}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Municipio (A nivel visual reemplaza la posición de parroquia) */}
-                  <FormField
-                    control={form.control}
-                    name="municipio"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="font-bold text-color-subtitulos">Municipio</FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: Iribarren
-                        </p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting || municipiosList.length === 0}
-                              >
-                                <span className={field.value ? "text-slate-700" : ""}>
-                                  {field.value || "Selecciona municipio"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
-                            {municipiosList.map((municipio) => (
-                              <DropdownMenuItem
-                                key={municipio.id}
-                                onClick={() => {
-                                  field.onChange(municipio.nombre);
-                                  form.setValue("parroquia", "");
-                                }}
-                                className="cursor-pointer"
-                              >
-                                {municipio.nombre}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Representante Nombre */}
-                  <FormField
-                    control={form.control}
-                    name="representanteNombre"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Nombre del Representante Legal
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: José Ramírez González Pérez
-                        </p>
-                        <FormControl>
-                          <Input
-                            className="h-11 border-border focus-visible:ring-color-boton-2"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Parroquia (A nivel visual reemplaza la posición de municipio) */}
-                  <FormField
-                    control={form.control}
-                    name="parroquia"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="font-bold text-color-subtitulos">Parroquia</FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: Concepción
-                        </p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting || parroquiasList.length === 0}
-                              >
-                                <span className={field.value ? "text-slate-700" : ""}>
-                                  {field.value || "Selecciona parroquia"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
-                            {parroquiasList.map((parroquia) => (
-                              <DropdownMenuItem
-                                key={parroquia.id}
-                                onClick={() => field.onChange(parroquia.nombre)}
-                                className="cursor-pointer"
-                              >
-                                {parroquia.nombre}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="space-y-2">
-                    <FormLabel className="font-bold text-color-subtitulos">
-                      Cédula del Representante Legal
-                    </FormLabel>
-                    <p className="text-xs text-muted-foreground italic mb-2">
-                      Ejemplo: V-00.000.000
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-[100px] h-11 font-normal border-border bg-white shadow-sm justify-between"
-                          >
-                            <span>{cedulaTipo || "V"}</span>
-                            <ChevronDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => setCedulaTipo("V")}>V</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setCedulaTipo("E")}>E</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Input
-                        placeholder="00000000"
-                        maxLength={8}
-                        value={cedulaNumero}
-                        onChange={(e) => setCedulaNumero(e.target.value.replace(/\D/g, ""))}
-                        className="flex-1 max-w-[200px] h-11 border border-slate-300 focus-visible:ring-1 focus-visible:ring-color-boton-2 bg-white"
-                      />
-                    </div>
-                    {form.formState.errors.representanteCedula && (
-                      <p className="text-sm font-medium text-destructive">
-                        {form.formState.errors.representanteCedula.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Telefono */}
-                  <div className="space-y-2">
-                    <FormLabel className="font-bold text-color-subtitulos">
-                      Teléfono de contacto
-                    </FormLabel>
-                    <p className="text-xs text-muted-foreground italic mb-2">
-                      Ejemplo: 0412-5555555
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="h-11 w-[90px] border border-slate-300 font-inter text-slate-500 justify-between bg-white"
-                          >
-                            {phonePrefix}
-                            <ChevronDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-[90px]">
-                          {["0414", "0424", "0412", "0422", "0416", "0426"].map((p) => (
-                            <DropdownMenuItem key={p} onClick={() => setPhonePrefix(p)}>
-                              {p}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Input
-                        type="text"
-                        maxLength={7}
-                        value={phoneBody}
-                        onChange={(e) => setPhoneBody(e.target.value.replace(/\D/g, ""))}
-                        placeholder="7894561"
-                        className="h-11 border border-slate-300 flex-1 focus-visible:ring-1 focus-visible:ring-color-boton-2"
-                      />
-                    </div>
-                    {form.formState.errors.telefono && (
-                      <p className="text-sm font-medium text-destructive">
-                        {form.formState.errors.telefono.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Dirección Fiscal (Más pequeña) */}
-                  <FormField
-                    control={form.control}
-                    name="direccionFiscal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Dirección fiscal (como se indica en el RIF)
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: Avenida 00, entre calles 00 y 00, Centro Comercial Central, Piso
-                          2, Local 3
-                        </p>
-                        <FormControl>
-                          <Input
-                            className="h-11 border-border focus-visible:ring-color-boton-2"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* Separador */}
-              <div className="border-t border-border"></div>
-
-              {/* Sección 2: Validación de requisitos */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-1 h-6 bg-color-boton-2 rounded-full"></div>
-                  <h2 className="text-xl font-bold text-color-titulos">
-                    2. Validación de requisitos
-                  </h2>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  {/* Preguntas de requisitos */}
-                  {[
-                    {
-                      name: "rnc",
-                      label: "¿Está registrado en el Registro Nacional de Contratista (RNC)?",
-                    },
-                    { name: "solvenciaLaboral", label: "¿Tiene solvencia laboral vigente?" },
-                    {
-                      name: "licenciaMunicipal",
-                      label: "¿Tiene licencia de funcionamiento municipal vigente?",
-                    },
-                  ].map((req) => (
+                  {currentTipoPersona === "JURIDICA" && (
                     <FormField
-                      key={req.name}
                       control={form.control}
-                      // @ts-expect-error dynamic strict
-                      name={req.name}
+                      name="formaJuridica"
                       render={({ field }) => (
-                        <FormItem className="flex items-center justify-between p-4 bg-white border border-border shadow-sm rounded-lg">
-                          <FormLabel className="text-[15px] text-color-subtitulos font-semibold m-0 flex-1">
-                            {req.label}
+                        <FormItem>
+                          <FormLabel className="font-bold text-color-subtitulos">
+                            Forma jurídica
                           </FormLabel>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={`rounded w-14 h-10 transition-colors ${
-                                field.value === "Si"
-                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
-                              }`}
-                              onClick={() => field.onChange("Si")}
-                            >
-                              Si
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={`rounded w-14 h-10 transition-colors ${
-                                field.value === "No"
-                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
-                              }`}
-                              onClick={() => field.onChange("No")}
-                            >
-                              No
-                            </Button>
-                          </div>
-                          <FormMessage className="absolute mt-14" />
+                          <p className="text-xs text-muted-foreground italic mb-2">
+                            Ejemplo: Compañía Anónima C.A
+                          </p>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full h-11 justify-between font-normal border-border focus-visible:ring-color-boton-2 bg-white",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  <span className={field.value ? "text-slate-700" : ""}>
+                                    {field.value
+                                      ? FORMA_JURIDICA_LABELS[field.value] || field.value
+                                      : "Seleccionar opciones"}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                              <DropdownMenuItem onClick={() => field.onChange("COMPANIA_ANONIMA")}>
+                                Compañía Anónima (C.A)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => field.onChange("ASOCIACION_CIVIL")}>
+                                Asociación Civil
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => field.onChange("SRL")}>
+                                Sociedades de Responsabilidad Limitada (S.R.L.)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => field.onChange("FUNDACION")}>
+                                Fundaciones
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => field.onChange("COOPERATIVA")}>
+                                Cooperativas
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => field.onChange("PYME")}>
+                                Pymes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => field.onChange("SOCIEDAD_CIVIL")}>
+                                Sociedad Civil
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
-                  ))}
-                </div>
-              </div>
+                  )}
 
-              {/* Separador */}
-              <div className="border-t border-border"></div>
+                  {currentTipoPersona === "JURIDICA" && (
+                    <FormField
+                      control={form.control}
+                      name="datosRegistroMercantil"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-bold text-color-subtitulos">
+                            Indique los datos del Registro Mercantil del proveedor
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground italic mb-2">
+                            Ejemplo: Registro Mercantil Segundo del Estado Lara, bajo el N° 0, Tomo
+                            00-A del Año 0000
+                          </p>
+                          <FormControl>
+                            <Input
+                              placeholder=""
+                              className="h-11 border-border focus-visible:ring-color-boton-2"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
-              {/* Sección 3: Capacidad Técnica y Financiera */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-1 h-6 bg-navy rounded-full"></div>
-                  <h2 className="text-xl font-bold text-color-titulos">
-                    3. Capacidad técnica y financiera
-                  </h2>
-                </div>
+                  {currentTipoPersona === "JURIDICA" && (
+                    <FormField
+                      control={form.control}
+                      name="representanteNombre"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-bold text-color-subtitulos">
+                            Nombre del Representante Legal
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground italic mb-2">
+                            Ejemplo: José Ramírez González Pérez
+                          </p>
+                          <FormControl>
+                            <Input
+                              className="h-11 border-border focus-visible:ring-color-boton-2"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  {currentTipoPersona === "JURIDICA" && (
+                    <div className="space-y-2">
+                      <FormLabel className="font-bold text-color-subtitulos">
+                        Cédula del Representante Legal
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground italic mb-2">
+                        Ejemplo: V-00.000.000
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-[100px] h-11 font-normal border-border bg-white shadow-sm justify-between"
+                            >
+                              <span>{cedulaTipo || "V"}</span>
+                              <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => setCedulaTipo("V")}>
+                              V
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCedulaTipo("E")}>
+                              E
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Input
+                          placeholder="00000000"
+                          maxLength={8}
+                          value={cedulaNumero}
+                          onChange={(e) => setCedulaNumero(e.target.value.replace(/\D/g, ""))}
+                          className="flex-1 max-w-[200px] h-11 border border-slate-300 focus-visible:ring-1 focus-visible:ring-color-boton-2 bg-white"
+                        />
+                      </div>
+                      {form.formState.errors.representanteCedula && (
+                        <p className="text-sm font-medium text-destructive">
+                          {form.formState.errors.representanteCedula.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8 max-w-[800px]">
-                  {/* Row 1: Actividad Comercial (Now at the top) */}
-                  <FormField
-                    control={form.control}
-                    name="actividadPrincipal"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
+                  {currentTipoPersona === "NATURAL" && (
+                    <div className="space-y-2">
+                      <FormLabel className="font-bold text-color-subtitulos">
+                        Cédula del Proveedor
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground italic mb-2">
+                        Ejemplo: V-00.000.000
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-[100px] h-11 font-normal border-border bg-white shadow-sm justify-between"
+                            >
+                              <span>{cedulaNaturalTipo || "V"}</span>
+                              <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => setCedulaNaturalTipo("V")}>
+                              V
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCedulaNaturalTipo("E")}>
+                              E
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Input
+                          placeholder="00000000"
+                          maxLength={8}
+                          value={cedulaNaturalNumero}
+                          onChange={(e) =>
+                            setCedulaNaturalNumero(e.target.value.replace(/\D/g, ""))
+                          }
+                          className="flex-1 max-w-[200px] h-11 border border-slate-300 focus-visible:ring-1 focus-visible:ring-color-boton-2 bg-white"
+                        />
+                      </div>
+                      {form.formState.errors.cedulaNatural && (
+                        <p className="text-sm font-medium text-destructive">
+                          {form.formState.errors.cedulaNatural.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {currentTipoPersona === "ADMINISTRACION_PUBLICA" && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="nombreAutoridad"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-color-subtitulos">
+                              Nombre de la Máxima Autoridad
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground italic mb-2">
+                              Ejemplo: José Ramírez González Pérez
+                            </p>
+                            <FormControl>
+                              <Input
+                                className="h-11 border-border focus-visible:ring-color-boton-2"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="space-y-2">
                         <FormLabel className="font-bold text-color-subtitulos">
-                          Actividad comercial principal
+                          Cédula de la Máxima Autoridad
                         </FormLabel>
                         <p className="text-xs text-muted-foreground italic mb-2">
-                          Ejemplo: El objeto principal es la prestación de servicios de consultoría
-                          y asesoría en el área de tecnología de la información, lo que incluye el
-                          desarrollo de software, diseño de páginas web, y manejo de redes sociales.
+                          Ejemplo: V-00.000.000
                         </p>
-                        <div className="flex gap-2 mt-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className={`rounded w-14 h-10 transition-colors ${
-                              field.value === "Si"
-                                ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
-                            }`}
-                            onClick={() => field.onChange("Si")}
-                          >
-                            Si
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className={`rounded w-14 h-10 transition-colors ${
-                              field.value === "No"
-                                ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
-                            }`}
-                            onClick={() => field.onChange("No")}
-                          >
-                            No
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Row 2: Area Especialidad (Left) */}
-                  <FormField
-                    control={form.control}
-                    name="areaEspecialidad"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos block mb-2">
-                          Área de especialidad
-                        </FormLabel>
-                        <div className="flex flex-row items-center gap-2 mt-2">
-                          {["BIENES", "OBRAS", "SERVICIOS"].map((area) => (
-                            <Button
-                              key={area}
-                              type="button"
-                              variant="outline"
-                              className={`rounded px-3 h-9 text-[10px] transition-colors ${
-                                field.value === area
-                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
-                              }`}
-                              onClick={() => field.onChange(area)}
-                            >
-                              {area}
-                            </Button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="hidden md:block"></div>
-
-                  {/* Row 3: Años de experiencia (Left) | Patrimonio (Right) */}
-                  <FormField
-                    control={form.control}
-                    name="anosExperiencia"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Años de experiencia comprobable
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            className="h-11 border-border focus-visible:ring-color-boton-2"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="patrimonioNeto"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos">
-                          Patrimonio neto reportado
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ej: 10000"
-                            type="text"
-                            className="h-11 border-border focus-visible:ring-color-boton-2"
-                            {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Row 4: Fecha (Left) | Nivel (Right) */}
-                  <FormField
-                    control={form.control}
-                    name="fechaEstadoFinanciero"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="font-bold text-color-subtitulos mb-2">
-                          Fecha del último estado financiero
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
+                        <div className="flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                               <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full h-11 pl-3 text-left font-normal border-border bg-white",
-                                  !field.value && "text-muted-foreground"
-                                )}
+                                variant="outline"
+                                className="w-[100px] h-11 font-normal border-border bg-white shadow-sm justify-between"
                               >
-                                {field.value ? (
-                                  format(new Date(field.value), "PPP", { locale: es })
-                                ) : (
-                                  <span>Seleccionar fecha</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                <span>{cedulaAutoridadTipo || "V"}</span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
                               </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              captionLayout="dropdown"
-                              fromYear={1900}
-                              toYear={new Date().getFullYear()}
-                              selected={field.value ? new Date(field.value) : undefined}
-                              onSelect={(date) => field.onChange(date?.toISOString())}
-                              locale={es}
-                              disabled={(date) =>
-                                date > new Date() || date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="nivelContratacion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-color-subtitulos block mb-2">
-                          Nivel de contratación
-                        </FormLabel>
-                        <div className="flex flex-row items-center gap-2 mt-2">
-                          {["ALTA", "MEDIA", "BAJA"].map((nivel) => (
-                            <Button
-                              key={nivel}
-                              type="button"
-                              variant="outline"
-                              className={`rounded px-3 h-9 text-[10px] transition-colors ${
-                                field.value === nivel
-                                  ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
-                                  : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
-                              }`}
-                              onClick={() => field.onChange(nivel)}
-                            >
-                              {nivel}
-                            </Button>
-                          ))}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onClick={() => setCedulaAutoridadTipo("V")}>
+                                V
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setCedulaAutoridadTipo("E")}>
+                                E
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Input
+                            placeholder="00000000"
+                            maxLength={8}
+                            value={cedulaAutoridadNumero}
+                            onChange={(e) =>
+                              setCedulaAutoridadNumero(e.target.value.replace(/\D/g, ""))
+                            }
+                            className="flex-1 max-w-[200px] h-11 border border-slate-300 focus-visible:ring-1 focus-visible:ring-color-boton-2 bg-white"
+                          />
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        {form.formState.errors.cedulaAutoridad && (
+                          <p className="text-sm font-medium text-destructive">
+                            {form.formState.errors.cedulaAutoridad.message}
+                          </p>
+                        )}
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="datosDesignacionAutoridad"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-color-subtitulos">
+                              Datos de Resolución/Decreto/Acta de designación
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground italic mb-2">
+                              Ejemplo: Resolución N° 000/00 de fecha 00-00-0000 publicado en Gaceta
+                              N° 0000
+                            </p>
+                            <FormControl>
+                              <Input
+                                className="h-11 border-border focus-visible:ring-color-boton-2"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
 
-                {/* Botón Siguiente */}
-                <div className="flex justify-end pt-8">
-                  <Button
-                    type="button"
-                    className="bg-navy hover:bg-navy-hover h-12 px-8 text-white font-semibold rounded-md shadow"
-                    onClick={handleNextStep}
-                  >
-                    Siguiente
-                  </Button>
+                  {hasTipoPersonaSelected && (
+                    <div className="space-y-2">
+                      <FormLabel className="font-bold text-color-subtitulos">
+                        Teléfono de contacto
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground italic mb-2">
+                        Ejemplo: 0412-5555555
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-11 w-[90px] border border-slate-300 font-inter text-slate-500 justify-between bg-white"
+                            >
+                              {phonePrefix}
+                              <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-[90px]">
+                            {["0414", "0424", "0412", "0422", "0416", "0426"].map((p) => (
+                              <DropdownMenuItem key={p} onClick={() => setPhonePrefix(p)}>
+                                {p}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Input
+                          type="text"
+                          maxLength={7}
+                          value={phoneBody}
+                          onChange={(e) => setPhoneBody(e.target.value.replace(/\D/g, ""))}
+                          placeholder="7894561"
+                          className="h-11 border border-slate-300 flex-1 focus-visible:ring-1 focus-visible:ring-color-boton-2"
+                        />
+                      </div>
+                      {form.formState.errors.telefono && (
+                        <p className="text-sm font-medium text-destructive">
+                          {form.formState.errors.telefono.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {hasTipoPersonaSelected && (
+                <>
+                  {/* Separador */}
+                  <div className="border-t border-border"></div>
+
+                  {/* Sección 2: Ubicación */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-6 bg-color-boton-2 rounded-full"></div>
+                      <h2 className="text-xl font-bold text-color-titulos">2. Ubicación</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-[800px]">
+                      {/* Estado */}
+                      <FormField
+                        control={form.control}
+                        name="estado"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel className="font-bold text-color-subtitulos">
+                              Estado
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground italic mb-2">
+                              Ejemplo: Lara
+                            </p>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting || estadosList.length === 0}
+                                  >
+                                    <span className={field.value ? "text-slate-700" : ""}>
+                                      {field.value || "Selecciona estado"}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
+                                {estadosList.map((estado) => (
+                                  <DropdownMenuItem
+                                    key={estado.id}
+                                    onClick={() => {
+                                      field.onChange(estado.nombre);
+                                      form.setValue("municipio", "");
+                                      form.setValue("parroquia", "");
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    {estado.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Municipio */}
+                      <FormField
+                        control={form.control}
+                        name="municipio"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel className="font-bold text-color-subtitulos">
+                              Municipio
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground italic mb-2">
+                              Ejemplo: Iribarren
+                            </p>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting || municipiosList.length === 0}
+                                  >
+                                    <span className={field.value ? "text-slate-700" : ""}>
+                                      {field.value || "Selecciona municipio"}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
+                                {municipiosList.map((municipio) => (
+                                  <DropdownMenuItem
+                                    key={municipio.id}
+                                    onClick={() => {
+                                      field.onChange(municipio.nombre);
+                                      form.setValue("parroquia", "");
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    {municipio.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Parroquia */}
+                      <FormField
+                        control={form.control}
+                        name="parroquia"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel className="font-bold text-color-subtitulos">
+                              Parroquia
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground italic mb-2">
+                              Ejemplo: Concepción
+                            </p>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full h-11 justify-between font-normal bg-white border-border hover:bg-slate-50 focus-visible:ring-color-boton-2",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting || parroquiasList.length === 0}
+                                  >
+                                    <span className={field.value ? "text-slate-700" : ""}>
+                                      {field.value || "Selecciona parroquia"}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto">
+                                {parroquiasList.map((parroquia) => (
+                                  <DropdownMenuItem
+                                    key={parroquia.id}
+                                    onClick={() => field.onChange(parroquia.nombre)}
+                                    className="cursor-pointer"
+                                  >
+                                    {parroquia.nombre}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Dirección Fiscal (Más pequeña) */}
+                      <FormField
+                        control={form.control}
+                        name="direccionFiscal"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-color-subtitulos">
+                              Dirección fiscal (como se indica en el RIF)
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground italic mb-2">
+                              Ejemplo: Avenida 00, entre calles 00 y 00, Centro Comercial Central,
+                              Piso 2, Local 3
+                            </p>
+                            <FormControl>
+                              <Input
+                                className="h-11 border-border focus-visible:ring-color-boton-2"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {hasTipoPersonaSelected && (
+                <>
+                  {/* Separador */}
+                  <div className="border-t border-border"></div>
+
+                  {currentTipoPersona !== "ADMINISTRACION_PUBLICA" && (
+                    <>
+                      {/* Sección 3: Validación de requisitos */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-6 bg-color-boton-2 rounded-full"></div>
+                          <h2 className="text-xl font-bold text-color-titulos">
+                            3. Validación de requisitos
+                          </h2>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                          {/* Preguntas de requisitos */}
+                          {[
+                            {
+                              name: "rnc",
+                              label:
+                                "¿Está registrado en el Registro Nacional de Contratista (RNC)?",
+                            },
+                            ...(currentTipoPersona === "JURIDICA"
+                              ? [
+                                  {
+                                    name: "solvenciaLaboral",
+                                    label: "¿Tiene solvencia laboral vigente?",
+                                  },
+                                  {
+                                    name: "licenciaMunicipal",
+                                    label: "¿Tiene licencia de funcionamiento municipal vigente?",
+                                  },
+                                ]
+                              : []),
+                            {
+                              name: "islr",
+                              label:
+                                "¿Posee Declaración de Impuesto Sobre la Renta (ISLR) del último ejercicio fiscal?",
+                            },
+                          ].map((req) => (
+                            <FormField
+                              key={req.name}
+                              control={form.control}
+                              // @ts-expect-error dynamic strict
+                              name={req.name}
+                              render={({ field }) => (
+                                <FormItem className="flex items-center justify-between p-4 bg-white border border-border shadow-sm rounded-lg">
+                                  <FormLabel className="text-[15px] text-color-subtitulos font-semibold m-0 flex-1">
+                                    {req.label}
+                                  </FormLabel>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className={`rounded w-14 h-10 transition-colors ${
+                                        field.value === "Si"
+                                          ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                          : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                                      }`}
+                                      onClick={() => field.onChange("Si")}
+                                    >
+                                      Si
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className={`rounded w-14 h-10 transition-colors ${
+                                        field.value === "No"
+                                          ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                          : "border-border text-muted-foreground font-medium bg-white hover:bg-muted hover:text-muted-foreground"
+                                      }`}
+                                      onClick={() => field.onChange("No")}
+                                    >
+                                      No
+                                    </Button>
+                                  </div>
+                                  <FormMessage className="absolute mt-14" />
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Separador */}
+                      <div className="border-t border-border"></div>
+                    </>
+                  )}
+
+                  {/* Sección Capacidad Técnica y Financiera */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-6 bg-navy rounded-full"></div>
+                      <h2 className="text-xl font-bold text-color-titulos">
+                        {currentTipoPersona === "ADMINISTRACION_PUBLICA"
+                          ? "3. Capacidad técnica y financiera"
+                          : "4. Capacidad técnica y financiera"}
+                      </h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8 max-w-[800px]">
+                      {currentTipoPersona !== "ADMINISTRACION_PUBLICA" && (
+                        <FormField
+                          control={form.control}
+                          name="actividadPrincipal"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel className="font-bold text-color-subtitulos">
+                                Actividad comercial principal
+                              </FormLabel>
+                              <p className="text-xs text-muted-foreground italic mb-2">
+                                Ejemplo: El objeto principal es la prestación de servicios de
+                                consultoría y asesoría en el área de tecnología de la información,
+                                lo que incluye el desarrollo de software, diseño de páginas web, y
+                                manejo de redes sociales.
+                              </p>
+                              <FormControl>
+                                <Textarea
+                                  className="min-h-[100px] border-border focus-visible:ring-color-boton-2"
+                                  placeholder="Describa la actividad comercial principal"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Row 2: Area Especialidad (Left) */}
+                      <FormField
+                        control={form.control}
+                        name="areaEspecialidad"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-color-subtitulos block mb-2">
+                              Área de especialidad
+                            </FormLabel>
+                            <div className="flex flex-row items-center gap-2 mt-2">
+                              {["BIENES", "OBRAS", "SERVICIOS"].map((area) => (
+                                <Button
+                                  key={area}
+                                  type="button"
+                                  variant="outline"
+                                  className={`rounded px-3 h-9 text-[10px] transition-colors ${
+                                    field.value === area
+                                      ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                      : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
+                                  }`}
+                                  onClick={() => field.onChange(area)}
+                                >
+                                  {area}
+                                </Button>
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="hidden md:block"></div>
+
+                      {/* Row 3: Años de experiencia (Left) | Patrimonio (Right) */}
+                      {currentTipoPersona !== "ADMINISTRACION_PUBLICA" && (
+                        <FormField
+                          control={form.control}
+                          name="anosExperiencia"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-bold text-color-subtitulos">
+                                Años de experiencia comprobable
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  className="h-11 border-border focus-visible:ring-color-boton-2"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                      {currentTipoPersona === "JURIDICA" && (
+                        <FormField
+                          control={form.control}
+                          name="fechaEstadoFinanciero"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                              <FormLabel className="font-bold text-color-subtitulos mb-2">
+                                Fecha del último estado financiero
+                              </FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "w-full h-11 pl-3 text-left font-normal border-border bg-white",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? (
+                                        format(new Date(field.value), "PPP", { locale: es })
+                                      ) : (
+                                        <span>Seleccionar fecha</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    captionLayout="dropdown"
+                                    fromYear={1900}
+                                    toYear={new Date().getFullYear()}
+                                    selected={field.value ? new Date(field.value) : undefined}
+                                    onSelect={(date) => field.onChange(date?.toISOString())}
+                                    locale={es}
+                                    disabled={(date) =>
+                                      date > new Date() || date < new Date("1900-01-01")
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                      {currentTipoPersona === "JURIDICA" && (
+                        <FormField
+                          control={form.control}
+                          name="patrimonioNeto"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-bold text-color-subtitulos">
+                                Patrimonio neto reportado
+                              </FormLabel>
+                              <FormControl>
+                                <MoneyInput
+                                  placeholder="Ej: 10000"
+                                  className="h-11 border-border focus-visible:ring-color-boton-2"
+                                  name={field.name}
+                                  value={field.value || ""}
+                                  onBlur={field.onBlur}
+                                  disabled={isSubmitting}
+                                  onValueChange={(cleanValue) => field.onChange(cleanValue)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                      <FormField
+                        control={form.control}
+                        name="nivelContratacion"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-color-subtitulos block mb-2">
+                              Nivel de contratación
+                            </FormLabel>
+                            <div className="flex flex-row items-center gap-2 mt-2">
+                              {["ALTA", "MEDIA", "BAJA"].map((nivel) => (
+                                <Button
+                                  key={nivel}
+                                  type="button"
+                                  variant="outline"
+                                  className={`rounded px-3 h-9 text-[10px] transition-colors ${
+                                    field.value === nivel
+                                      ? "border-ring text-color-titulos font-bold bg-muted shadow-sm"
+                                      : "border-border text-muted-foreground font-medium bg-white hover:bg-muted"
+                                  }`}
+                                  onClick={() => field.onChange(nivel)}
+                                >
+                                  {nivel}
+                                </Button>
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Botón Siguiente */}
+                    <div className="flex justify-end pt-8">
+                      <Button
+                        type="button"
+                        className="bg-navy hover:bg-navy-hover h-12 px-8 text-white font-semibold rounded-md shadow"
+                        onClick={handleNextStep}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+              {!hasTipoPersonaSelected && (
+                <div className="p-4 border border-dashed border-border rounded-md bg-slate-50">
+                  <p className="text-sm text-muted-foreground">
+                    Selecciona V, J o G en el RIF para desplegar el resto del formulario.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1441,7 +1898,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-1">
                     Documentos requeridos
                   </p>
-                  {TIPOS_DOCUMENTO.map((tipo, idx) => {
+                  {tiposDocumento.map((tipo, idx) => {
                     const isUploaded = documentos.some((d) => d.tipoDoc === tipo.value);
                     const isActive = idx === docStepIndex;
                     const isCompleted = isUploaded;
@@ -1488,7 +1945,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                                   : "text-color-subtitulos"
                             )}
                           >
-                            {tipo.label}
+                            {tipo.shortLabel}
                           </span>
                           <span className="text-[10px] mt-0.5 font-medium">
                             {isCompleted ? (
@@ -1511,13 +1968,13 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                         Progreso
                       </span>
                       <span className="text-[10px] font-bold text-color-titulos">
-                        {documentos.length}/{TIPOS_DOCUMENTO.length}
+                        {documentos.length}/{tiposDocumento.length}
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full bg-success rounded-full transition-all duration-500"
-                        style={{ width: `${(documentos.length / TIPOS_DOCUMENTO.length) * 100}%` }}
+                        style={{ width: `${(documentos.length / tiposDocumento.length) * 100}%` }}
                       />
                     </div>
                   </div>
@@ -1533,10 +1990,10 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                       </div>
                       <div>
                         <p className="text-sm font-bold text-color-titulos leading-tight">
-                          {TIPOS_DOCUMENTO[docStepIndex].label}
+                          {tiposDocumento[docStepIndex]?.label ?? ""}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Paso {docStepIndex + 1} de {TIPOS_DOCUMENTO.length}
+                        <p className="text-[11px] text-muted-foreground italic">
+                          {tiposDocumento[docStepIndex]?.description ?? ""}
                         </p>
                       </div>
                     </div>
@@ -1678,15 +2135,15 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                       ← Anterior doc.
                     </Button>
                     <span className="text-xs text-muted-foreground font-medium">
-                      {docStepIndex + 1} / {TIPOS_DOCUMENTO.length}
+                      {docStepIndex + 1} / {tiposDocumento.length}
                     </span>
-                    {docStepIndex < TIPOS_DOCUMENTO.length - 1 ? (
+                    {docStepIndex < tiposDocumento.length - 1 ? (
                       <Button
                         type="button"
                         variant="outline"
                         className="h-9 px-5 text-sm font-semibold rounded-lg border-navy/30 text-navy hover:bg-navy/5"
                         onClick={() => {
-                          setDocStepIndex((i) => Math.min(TIPOS_DOCUMENTO.length - 1, i + 1));
+                          setDocStepIndex((i) => Math.min(tiposDocumento.length - 1, i + 1));
                         }}
                       >
                         Siguiente doc. →
