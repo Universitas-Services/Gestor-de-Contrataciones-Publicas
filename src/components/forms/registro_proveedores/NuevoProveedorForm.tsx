@@ -32,6 +32,16 @@ import {
   nuevoProveedorSchema,
   type NuevoProveedorFormValues,
 } from "@/lib/schemas/nuevoProveedorSchema";
+import { buildProveedorFormData } from "@/lib/proveedores/buildProveedorFormData";
+import {
+  FORMA_JURIDICA_LABELS,
+  TIPO_PERSONA_LABELS,
+  getTipoPersonaFromRifPrefix,
+  normalizeTipoPersonaFromApi,
+  normalizeFormaJuridica,
+  formatCedulaFromApi,
+  normalizeDocKeyFromApi,
+} from "@/lib/proveedores/proveedor.constants";
 
 import {
   Form,
@@ -165,7 +175,7 @@ const TIPOS_DOCUMENTO_BY_PERSONA: Record<string, TipoDocItem[]> = {
       description: "Cargue documento vigente en PDF",
     },
   ],
-  ADMINISTRACION_PUBLICA: [
+  ORGANO_ENTE_PUBLICO: [
     {
       value: "doc_rif",
       label: "Registro de Información Fiscal",
@@ -197,22 +207,6 @@ const TIPOS_DOCUMENTO_BY_PERSONA: Record<string, TipoDocItem[]> = {
 
 // Fallback por si el tipo aún no está seleccionado
 const TIPOS_DOCUMENTO_DEFAULT: TipoDocItem[] = TIPOS_DOCUMENTO_BY_PERSONA.JURIDICA;
-
-const FORMA_JURIDICA_LABELS: Record<string, string> = {
-  COMPANIA_ANONIMA: "Compañía Anónima (C.A)",
-  ASOCIACION_CIVIL: "Asociación Civil",
-  SRL: "Sociedades de Responsabilidad Limitada (S.R.L.)",
-  FUNDACION: "Fundaciones",
-  COOPERATIVA: "Cooperativas",
-  PYME: "Pymes",
-  SOCIEDAD_CIVIL: "Sociedad Civil",
-};
-
-const TIPO_PERSONA_LABELS: Record<string, string> = {
-  JURIDICA: "Persona Jurídica",
-  NATURAL: "Persona Natural",
-  ADMINISTRACION_PUBLICA: "Órganos y Entes de la Administración Pública",
-};
 
 const STEP1_BASE_FIELDS: (keyof NuevoProveedorFormValues)[] = [
   "correo",
@@ -257,7 +251,7 @@ const STEP1_FIELDS_BY_PERSONA: Record<string, (keyof NuevoProveedorFormValues)[]
     "actividadPrincipal",
     "anosExperiencia",
   ],
-  ADMINISTRACION_PUBLICA: [
+  ORGANO_ENTE_PUBLICO: [
     ...STEP1_BASE_FIELDS,
     ...STEP1_COMMON_DYNAMIC_FIELDS,
     "nombreAutoridad",
@@ -266,13 +260,6 @@ const STEP1_FIELDS_BY_PERSONA: Record<string, (keyof NuevoProveedorFormValues)[]
   ],
 };
 
-function getTipoPersonaFromRifPrefix(prefix: string): string {
-  if (prefix === "J") return "JURIDICA";
-  if (prefix === "G") return "ADMINISTRACION_PUBLICA";
-  if (prefix === "V") return "NATURAL";
-  return "";
-}
-
 interface NuevoProveedorFormProps {
   providerId?: string;
   readOnly?: boolean;
@@ -280,8 +267,11 @@ interface NuevoProveedorFormProps {
 
 export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProveedorFormProps) {
   const router = useRouter();
+  const isEditMode = Boolean(providerId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousRifTipoRef = useRef<string>("");
+  const initialFormValuesRef = useRef<NuevoProveedorFormValues | null>(null);
+  const initialObsMapRef = useRef<Record<string, string>>({});
 
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -307,6 +297,8 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
   const [docStepIndex, setDocStepIndex] = useState(0);
   // Observaciones persistidas por tipo de documento
   const [obsMap, setObsMap] = useState<Record<string, string>>({});
+  /** Tipos doc_* ya guardados en servidor (modo edición, sin File local). */
+  const [documentosRegistrados, setDocumentosRegistrados] = useState<Set<string>>(new Set());
   const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   const [documentos, setDocumentos] = useState<
@@ -388,6 +380,13 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
     TIPOS_DOCUMENTO_BY_PERSONA[currentTipoPersona] ?? TIPOS_DOCUMENTO_DEFAULT;
   const tipoDocActual = tiposDocumento[docStepIndex]?.value ?? tiposDocumento[0]?.value ?? "";
 
+  const rifFieldsDisabled = isSubmitting || isEditMode;
+
+  const isDocCompleto = (tipoValue: string) =>
+    documentos.some((d) => d.tipoDoc === tipoValue) || documentosRegistrados.has(tipoValue);
+
+  const documentosCompletadosCount = tiposDocumento.filter((t) => isDocCompleto(t.value)).length;
+
   // Resetear el paso de documentos cuando cambia el tipo de persona
   useEffect(() => {
     setDocStepIndex(0);
@@ -441,32 +440,27 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
         const response = await getProveedorById(providerId);
         const data = response.data || response;
 
-        const normalizeFormaJuridica = (val: string) => {
-          if (!val) return "";
-          const v = val.toUpperCase();
-          if (v === "COOPERATIVA" || v === "COOPERATIVA") return "COOPERATIVA";
-          if (v === "PYME" || v === "PYME") return "PYME";
-          if (v === "COMPANIA_ANONIMA" || v === "C.A." || v === "C.A" || v.includes("ANONIMA"))
-            return "COMPANIA_ANONIMA";
-          if (v === "ASOCIACION_CIVIL") return "ASOCIACION_CIVIL";
-          if (v === "SOCIEDAD_CIVIL") return "SOCIEDAD_CIVIL";
-          if (v === "SRL" || v.includes("LIMITADA")) return "SRL";
-          if (v === "FUNDACION" || v === "FUNDACION") return "FUNDACION";
-          return val;
-        };
+        const hasIslr =
+          typeof data.islrProveedor === "boolean"
+            ? data.islrProveedor
+            : typeof data.declaracionIslr === "boolean"
+              ? data.declaracionIslr
+              : false;
 
-        // Mapear datos al formulario
-        form.reset({
+        const mappedValues: NuevoProveedorFormValues = {
           correo: data.correo || "",
           nombre: data.nombre || "",
           rif: data.rif || "",
           formaJuridica: normalizeFormaJuridica(data.tipoEntidadJuridica),
-          tipoPersona: data.tipoPersona || "",
+          tipoPersona: normalizeTipoPersonaFromApi(data.tipoPersona),
           datosRegistroMercantil: data.datosRegistroMercantil || "",
-          cedulaNatural: data.cedulaNatural || "",
-          nombreAutoridad: data.nombreAutoridad || "",
-          cedulaAutoridad: data.cedulaAutoridad || "",
-          datosDesignacionAutoridad: data.datosDesignacionAutoridad || "",
+          cedulaNatural:
+            formatCedulaFromApi(data.cedulaNaturalProveedor ?? data.cedulaNatural) || "",
+          nombreAutoridad: data.nombreAutoridadProveedor ?? data.nombreAutoridad ?? "",
+          cedulaAutoridad:
+            formatCedulaFromApi(data.cedulaAutoridadProveedor ?? data.cedulaAutoridad) || "",
+          datosDesignacionAutoridad:
+            data.datosDesignacionAutoridadProveedor ?? data.datosDesignacionAutoridad ?? "",
           estado: data.estado || "",
           municipio: data.municipio || "",
           parroquia: data.parroquia || "",
@@ -477,7 +471,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           rnc: data.registroRnc ? "Si" : "No",
           solvenciaLaboral: data.solvenciaLaboral ? "Si" : "No",
           licenciaMunicipal: data.licenciaFuncionamientoMunicipal ? "Si" : "No",
-          islr: data.declaracionIslr ? "Si" : "No",
+          islr: hasIslr ? "Si" : "No",
           actividadPrincipal: data.actividadComercial || "",
           areaEspecialidad:
             data.areaEspecialidad === "SERVICIO" || data.areaEspecialidad === "SERVICIOS"
@@ -487,7 +481,10 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           patrimonioNeto: data.patrimonioReportado?.toString() || "",
           fechaEstadoFinanciero: data.fechaEstadoFinanciero || "",
           nivelContratacion: data.nivelContratacion || "",
-        });
+        };
+
+        form.reset(mappedValues);
+        initialFormValuesRef.current = { ...mappedValues };
 
         // Fragmentar RIF
         if (data.rif) {
@@ -507,15 +504,21 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
             setCedulaNumero(cidParts[1]);
           }
         }
-        if (data.cedulaNatural) {
-          const cidParts = data.cedulaNatural.split("-");
+        const cedulaNaturalFormatted = formatCedulaFromApi(
+          data.cedulaNaturalProveedor ?? data.cedulaNatural
+        );
+        if (cedulaNaturalFormatted) {
+          const cidParts = cedulaNaturalFormatted.split("-");
           if (cidParts.length === 2) {
             setCedulaNaturalTipo(cidParts[0]);
             setCedulaNaturalNumero(cidParts[1]);
           }
         }
-        if (data.cedulaAutoridad) {
-          const cidParts = data.cedulaAutoridad.split("-");
+        const cedulaAutoridadFormatted = formatCedulaFromApi(
+          data.cedulaAutoridadProveedor ?? data.cedulaAutoridad
+        );
+        if (cedulaAutoridadFormatted) {
+          const cidParts = cedulaAutoridadFormatted.split("-");
           if (cidParts.length === 2) {
             setCedulaAutoridadTipo(cidParts[0]);
             setCedulaAutoridadNumero(cidParts[1]);
@@ -528,8 +531,26 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
           setPhoneBody(data.telefono.slice(4));
         }
 
-        // Manejar documentos existentes (opcional: mostrar historial)
-        // Por ahora nos enfocamos en permitir cargar nuevos
+        const docsApi = (data.documentos ?? []) as Array<{
+          tipoDocumento?: string;
+          observaciones?: string;
+        }>;
+        const registered = new Set<string>();
+        const obsFromServer: Record<string, string> = {};
+        for (const doc of docsApi) {
+          const key = normalizeDocKeyFromApi(doc.tipoDocumento);
+          if (key) {
+            registered.add(key);
+            if (doc.observaciones?.trim()) {
+              obsFromServer[key] = doc.observaciones.trim();
+            }
+          }
+        }
+        setDocumentosRegistrados(registered);
+        initialObsMapRef.current = { ...obsFromServer };
+        if (Object.keys(obsFromServer).length > 0) {
+          setObsMap(obsFromServer);
+        }
       } catch (error) {
         toast.error("Error al cargar los datos del proveedor");
         console.error(error);
@@ -541,14 +562,15 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
     cargarDatos();
   }, [providerId, form]);
 
-  // Efecto para concatenar RIF
+  // Efecto para concatenar RIF (solo en alta; en edición tipoPersona/RIF son fijos)
   useEffect(() => {
+    if (isEditMode || isLoadingInitialData) return;
     const tipoPersona = getTipoPersonaFromRifPrefix(rifTipo);
     form.setValue("tipoPersona", tipoPersona, { shouldValidate: Boolean(tipoPersona) });
-  }, [rifTipo, form]);
+  }, [rifTipo, form, isEditMode, isLoadingInitialData]);
 
   useEffect(() => {
-    if (isLoadingInitialData) return;
+    if (isLoadingInitialData || isEditMode) return;
     const previousRifTipo = previousRifTipoRef.current;
     if (previousRifTipo && previousRifTipo !== rifTipo) {
       form.setValue("formaJuridica", "");
@@ -580,10 +602,10 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       setPhoneBody("");
     }
     previousRifTipoRef.current = rifTipo;
-  }, [rifTipo, form, isLoadingInitialData]);
+  }, [rifTipo, form, isLoadingInitialData, isEditMode]);
 
   useEffect(() => {
-    if (isLoadingInitialData) return;
+    if (isLoadingInitialData || isEditMode) return;
     if (rifTipo && rifCuerpo.length === 8 && rifVerificador.length === 1) {
       form.setValue("rif", `${rifTipo}-${rifCuerpo}-${rifVerificador}`, {
         shouldValidate: true,
@@ -592,7 +614,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
       // Solo limpiar si el usuario realmente está interactuando
       form.setValue("rif", "");
     }
-  }, [rifTipo, rifCuerpo, rifVerificador, form, isLoadingInitialData]);
+  }, [rifTipo, rifCuerpo, rifVerificador, form, isLoadingInitialData, isEditMode]);
 
   // Efecto para concatenar Cédula Representante
   useEffect(() => {
@@ -663,67 +685,13 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
     if (readOnly) return;
     setIsSubmitting(true);
     try {
-      const data = form.getValues();
-      const formData = new FormData();
-      const tipoPersona = data.tipoPersona;
-      const isJuridica = tipoPersona === "JURIDICA";
-      const isNatural = tipoPersona === "NATURAL";
-      const isAdminPublica = tipoPersona === "ADMINISTRACION_PUBLICA";
-      const appendNullable = (key: string, value?: string) => {
-        formData.append(key, value && value.trim() ? value : "null");
-      };
-
-      formData.append("correo", data.correo);
-      formData.append("nombre", data.nombre);
-      formData.append("rif", data.rif);
-      formData.append("tipoPersona", data.tipoPersona);
-      appendNullable("tipoEntidadJuridica", isJuridica ? data.formaJuridica : undefined);
-      appendNullable(
-        "datosRegistroMercantil",
-        isJuridica ? data.datosRegistroMercantil : undefined
-      );
-      formData.append("estado", data.estado || "");
-      formData.append("municipio", data.municipio || "");
-      formData.append("parroquia", data.parroquia || "");
-      formData.append("direccionFiscal", data.direccionFiscal || "");
-      formData.append("telefono", data.telefono || "");
-      appendNullable("nombreRepLegal", isJuridica ? data.representanteNombre : undefined);
-      appendNullable("cedulaRepLegal", isJuridica ? data.representanteCedula : undefined);
-      appendNullable("cedulaNatural", isNatural ? data.cedulaNatural : undefined);
-      appendNullable("nombreAutoridad", isAdminPublica ? data.nombreAutoridad : undefined);
-      appendNullable("cedulaAutoridad", isAdminPublica ? data.cedulaAutoridad : undefined);
-      appendNullable(
-        "datosDesignacionAutoridad",
-        isAdminPublica ? data.datosDesignacionAutoridad : undefined
-      );
-
-      formData.append("registroRnc", data.rnc === "Si" ? "true" : "false");
-      formData.append(
-        "solvenciaLaboral",
-        isJuridica ? (data.solvenciaLaboral === "Si" ? "true" : "false") : "null"
-      );
-      formData.append(
-        "licenciaFuncionamientoMunicipal",
-        isJuridica ? (data.licenciaMunicipal === "Si" ? "true" : "false") : "null"
-      );
-      formData.append(
-        "declaracionIslr",
-        !isAdminPublica ? (data.islr === "Si" ? "true" : "false") : "null"
-      );
-
-      appendNullable("actividadComercial", !isAdminPublica ? data.actividadPrincipal : undefined);
-      formData.append("areaEspecialidad", data.areaEspecialidad || "");
-      appendNullable("anosExperiencia", !isAdminPublica ? data.anosExperiencia : undefined);
-      appendNullable("fechaEstadoFinanciero", isJuridica ? data.fechaEstadoFinanciero : undefined);
-      appendNullable("patrimonioReportado", isJuridica ? data.patrimonioNeto : undefined);
-      formData.append("nivelContratacion", data.nivelContratacion || "");
-
-      // Adjuntar archivos y observaciones
-      documentos.forEach((doc) => {
-        formData.append(doc.tipoDoc, doc.file);
-        if (doc.observaciones) {
-          formData.append(`obs_${doc.tipoDoc}`, doc.observaciones);
-        }
+      const formData = buildProveedorFormData({
+        values: form.getValues(),
+        documentos,
+        obsMap,
+        mode: providerId ? "edit" : "create",
+        initialValues: providerId ? (initialFormValuesRef.current ?? undefined) : undefined,
+        initialObsMap: providerId ? initialObsMapRef.current : undefined,
       });
 
       if (providerId) {
@@ -913,10 +881,11 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     </p>
                     <div className="flex items-center gap-2">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild disabled={rifFieldsDisabled}>
                           <Button
                             variant="outline"
-                            className="w-[80px] h-11 font-normal border border-border bg-white justify-between"
+                            disabled={rifFieldsDisabled}
+                            className="w-[80px] h-11 font-normal border border-border bg-white justify-between disabled:opacity-60"
                           >
                             <span>{rifTipo || "Tipo"}</span>
                             <ChevronDown className="h-4 w-4 opacity-50" />
@@ -938,7 +907,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                             rifVerificadorRef.current?.focus();
                           }
                         }}
-                        disabled={isSubmitting}
+                        disabled={rifFieldsDisabled}
                         pattern={REGEXP_ONLY_DIGITS}
                       >
                         <InputOTPGroup>
@@ -962,7 +931,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                         maxLength={1}
                         value={rifVerificador}
                         onChange={(val) => setRifVerificador(val)}
-                        disabled={isSubmitting}
+                        disabled={rifFieldsDisabled}
                         pattern={REGEXP_ONLY_DIGITS}
                       >
                         <InputOTPGroup>
@@ -1200,7 +1169,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     </div>
                   )}
 
-                  {currentTipoPersona === "ADMINISTRACION_PUBLICA" && (
+                  {currentTipoPersona === "ORGANO_ENTE_PUBLICO" && (
                     <>
                       <FormField
                         control={form.control}
@@ -1531,7 +1500,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                   {/* Separador */}
                   <div className="border-t border-border"></div>
 
-                  {currentTipoPersona !== "ADMINISTRACION_PUBLICA" && (
+                  {currentTipoPersona !== "ORGANO_ENTE_PUBLICO" && (
                     <>
                       {/* Sección 3: Validación de requisitos */}
                       <div className="space-y-6">
@@ -1622,14 +1591,14 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-6 bg-navy rounded-full"></div>
                       <h2 className="text-xl font-bold text-color-titulos">
-                        {currentTipoPersona === "ADMINISTRACION_PUBLICA"
+                        {currentTipoPersona === "ORGANO_ENTE_PUBLICO"
                           ? "3. Capacidad técnica y financiera"
                           : "4. Capacidad técnica y financiera"}
                       </h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8 max-w-[800px]">
-                      {currentTipoPersona !== "ADMINISTRACION_PUBLICA" && (
+                      {currentTipoPersona !== "ORGANO_ENTE_PUBLICO" && (
                         <FormField
                           control={form.control}
                           name="actividadPrincipal"
@@ -1690,7 +1659,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                       <div className="hidden md:block"></div>
 
                       {/* Row 3: Años de experiencia (Left) | Patrimonio (Right) */}
-                      {currentTipoPersona !== "ADMINISTRACION_PUBLICA" && (
+                      {currentTipoPersona !== "ORGANO_ENTE_PUBLICO" && (
                         <FormField
                           control={form.control}
                           name="anosExperiencia"
@@ -1899,7 +1868,7 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     Documentos requeridos
                   </p>
                   {tiposDocumento.map((tipo, idx) => {
-                    const isUploaded = documentos.some((d) => d.tipoDoc === tipo.value);
+                    const isUploaded = isDocCompleto(tipo.value);
                     const isActive = idx === docStepIndex;
                     const isCompleted = isUploaded;
                     return (
@@ -1968,13 +1937,15 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                         Progreso
                       </span>
                       <span className="text-[10px] font-bold text-color-titulos">
-                        {documentos.length}/{tiposDocumento.length}
+                        {documentosCompletadosCount}/{tiposDocumento.length}
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full bg-success rounded-full transition-all duration-500"
-                        style={{ width: `${(documentos.length / tiposDocumento.length) * 100}%` }}
+                        style={{
+                          width: `${(documentosCompletadosCount / tiposDocumento.length) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -2003,10 +1974,15 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                         <span>Cargando...</span>
                       </div>
                     ) : (
-                      documentos.some((d) => d.tipoDoc === tipoDocActual) && (
+                      isDocCompleto(tipoDocActual) && (
                         <div className="flex items-center gap-1.5 bg-success-bg text-success-text text-[11px] font-bold px-3 py-1 rounded-full">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Documento cargado</span>
+                          <span>
+                            {documentosRegistrados.has(tipoDocActual) &&
+                            !documentos.some((d) => d.tipoDoc === tipoDocActual)
+                              ? "Registrado en servidor"
+                              : "Documento cargado"}
+                          </span>
                         </div>
                       )
                     )}
@@ -2067,6 +2043,19 @@ export function NuevoProveedorForm({ providerId, readOnly = false }: NuevoProvee
                     </div>
 
                     {/* Documento cargado para este paso */}
+                    {documentosRegistrados.has(tipoDocActual) &&
+                      !documentos.some((d) => d.tipoDoc === tipoDocActual) && (
+                        <Card className="border border-navy/30 bg-navy/5 shadow-sm">
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <FileText className="w-4 h-4 text-navy flex-shrink-0" />
+                            <p className="text-sm text-color-subtitulos">
+                              Este documento ya está registrado. Puede subir un nuevo PDF para
+                              reemplazarlo.
+                            </p>
+                          </div>
+                        </Card>
+                      )}
+
                     {(() => {
                       const docActivo = documentos.find((d) => d.tipoDoc === tipoDocActual);
                       return docActivo ? (

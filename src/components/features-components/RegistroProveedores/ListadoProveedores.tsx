@@ -43,6 +43,7 @@ interface Provider {
   nombre: string;
   rif: string;
   nombreRepLegal: string;
+  nombreAutoridadProveedor?: string | null;
   areaEspecialidad: string | null;
   estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
@@ -216,8 +217,10 @@ export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean })
                   </div>
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
-                  Representante Legal
+                <th className="px-4 py-3 font-semibold text-center leading-tight">
+                  Representante legal/
+                  <br />
+                  Máxima autoridad
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">tipo</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
@@ -248,7 +251,22 @@ export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean })
                         </td>
                         <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
                         <td className="px-4 py-3 text-slate-600 text-center font-medium max-w-[150px] truncate">
-                          {provider.nombreRepLegal}
+                          {(() => {
+                            const firstChar = provider.rif
+                              ? provider.rif.trim().charAt(0).toUpperCase()
+                              : "";
+                            if (firstChar === "J") {
+                              return provider.nombreRepLegal || "N/A";
+                            } else if (firstChar === "G") {
+                              return provider.nombreAutoridadProveedor || "N/A";
+                            } else {
+                              return (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                  No aplica
+                                </span>
+                              );
+                            }
+                          })()}
                         </td>
 
                         {/* Tipo Pill */}

@@ -66,8 +66,8 @@ export const nuevoProveedorSchema = z
 
     const isJuridica = data.tipoPersona === "JURIDICA";
     const isNatural = data.tipoPersona === "NATURAL";
-    const isAdminPublica = data.tipoPersona === "ADMINISTRACION_PUBLICA";
-    const hasTipoPersona = isJuridica || isNatural || isAdminPublica;
+    const isOrganoEntePublico = data.tipoPersona === "ORGANO_ENTE_PUBLICO";
+    const hasTipoPersona = isJuridica || isNatural || isOrganoEntePublico;
 
     requireField(hasTipoPersona, data.telefono, "telefono", "Teléfono de contacto es requerido");
     requireField(hasTipoPersona, data.estado, "estado", "Seleccione un estado");
@@ -163,19 +163,19 @@ export const nuevoProveedorSchema = z
     requireField(isNatural, data.islr, "islr", "Indique si posee ISLR");
 
     requireField(
-      isAdminPublica,
+      isOrganoEntePublico,
       data.nombreAutoridad,
       "nombreAutoridad",
       "Nombre de la máxima autoridad requerido"
     );
     requireField(
-      isAdminPublica,
+      isOrganoEntePublico,
       data.cedulaAutoridad,
       "cedulaAutoridad",
       "Cédula de la máxima autoridad requerida"
     );
     requireField(
-      isAdminPublica,
+      isOrganoEntePublico,
       data.datosDesignacionAutoridad,
       "datosDesignacionAutoridad",
       "Datos de designación de la máxima autoridad requeridos"

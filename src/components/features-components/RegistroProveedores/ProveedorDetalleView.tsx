@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getProveedorById, cambiarEstatusProveedor } from "@/services/proveedores.service";
+import { TIPO_PERSONA_LABELS, FORMA_JURIDICA_LABELS } from "@/lib/proveedores/proveedor.constants";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -218,8 +219,17 @@ export function ProveedorDetalleView({ id, readOnly = false }: { id: string; rea
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <InfoItem label="Nombre legal" value={provider.nombre} />
-                <InfoItem label="Tipo de persona" value={provider.tipoPersona} />
-                <InfoItem label="Forma jurídica" value={provider.tipoEntidadJuridica} />
+                <InfoItem
+                  label="Tipo de persona"
+                  value={TIPO_PERSONA_LABELS[provider.tipoPersona] ?? provider.tipoPersona}
+                />
+                <InfoItem
+                  label="Forma jurídica"
+                  value={
+                    FORMA_JURIDICA_LABELS[provider.tipoEntidadJuridica] ??
+                    provider.tipoEntidadJuridica
+                  }
+                />
                 <InfoItem
                   label="Fecha de fundación"
                   value={

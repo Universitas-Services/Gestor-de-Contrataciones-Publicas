@@ -6,6 +6,7 @@ export interface DashboardOperativoResponse {
     total: number;
     ejecutores: number;
     visualizadores: number;
+    administradores: number;
   };
   expedientesEnProceso: {
     total: number;

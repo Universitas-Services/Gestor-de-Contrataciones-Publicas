@@ -34,6 +34,7 @@ interface Provider {
   nombre: string;
   rif: string;
   nombreRepLegal: string;
+  nombreAutoridadProveedor?: string | null;
   areaEspecialidad: string | null;
   estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
@@ -247,8 +248,10 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
                   </div>
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
-                  Representante legal
+                <th className="px-4 py-3 font-semibold text-center leading-tight">
+                  Representante legal/
+                  <br />
+                  Máxima autoridad
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
@@ -281,7 +284,22 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
                           {provider.rif}
                         </td>
                         <td className="px-4 py-3 text-slate-600 text-center font-medium whitespace-nowrap max-w-[150px] truncate">
-                          {provider.nombreRepLegal}
+                          {(() => {
+                            const firstChar = provider.rif
+                              ? provider.rif.trim().charAt(0).toUpperCase()
+                              : "";
+                            if (firstChar === "J") {
+                              return provider.nombreRepLegal || "N/A";
+                            } else if (firstChar === "G") {
+                              return provider.nombreAutoridadProveedor || "N/A";
+                            } else {
+                              return (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                  No aplica
+                                </span>
+                              );
+                            }
+                          })()}
                         </td>
 
                         {/* Area Pill */}
