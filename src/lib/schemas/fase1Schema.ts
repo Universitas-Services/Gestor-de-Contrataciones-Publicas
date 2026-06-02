@@ -3,6 +3,7 @@ import { z } from "zod";
 const MAX_TEXT_100 = 100;
 const MAX_TEXT_255 = 255;
 const MAX_TEXT_500 = 500;
+const MAX_TEXT_1000 = 1000;
 
 function parseDecimalString(value: string) {
   const normalized = value.trim().replace(/\./g, "").replace(",", ".");
@@ -74,9 +75,9 @@ export const fase1FormSchema = z
     fechaActaInicio: requiredText("La fecha del acta de inicio es requerida", 50),
     detallesTecnicosCalidad: requiredText(
       "Las caracteristicas tecnicas son requeridas",
-      MAX_TEXT_500
+      MAX_TEXT_1000
     ),
-    alcanceCantidadesObra: requiredText("Las cantidades o alcance son requeridos", MAX_TEXT_500),
+    alcanceCantidadesObra: requiredText("Las cantidades o alcance son requeridos", MAX_TEXT_1000),
     justificacionVentajas: requiredText("La justificacion de ventajas es requerida", MAX_TEXT_500),
     origenCrsRegistro: z.boolean().optional(),
     diasValidezOferta: requiredInteger("Los dias de validez de la oferta son requeridos"),

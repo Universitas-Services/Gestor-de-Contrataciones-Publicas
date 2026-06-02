@@ -211,8 +211,8 @@ export function PresupuestoItemsTable({
 
   return (
     <Card className="border border-slate-200 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-heading-dark">
+      <CardHeader className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="flex items-center gap-2 text-[17px] font-bold text-color-titulos">
           <WalletCards className="h-5 w-5 text-navy" />
           Presupuesto Base
         </CardTitle>
@@ -226,7 +226,8 @@ export function PresupuestoItemsTable({
               onAdd?.();
             }}
             disabled={addButtonDisabled}
-            className="w-fit bg-navy text-white hover:bg-navy-hover"
+            size="sm"
+            className="w-fit bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
           >
             <Plus className="h-4 w-4" />
             {addButtonLabel}

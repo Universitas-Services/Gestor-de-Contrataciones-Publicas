@@ -55,12 +55,12 @@ export const FASE1_STEP_FIELDS = {
 export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
   datosActoAutorizacionInicio: {
     label:
-      "Indique los datos del Acto Administrativo de autorización de inicio emitido por la máxima autoridad (Número y fecha punto de cta)",
+      "Indique los datos del acto administrativo de autorización de inicio emitido por la Máxima Autoridad (Número y fecha punto de cuenta)",
     description: "Artículos 18.3 LOPA; 23 NORMAS DE CONTROL INTERNO SUNAI.",
     placeholder: "Ejemplo: 0002-2026 de fecha 02-03-2026",
   },
   fechaActaInicio: {
-    label: "Indique la fecha de elaboración del Acta de Inicio",
+    label: "Indique la fecha de elaboración del acta de inicio",
     description: "Artículos 18.3 LOPA; 23 NORMAS DE CONTROL INTERNO SUNAI.",
     placeholder: "Seleccione una fecha",
   },

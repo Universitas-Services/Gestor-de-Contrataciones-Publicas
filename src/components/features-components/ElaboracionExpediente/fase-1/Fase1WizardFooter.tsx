@@ -35,9 +35,10 @@ export function Fase1WizardFooter({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={onBack}
           disabled={backDisabled || isLoading}
-          className="min-w-[140px]"
+          className="min-w-[120px] border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
         >
           Anterior
         </Button>
@@ -55,7 +56,7 @@ export function Fase1WizardFooter({
                   href="#"
                   isActive={isActive}
                   className={[
-                    "pointer-events-none rounded-full border px-3 py-2 text-sm",
+                    "pointer-events-none rounded-full border px-3 py-1.5 text-[11px] font-semibold",
                     isActive
                       ? "border-navy bg-navy text-white hover:bg-navy"
                       : "border-slate-200 bg-white text-slate-500",
@@ -73,9 +74,10 @@ export function Fase1WizardFooter({
       <div className="flex justify-end">
         <Button
           type="button"
+          size="sm"
           onClick={onNext}
           disabled={nextDisabled || isLoading}
-          className="min-w-[160px] bg-navy text-white hover:bg-navy-hover"
+          className="min-w-[140px] bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
         >
           {isLoading ? "Procesando..." : nextLabel}
         </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
@@ -31,13 +31,44 @@ export interface ProductoItemSheetProps {
   isSubmitting?: boolean;
 }
 
+const compactLabelClass = "font-bold text-color-titulos text-[11px] leading-snug";
+const compactDescriptionClass = "text-[10px] text-muted-foreground italic leading-relaxed";
+const compactInputClass =
+  "h-[32px] w-full rounded-md border border-slate-300 bg-white px-3 text-[11px] font-medium text-slate-600 shadow-none placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/60 focus:outline-none focus:ring-2 focus:ring-ring/50";
+const compactSectionTitleClass = "text-[17px] font-bold text-color-titulos";
+const compactSectionDescriptionClass = "text-[12px] text-muted-foreground italic leading-relaxed";
+const compactMessageClass = "text-[11px]";
+
+function FieldBlock({
+  label,
+  description,
+  error,
+  children,
+}: {
+  label: string;
+  description: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className={compactLabelClass}>{label}</label>
+      <p className={compactDescriptionClass}>{description}</p>
+      {children}
+      {error ? (
+        <p className={`font-medium text-destructive ${compactMessageClass}`}>{error}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProductoItemSheet({
   open,
   onOpenChange,
   onSubmit,
   mode = "create",
   initialValues,
-  submitLabel = "Guardar Item",
+  submitLabel = "Guardar item",
   isSubmitting = false,
 }: ProductoItemSheetProps) {
   const form = useForm<ProductoItemFormInputValues>({
@@ -134,7 +165,7 @@ export function ProductoItemSheet({
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md md:max-w-[430px]">
+      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md md:max-w-[450px]">
         <div
           className="flex h-full flex-col border-l bg-white shadow-lg animate-in slide-in-from-right duration-300"
           role="dialog"
@@ -150,17 +181,19 @@ export function ProductoItemSheet({
               <X className="h-4 w-4" />
               <span className="sr-only">Cerrar</span>
             </button>
-            <h2 className="text-left text-2xl font-bold text-heading-dark">Presupuesto base</h2>
-            <p className="mt-1.5 text-left text-sm font-medium italic text-slate-500">
+            <h2 className="text-left text-2xl font-extrabold text-color-titulos">
+              {mode === "edit" ? "Editar item" : "Registrar item"}
+            </h2>
+            <p className="text-left text-sm font-medium italic text-slate-500">
               {mode === "edit"
                 ? "Actualice la informacion del producto seleccionado dentro del presupuesto base."
-                : "Complete la informacion tecnica, financiera y legal para generar automaticamente el Acta de Inicio, el Pliego de Condiciones y el Llamado a Participar."}
+                : "Registre los datos del item para construir el presupuesto base del procedimiento."}
             </p>
           </div>
 
-          <div className="shrink-0 px-8 pb-2 pt-6">
-            <h3 className="text-base font-bold text-[#215ea8]">Estructura del presupuesto base</h3>
-            <p className="mt-1 text-xs italic text-slate-500">Articulos 59, 60 LCP.</p>
+          <div className="px-8 pb-2 pt-6">
+            <h3 className={compactSectionTitleClass}>Estructura del presupuesto base</h3>
+            <p className={`mt-1 ${compactSectionDescriptionClass}`}>Articulos 59 y 60 LCP.</p>
           </div>
 
           <div className="flex-1 overflow-y-auto px-8 py-4">
@@ -169,98 +202,55 @@ export function ProductoItemSheet({
               className="space-y-6 pb-4"
               onSubmit={handleSubmit(onSubmitForm)}
             >
-              <div className="space-y-2">
-                <label className="block text-base font-bold text-heading-dark">
-                  {FASE1_FIELD_COPY.descripcionItem.label}
-                </label>
-                <p className="text-sm italic text-slate-500">
-                  {FASE1_FIELD_COPY.descripcionItem.description}
-                </p>
-                <input
-                  type="text"
-                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  {...register("descripcionItem")}
-                />
-                {errors.descripcionItem && (
-                  <p className="text-sm font-medium text-red-500">
-                    {errors.descripcionItem.message}
-                  </p>
-                )}
-              </div>
+              <FieldBlock
+                label={FASE1_FIELD_COPY.descripcionItem.label}
+                description={FASE1_FIELD_COPY.descripcionItem.description}
+                error={errors.descripcionItem?.message}
+              >
+                <input type="text" className={compactInputClass} {...register("descripcionItem")} />
+              </FieldBlock>
 
-              <div className="space-y-2">
-                <label className="block text-base font-bold text-heading-dark">
-                  {FASE1_FIELD_COPY.codigoPartida.label}
-                </label>
-                <p className="text-sm italic text-slate-500">
-                  {FASE1_FIELD_COPY.codigoPartida.description}
-                </p>
-                <input
-                  type="text"
-                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  {...register("codigoPartida")}
-                />
-                {errors.codigoPartida && (
-                  <p className="text-sm font-medium text-red-500">{errors.codigoPartida.message}</p>
-                )}
-              </div>
+              <FieldBlock
+                label={FASE1_FIELD_COPY.codigoPartida.label}
+                description={FASE1_FIELD_COPY.codigoPartida.description}
+                error={errors.codigoPartida?.message}
+              >
+                <input type="text" className={compactInputClass} {...register("codigoPartida")} />
+              </FieldBlock>
 
-              <div className="space-y-2">
-                <label className="block text-base font-bold text-heading-dark">
-                  {FASE1_FIELD_COPY.unidadMedida.label}
-                </label>
-                <p className="text-sm italic text-slate-500">
-                  {FASE1_FIELD_COPY.unidadMedida.description}
-                </p>
-                <input
-                  type="text"
-                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  {...register("unidadMedida")}
-                />
-                {errors.unidadMedida && (
-                  <p className="text-sm font-medium text-red-500">{errors.unidadMedida.message}</p>
-                )}
-              </div>
+              <FieldBlock
+                label={FASE1_FIELD_COPY.unidadMedida.label}
+                description={FASE1_FIELD_COPY.unidadMedida.description}
+                error={errors.unidadMedida?.message}
+              >
+                <input type="text" className={compactInputClass} {...register("unidadMedida")} />
+              </FieldBlock>
 
-              <div className="space-y-2">
-                <label className="block text-base font-bold text-heading-dark">
-                  {FASE1_FIELD_COPY.cantidadRequerida.label}
-                </label>
-                <p className="text-sm italic text-slate-500">
-                  {FASE1_FIELD_COPY.cantidadRequerida.description}
-                </p>
+              <FieldBlock
+                label={FASE1_FIELD_COPY.cantidadRequerida.label}
+                description={FASE1_FIELD_COPY.cantidadRequerida.description}
+                error={errors.cantidadRequerida?.message}
+              >
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className={compactInputClass}
                   {...register("cantidadRequerida")}
                 />
-                {errors.cantidadRequerida && (
-                  <p className="text-sm font-medium text-red-500">
-                    {errors.cantidadRequerida.message}
-                  </p>
-                )}
-              </div>
+              </FieldBlock>
 
-              <div className="space-y-2">
-                <label className="block text-base font-bold text-heading-dark">
-                  {FASE1_FIELD_COPY.precioUnitarioEstimado.label}
-                </label>
-                <p className="text-sm italic text-slate-500">
-                  {FASE1_FIELD_COPY.precioUnitarioEstimado.description}
-                </p>
+              <FieldBlock
+                label={FASE1_FIELD_COPY.precioUnitarioEstimado.label}
+                description={FASE1_FIELD_COPY.precioUnitarioEstimado.description}
+                error={errors.precioUnitarioEstimado?.message}
+              >
                 <input
                   inputMode="decimal"
-                  className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className={compactInputClass}
                   {...register("precioUnitarioEstimado")}
                 />
-                {errors.precioUnitarioEstimado && (
-                  <p className="text-sm font-medium text-red-500">
-                    {errors.precioUnitarioEstimado.message}
-                  </p>
-                )}
-              </div>
+              </FieldBlock>
             </form>
           </div>
 
@@ -269,7 +259,7 @@ export function ProductoItemSheet({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
               >
                 Cancelar
               </button>
@@ -277,7 +267,7 @@ export function ProductoItemSheet({
                 type="submit"
                 form="producto-item-form"
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-[#1a4b86] disabled:opacity-50"
+                className="inline-flex h-8 items-center justify-center rounded-md bg-navy px-4 text-[11px] font-semibold text-white hover:bg-navy-hover disabled:opacity-50"
               >
                 {isSubmitting ? "Guardando..." : submitLabel}
               </button>

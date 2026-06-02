@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -124,29 +124,31 @@ function buildDefaultValues({
   const shouldClearPaymentFields = fasePreparatoria.pliegoGratuito === true;
 
   return {
-    datosActoAutorizacionInicio: fasePreparatoria.datosActoAutorizacionInicio,
-    fechaActaInicio: fasePreparatoria.fechaActaInicio.split("T")[0] ?? "",
-    detallesTecnicosCalidad: fasePreparatoria.detallesTecnicosCalidad,
-    alcanceCantidadesObra: fasePreparatoria.alcanceCantidadesObra,
-    justificacionVentajas: fasePreparatoria.justificacionVentajas,
+    datosActoAutorizacionInicio: fasePreparatoria.datosActoAutorizacionInicio ?? "",
+    fechaActaInicio: fasePreparatoria.fechaActaInicio
+      ? fasePreparatoria.fechaActaInicio.split("T")[0]
+      : "",
+    detallesTecnicosCalidad: fasePreparatoria.detallesTecnicosCalidad ?? "",
+    alcanceCantidadesObra: fasePreparatoria.alcanceCantidadesObra ?? "",
+    justificacionVentajas: fasePreparatoria.justificacionVentajas ?? "",
     origenCrsRegistro: fasePreparatoria.origenCrsRegistro,
     diasValidezOferta: toFormString(fasePreparatoria.diasValidezOferta),
-    autoridadAclaratorias: fasePreparatoria.autoridadAclaratorias,
-    normativaLegal: fasePreparatoria.normativaLegal,
+    autoridadAclaratorias: fasePreparatoria.autoridadAclaratorias ?? "",
+    normativaLegal: fasePreparatoria.normativaLegal ?? "",
     diasVigenciaGarantiaExtension: toFormString(fasePreparatoria.diasVigenciaGarantiaExtension),
-    objetivosEspecificos1: fasePreparatoria.objetivosEspecificos1,
-    objetivosEspecificos2: fasePreparatoria.objetivosEspecificos2,
-    objetivosEspecificos3: fasePreparatoria.objetivosEspecificos3,
+    objetivosEspecificos1: fasePreparatoria.objetivosEspecificos1 ?? "",
+    objetivosEspecificos2: fasePreparatoria.objetivosEspecificos2 ?? "",
+    objetivosEspecificos3: fasePreparatoria.objetivosEspecificos3 ?? "",
     direccionRetiroPliego: fasePreparatoria.direccionRetiroPliego || direccionEnteDefault,
-    horarioRetiroPliego: fasePreparatoria.horarioRetiroPliego,
+    horarioRetiroPliego: fasePreparatoria.horarioRetiroPliego ?? "",
     pliegoGratuito: fasePreparatoria.pliegoGratuito,
     costoPliegoBs: shouldClearPaymentFields ? "" : toFormString(fasePreparatoria.costoPliegoBs),
     bancoPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.bancoPagoPliego ?? ""),
     cuentaPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.cuentaPagoPliego ?? ""),
     titularPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.titularPagoPliego ?? ""),
-    horaActoRecepAper: fasePreparatoria.horaActoRecepAper,
-    condicionPlurianual: fasePreparatoria.condicionPlurianual,
-    viabilidadContratoMarco: fasePreparatoria.viabilidadContratoMarco,
+    horaActoRecepAper: fasePreparatoria.horaActoRecepAper ?? "",
+    condicionPlurianual: fasePreparatoria.condicionPlurianual ?? "",
+    viabilidadContratoMarco: fasePreparatoria.viabilidadContratoMarco ?? "",
   };
 }
 
@@ -245,6 +247,13 @@ export function Fase1Form({
   });
   const pliegoGratuito = form.watch("pliegoGratuito");
 
+  const handleOpenItemSheet = useCallback(() => {
+    if (readOnly) return;
+    window.setTimeout(() => {
+      setIsSheetOpen(true);
+    }, 0);
+  }, [readOnly]);
+
   const visibleSteps = useMemo<Fase1WizardStep[]>(
     () => [
       {
@@ -277,7 +286,7 @@ export function Fase1Form({
         render: () => <Paso5ObservacionesStep form={form} />,
       },
     ],
-    [form, items, pliegoGratuito, showBudgetStep]
+    [form, handleOpenItemSheet, items, pliegoGratuito, showBudgetStep]
   );
 
   const totalSteps = visibleSteps.length;
@@ -288,13 +297,6 @@ export function Fase1Form({
   function goToStep(step: number) {
     setCurrentStep(step);
     scrollToTop();
-  }
-
-  function handleOpenItemSheet() {
-    if (readOnly) return;
-    window.setTimeout(() => {
-      setIsSheetOpen(true);
-    }, 0);
   }
 
   const validateStep = async () => {
@@ -401,24 +403,24 @@ export function Fase1Form({
 
   return (
     <div className="min-h-screen w-full pb-16">
-      <div className="w-full px-0 py-8 sm:px-0">
-        <div className="mx-auto max-w-6xl">
+      <div className="w-full px-0 py-6 sm:px-0">
+        <div className="mx-auto max-w-5xl">
           <Card className="overflow-hidden border border-slate-200 bg-white shadow-sm">
             <CardContent className="p-0">
-              <div className="space-y-2 border-b border-slate-200 px-5 py-6 md:px-8">
-                <h1 className="text-[28px] font-bold leading-tight text-heading-dark">
+              <div className="space-y-1.5 border-b border-slate-200 bg-slate-50/70 px-5 py-5 md:px-8">
+                <h1 className="text-[20px] font-bold leading-tight text-color-titulos md:text-[22px]">
                   {FASE1_WIZARD_TITLE}
                 </h1>
-                <p className="max-w-5xl text-base italic text-slate-500">
+                <p className="max-w-4xl text-[12px] italic leading-relaxed text-muted-foreground">
                   {FASE1_WIZARD_DESCRIPTION}
                 </p>
               </div>
 
               <Form {...form}>
-                <form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
-                  <div className="px-5 py-7 md:px-8 md:py-9">{renderCurrentStep()}</div>
+                <form className="space-y-8" onSubmit={(event) => event.preventDefault()}>
+                  <div className="px-5 py-6 md:px-8 md:py-7">{renderCurrentStep()}</div>
 
-                  <div className="border-t border-slate-200 bg-white px-5 py-6 md:px-8">
+                  <div className="border-t border-slate-200 bg-white px-5 py-5 md:px-8">
                     <Fase1WizardFooter
                       currentStep={currentStep}
                       totalSteps={totalSteps}
@@ -444,31 +446,31 @@ export function Fase1Form({
       />
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent className="max-w-[640px] border-none px-6 py-8 shadow-2xl sm:px-10">
-          <AlertDialogHeader className="space-y-4 text-center">
-            <AlertDialogMedia className="mx-auto mb-0 size-16 rounded-full border-2 border-[#83bf3a]/30 bg-[#f5faef] text-[#83bf3a]">
-              <Check className="h-8 w-8" />
+        <AlertDialogContent className="max-w-[540px] border border-slate-200 px-6 py-7 shadow-xl sm:px-8">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <AlertDialogMedia className="mx-auto mb-0 size-14 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
+              <Check className="h-7 w-7" />
             </AlertDialogMedia>
-            <AlertDialogTitle className="text-center text-4xl font-extrabold text-[#0d4e88] sm:text-5xl">
+            <AlertDialogTitle className="text-center text-[24px] font-extrabold text-color-titulos sm:text-[28px]">
               ¡Excelente!
             </AlertDialogTitle>
-            <div className="space-y-3">
-              <p className="text-center text-2xl font-extrabold leading-tight text-[#0d4e88] sm:text-[38px]">
+            <div className="space-y-2">
+              <p className="text-center text-[18px] font-bold leading-tight text-color-titulos sm:text-[20px]">
                 Ha completado la carga de datos de la fase preparatoria.
               </p>
-              <AlertDialogDescription className="mx-auto max-w-2xl text-center text-base italic text-slate-500 sm:text-2xl">
+              <AlertDialogDescription className="mx-auto max-w-xl text-center text-[12px] italic leading-relaxed text-muted-foreground sm:text-[13px]">
                 El sistema está listo para generar el Acta de Inicio, el Pliego de Condiciones y el
                 Llamado a Participar.
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>
 
-          <AlertDialogFooter className="mt-4 justify-center">
+          <AlertDialogFooter className="mt-3 justify-center">
             <Button
               type="button"
               onClick={handleFinalSubmit}
               disabled={isSavingPhase}
-              className="min-w-[280px] bg-navy text-white hover:bg-navy-hover"
+              className="min-w-[240px] bg-navy text-white hover:bg-navy-hover"
             >
               {isSavingPhase ? "Procesando..." : finalButtonLabel}
             </Button>
