@@ -10,6 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -56,7 +57,8 @@ export function DatosBasicosStep({ form, onNext, isLoading = false }: DatosBasic
                   Describa el objeto del procedimiento de contratación.
                 </FormLabel>
                 <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
-                  Artículos 107.1 RLCP; 3 NORMAS DE CONTROL INTERNO SUNAI.
+                  Artículo 107.1 RLCP; 38 (1 al 5 primer párrafo), 91.9 LOCGR; 23 NORMAS DE CONTROL
+                  INTERNO SUNAI.
                 </p>
                 <FormControl>
                   <Input
@@ -138,26 +140,26 @@ export function DatosBasicosStep({ form, onNext, isLoading = false }: DatosBasic
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-heading-dark font-bold font-inter text-base">
-                  Ingrese el monto (Bs.) estimado de la contratación, incluyendo el Impuesto al
-                  Valor Agregado (IVA).
+                  Ingrese el monto en bolívares (Bs.) estimado de la contratación, incluyendo el
+                  Impuesto al Valor Agregado (IVA).
                 </FormLabel>
                 <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
-                  Artículos 107.2 RLCP; 15 y 24 NORMAS DE CONTROL INTERNO SUNAI.
+                  Artículo 107.2 RLCP; 6 LCC; 38 (1 al 5 primer párrafo), 91.1.9.17.23.29 LOCGR; 15
+                  Y 24 NORMAS DE CONTROL INTERNO SUNAI.
                 </p>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={field.value ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      field.onChange(val === "" ? undefined : parseFloat(val));
-                    }}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
+                  <MoneyInput
+                    placeholder="Ej: 10.000,00"
                     className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-1/3 lg:w-1/4"
+                    name={field.name}
+                    value={
+                      typeof field.value === "number" ? field.value.toFixed(2) : field.value || ""
+                    }
+                    onBlur={field.onBlur}
+                    onValueChange={(cleanValue) => {
+                      const numericVal = parseFloat(cleanValue.replace(",", "."));
+                      field.onChange(isNaN(numericVal) ? undefined : numericVal);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

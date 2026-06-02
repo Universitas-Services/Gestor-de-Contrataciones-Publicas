@@ -3,6 +3,7 @@ import {
   DOC_KEYS_BY_PERSONA,
   TIPO_PERSONA,
   extractCedulaDigits,
+  extractCedulaWithPrefix,
   isTipoPersona,
   mapFormaJuridicaToApi,
 } from "./proveedor.constants";
@@ -142,15 +143,15 @@ function appendRequiredCreate(
   }
 
   if (isNatural) {
-    const digits = extractCedulaDigits(values.cedulaNatural);
-    if (digits) {
-      formData.append("cedulaNaturalProveedor", digits);
+    const cedulaConPrefijo = extractCedulaWithPrefix(values.cedulaNatural);
+    if (cedulaConPrefijo) {
+      formData.append("cedulaNaturalProveedor", cedulaConPrefijo);
     }
   }
 
   if (isOrgano) {
     appendIfPresent(formData, "nombreAutoridadProveedor", values.nombreAutoridad);
-    const cedulaAutoridad = extractCedulaDigits(values.cedulaAutoridad);
+    const cedulaAutoridad = extractCedulaWithPrefix(values.cedulaAutoridad);
     if (cedulaAutoridad) {
       formData.append("cedulaAutoridadProveedor", cedulaAutoridad);
     }
@@ -223,8 +224,8 @@ function appendOptionalScalars(
     },
     {
       key: "cedulaRepLegal",
-      value: isJuridica ? extractCedulaDigits(values.representanteCedula) : undefined,
-      initial: isJuridica ? extractCedulaDigits(initial?.representanteCedula) : undefined,
+      value: isJuridica ? extractCedulaWithPrefix(values.representanteCedula) : undefined,
+      initial: isJuridica ? extractCedulaWithPrefix(initial?.representanteCedula) : undefined,
       applies: isJuridica,
     },
     {
@@ -264,10 +265,10 @@ function appendOptionalScalars(
   }
 
   if (mode === "edit" && isNatural) {
-    const digits = extractCedulaDigits(values.cedulaNatural);
-    const initialDigits = extractCedulaDigits(initial?.cedulaNatural);
-    if (digits && digits !== initialDigits) {
-      formData.append("cedulaNaturalProveedor", digits);
+    const cedula = extractCedulaWithPrefix(values.cedulaNatural);
+    const initialCedula = extractCedulaWithPrefix(initial?.cedulaNatural);
+    if (cedula && cedula !== initialCedula) {
+      formData.append("cedulaNaturalProveedor", cedula);
     }
   }
 
@@ -275,8 +276,8 @@ function appendOptionalScalars(
     if (valuesDiffer(values.nombreAutoridad, initial?.nombreAutoridad)) {
       appendIfPresent(formData, "nombreAutoridadProveedor", values.nombreAutoridad);
     }
-    const cedula = extractCedulaDigits(values.cedulaAutoridad);
-    const initialCedula = extractCedulaDigits(initial?.cedulaAutoridad);
+    const cedula = extractCedulaWithPrefix(values.cedulaAutoridad);
+    const initialCedula = extractCedulaWithPrefix(initial?.cedulaAutoridad);
     if (cedula && cedula !== initialCedula) {
       formData.append("cedulaAutoridadProveedor", cedula);
     }

@@ -12,15 +12,30 @@ export const nuevoProveedorSchema = z
     formaJuridica: z.string().optional(),
     tipoPersona: z.string().min(1, { message: "Seleccione un tipo de persona" }),
     datosRegistroMercantil: z.string().optional(),
-    cedulaNatural: z.string().optional(),
+    cedulaNatural: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^[VvEe]-\d{6,8}$/.test(val), {
+        message: "Formato inválido. Use V-XXXXXXXX o E-XXXXXXXX",
+      }),
     nombreAutoridad: z.string().optional(),
-    cedulaAutoridad: z.string().optional(),
+    cedulaAutoridad: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^[VvEe]-\d{6,8}$/.test(val), {
+        message: "Formato inválido. Use V-XXXXXXXX o E-XXXXXXXX",
+      }),
     datosDesignacionAutoridad: z.string().optional(),
     estado: z.string().optional(),
     parroquia: z.string().optional(),
     representanteNombre: z.string().optional(),
     municipio: z.string().optional(),
-    representanteCedula: z.string().optional(),
+    representanteCedula: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^[VvEe]-\d{6,8}$/.test(val), {
+        message: "Formato inválido. Use V-XXXXXXXX o E-XXXXXXXX",
+      }),
     telefono: z.string().optional(),
     direccionFiscal: z.string().optional(),
 

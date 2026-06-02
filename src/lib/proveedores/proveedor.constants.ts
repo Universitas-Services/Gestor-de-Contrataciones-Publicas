@@ -94,6 +94,25 @@ export function extractCedulaDigits(cedula?: string): string {
   return digits || "";
 }
 
+/**
+ * Extrae la cédula conservando la letra prefija (V o E).
+ * Formatos aceptados: "V-12345678", "V12345678", "12345678" (defaultTipo aplica si no hay letra).
+ * Devuelve "V-12345678" o "E-12345678".
+ */
+export function extractCedulaWithPrefix(cedula?: string, defaultTipo: "V" | "E" = "V"): string {
+  if (!cedula?.trim()) return "";
+  const str = cedula.trim();
+  // Si ya viene en formato X-digitos, lo devolvemos normalizado
+  const withDash = /^([VvEe])-?(\d+)$/.exec(str.replace(/[^VvEe\d-]/g, ""));
+  if (withDash) {
+    return `${withDash[1].toUpperCase()}-${withDash[2]}`;
+  }
+  // Solo dígitos: usamos el defaultTipo
+  const digits = str.replace(/\D/g, "");
+  if (!digits) return "";
+  return `${defaultTipo}-${digits}`;
+}
+
 /** Formatea cédula numérica del API para UI (12345678 → V-12345678). */
 export function formatCedulaFromApi(value?: string | number | null, defaultTipo = "V"): string {
   if (value === null || value === undefined || value === "") return "";

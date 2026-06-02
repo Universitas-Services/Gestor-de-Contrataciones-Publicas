@@ -33,6 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import { actaAdjudicacionSchema, type ActaAdjudicacionFormValues } from "@/lib/schemas/fase4Schema";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   ACTA_ADJUDICACION_EMPTY_VALUES,
   toActaFormValues,
@@ -66,33 +67,6 @@ const MONTO_INPUT_CLASS =
 
 const MONTO_WRAPPER_CLASS =
   "border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px]";
-
-interface MontoInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
-  disabled?: boolean;
-  placeholder?: string;
-  name: string;
-}
-
-function MontoInput({ value, onChange, onBlur, disabled, placeholder, name }: MontoInputProps) {
-  return (
-    <div className={MONTO_WRAPPER_CLASS}>
-      <input
-        name={name}
-        value={value}
-        disabled={disabled}
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder={placeholder}
-        className={MONTO_INPUT_CLASS}
-        onBlur={onBlur}
-        onChange={(e) => onChange(sanitizeMontoInput(e.target.value))}
-      />
-    </div>
-  );
-}
 
 export function ActaAdjudicacionSheet({
   expedienteId,
@@ -223,7 +197,7 @@ export function ActaAdjudicacionSheet({
           <div className="flex flex-col h-full">
             <SheetHeader className="p-8 pb-4 border-b border-slate-100">
               <SheetTitle className="text-2xl font-extrabold text-color-titulos text-left">
-                Datos del acto de Adjudicación
+                Datos del acta de adjudicación
               </SheetTitle>
               <SheetDescription className="text-slate-500 font-medium italic text-left text-sm">
                 Deje constancia de las variables de tiempo, lugar y justificación que motivaron la
@@ -250,20 +224,23 @@ export function ActaAdjudicacionSheet({
                     render={({ field }) => (
                       <FormItem className="space-y-1">
                         <FormLabel className="font-bold text-color-titulos text-[11px]">
-                          Indique el monto (Bs) de la contratación incluyendo IVA.
+                          Indique el monto en bolívares (Bs) de la contratación incluyendo IVA.
                         </FormLabel>
                         <p className="text-[10px] text-muted-foreground italic">
                           Artículos 74 LCP; 25 NORMAS DE CONTROL INTERNO SUNAI.
                         </p>
                         <FormControl>
-                          <MontoInput
-                            name={field.name}
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            disabled={readOnly || isLoading}
-                            placeholder="Bs. 0,00"
-                          />
+                          <div className={MONTO_WRAPPER_CLASS}>
+                            <MoneyInput
+                              name={field.name}
+                              value={field.value}
+                              onValueChange={(cleanValue) => field.onChange(cleanValue)}
+                              onBlur={field.onBlur}
+                              disabled={readOnly || isLoading}
+                              placeholder="Ej: 1.500,50"
+                              className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-[11px] !text-[11px] h-auto italic font-medium text-slate-500 placeholder:text-slate-500/50 placeholder:italic placeholder:font-medium"
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -303,20 +280,24 @@ export function ActaAdjudicacionSheet({
                     render={({ field }) => (
                       <FormItem className="space-y-1">
                         <FormLabel className="font-bold text-color-titulos text-[11px]">
-                          Indique el monto (Bs) del compromiso de responsabilidad social sin IVA.
+                          Indique el monto en bolívares (Bs) del compromiso de responsabilidad
+                          social sin IVA.
                         </FormLabel>
                         <p className="text-[10px] text-muted-foreground italic">
                           Artículos 31 LCP; 5 NORMAS DE CONTROL INTERNO SUNAI.
                         </p>
                         <FormControl>
-                          <MontoInput
-                            name={field.name}
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            disabled={readOnly || isLoading}
-                            placeholder="Bs. 0,00"
-                          />
+                          <div className={MONTO_WRAPPER_CLASS}>
+                            <MoneyInput
+                              name={field.name}
+                              value={field.value}
+                              onValueChange={(cleanValue) => field.onChange(cleanValue)}
+                              onBlur={field.onBlur}
+                              disabled={readOnly || isLoading}
+                              placeholder="Ej: 150,00"
+                              className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-[11px] !text-[11px] h-auto italic font-medium text-slate-500 placeholder:text-slate-500/50 placeholder:italic placeholder:font-medium"
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

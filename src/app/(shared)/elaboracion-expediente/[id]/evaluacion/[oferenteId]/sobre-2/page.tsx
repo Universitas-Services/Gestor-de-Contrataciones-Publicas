@@ -36,19 +36,19 @@ const PREGUNTAS: Pregunta[] = [
   { id: 2, texto: "¿Presentó carta de oferta?" },
   {
     id: 3,
-    texto: "¿Consignó declaración jurada de contar con la Capacidad Financiera de Contratación?",
+    texto: "¿Consignó declaración jurada de contar con la capacidad financiera de contratación?",
   },
   {
     id: 4,
     texto:
-      "¿Consignó declaración jurada para el Cumplimiento del Compromiso de Responsabilidad Social?",
+      "¿Consignó declaración jurada para el cumplimiento del compromiso de responsabilidad social?",
   },
   {
     id: 5,
     texto:
-      "¿Consignó garantía de mantenimiento de la oferta: Declaración Jurada o Caución a favor del Ente Contratante?",
+      "¿Consignó garantía de mantenimiento de la oferta: declaración jurada o caución a favor del Ente contratante?",
   },
-  { id: 6, texto: "¿Consignó declaración jurada de Auto cálculo del V.A.N?.", opcional: true },
+  { id: 6, texto: "¿Consignó declaración jurada de auto cálculo del V.A.N?.", opcional: true },
 ];
 
 export default function Sobre2Page({
@@ -79,6 +79,9 @@ export default function Sobre2Page({
   const [isSaving, setIsSaving] = useState(false);
 
   const allAnswered = Object.keys(respuestas).length === PREGUNTAS.length;
+
+  // Clave única de caché por oferente
+  const CACHE_KEY = `sobre2_draft_${oferenteId}`;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,6 +120,7 @@ export default function Sobre2Page({
         // y oferenteCalificado/motivoDescalificacion en la raíz
         const sobre2Data = evaluacionData?.sobre2;
         if (sobre2Data) {
+          // El servidor tiene datos: los usamos como fuente de verdad
           const newRespuestas: Record<number, "SI" | "NO"> = {};
           const newObservaciones: Record<number, string> = {};
           const newObsAbiertas: Record<number, boolean> = {};
@@ -141,6 +145,35 @@ export default function Sobre2Page({
           setRespuestas(newRespuestas);
           setObservaciones(newObservaciones);
           setObsAbiertas(newObsAbiertas);
+        } else {
+          // El servidor no tiene datos aún (no se ha guardado el sobre 2).
+          // Intentar restaurar desde sessionStorage (el usuario regresó desde la matriz).
+          try {
+            const cached = sessionStorage.getItem(CACHE_KEY);
+            if (cached) {
+              const draft = JSON.parse(cached) as {
+                respuestas: Record<number, "SI" | "NO">;
+                observaciones: Record<number, string>;
+                resultadoFinal: "SI" | "NO" | null;
+                motivoDescalificacion: string;
+              };
+              if (draft.respuestas) setRespuestas(draft.respuestas);
+              if (draft.observaciones) {
+                setObservaciones(draft.observaciones);
+                // Reabrir las cajas de obs que tienen texto
+                const abiertas: Record<number, boolean> = {};
+                Object.entries(draft.observaciones).forEach(([k, v]) => {
+                  if (v) abiertas[Number(k)] = true;
+                });
+                setObsAbiertas(abiertas);
+              }
+              if (draft.resultadoFinal) setResultadoFinal(draft.resultadoFinal);
+              if (draft.motivoDescalificacion)
+                setMotivoDescalificacion(draft.motivoDescalificacion);
+            }
+          } catch {
+            // sessionStorage no disponible o JSON inválido — ignorar silenciosamente
+          }
         }
 
         // oferenteCalificado y motivoDescalificacion están en la raíz
@@ -163,6 +196,19 @@ export default function Sobre2Page({
     };
     fetchData();
   }, [id, oferenteId]);
+
+  // Persistir borrador en sessionStorage cada vez que el usuario cambia algo
+  useEffect(() => {
+    if (loading) return; // No persistir mientras se está cargando
+    try {
+      sessionStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ respuestas, observaciones, resultadoFinal, motivoDescalificacion })
+      );
+    } catch {
+      // sessionStorage no disponible — ignorar
+    }
+  }, [respuestas, observaciones, resultadoFinal, motivoDescalificacion, loading]);
 
   const handleToggle = (id: number, valor: "SI" | "NO") => {
     if (readOnly) {
@@ -447,9 +493,12 @@ export default function Sobre2Page({
               Resultado final
             </div>
             <div className="p-6">
-              <p className="text-[13px] font-bold text-navy mb-4">
-                ¿Este oferente cumplió con la calificación legal, técnica y financiera, con base en
-                los criterios establecidos en el Pliego de Condiciones?
+              <p className="text-[13px] font-bold text-navy mb-1">
+                Indique si este oferente cumplio con la calificación legal, técnica y financiera,
+                con base en los criterios establecidos en el pliego de condiciones
+              </p>
+              <p className="text-[10px] text-muted-foreground italic mb-4">
+                Artículos 95 LCP; 18. 4 LOPA; 16 NORMAS DE CONTROL INTERNO SUNAI.
               </p>
               <div className="flex gap-3">
                 <button
@@ -498,12 +547,11 @@ export default function Sobre2Page({
               {resultadoFinal === "NO" && (
                 <div className="mt-6 border border-slate-200 rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="bg-[var(--motivo-bg)] px-4 py-2 text-white font-bold text-[12px]">
-                    Motivo de descalificación
+                    Indique el motivo de la descalificación de la(s) empresa(s)
                   </div>
                   <div className="p-4 bg-white">
-                    <p className="text-[12px] text-navy font-semibold mb-2">
-                      Describa detalladamente las razones por las cuales el oferente ha sido
-                      descalificado
+                    <p className="text-[10px] text-muted-foreground italic mb-2">
+                      Artículos 95 LCP; 18. 4 LOPA; 4 NORMAS DE CONTROL INTERNO SUNAI
                     </p>
                     <div className="relative">
                       <textarea
