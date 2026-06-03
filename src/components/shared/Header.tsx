@@ -17,16 +17,9 @@ interface HeaderProps {
   userEmail: string;
   userAvatar?: string;
   userRole: UserRole;
-  notificationCount?: number;
 }
 
-export function Header({
-  userName,
-  userEmail,
-  userAvatar,
-  userRole,
-  notificationCount = 0,
-}: HeaderProps) {
+export function Header({ userName, userEmail, userAvatar, userRole }: HeaderProps) {
   const { state } = useSidebar();
   const roleConfig = getRoleConfig(userRole);
   const isSidebarCollapsed = state === "collapsed";
@@ -52,7 +45,7 @@ export function Header({
         <HeaderTitle userRole={userRole} />
 
         <div className="ml-auto flex min-w-0 items-center gap-2 md:ml-0 md:w-[22rem] md:justify-end md:justify-self-end">
-          <NotificationBell count={notificationCount} />
+          <NotificationBell userRole={userRole} />
 
           <Popover>
             <PopoverTrigger asChild>

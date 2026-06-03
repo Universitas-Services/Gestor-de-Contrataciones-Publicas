@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,6 +80,8 @@ export function CompletarEnteForm({
   readOnly = false,
 }: CompletarEnteFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEdit = searchParams.get("edit") === "true";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -347,7 +349,11 @@ export function CompletarEnteForm({
       await markDatosConfirmadosAction();
 
       toast.success("Datos guardados correctamente", { id: toastId });
-      router.replace("/admin_ente/dashboard");
+      if (isEdit) {
+        router.replace("/gestion-datos/perfil");
+      } else {
+        router.replace("/admin_ente/dashboard");
+      }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error al guardar los datos del ente";
@@ -378,7 +384,9 @@ export function CompletarEnteForm({
           {step === 1 ? "Datos generales" : "Ubicación y estructura"}
         </CardTitle>
         <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
-          Ingresa los datos básicos para comenzar el registro
+          {isEdit
+            ? "Modifica los datos del ente contratante"
+            : "Ingresa los datos básicos para comenzar el registro"}
         </CardDescription>
       </CardHeader>
 

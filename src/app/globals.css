@@ -165,8 +165,10 @@
   --color-legal-norma: var(--legal-norma);
   --color-legal-resolucion: var(--legal-resolucion);
   --color-legal-reglamento: var(--legal-reglamento);
-  --color-legal-especial: var(--legal-especial);
   --color-legal-constitucional: var(--legal-constitucional);
+
+  /* Historial de Manual */
+  --color-manual-historial-row: var(--manual-historial-row);
 }
 
 :root {
@@ -347,6 +349,9 @@
   --legal-especial: oklch(0.895 0.035 350);
   /* Ley Constitucional → dorado institucional suave */
   --legal-constitucional: oklch(0.918 0.055 75);
+
+  /* Historial de Manual (#E6FED4) */
+  --manual-historial-row: oklch(0.965 0.048 140);
 }
 
 @layer base {

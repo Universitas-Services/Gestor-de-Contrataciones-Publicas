@@ -8,17 +8,10 @@ interface DashboardLayoutProps {
   role: UserRole;
   userName: string;
   userEmail: string;
-  notificationCount?: number;
   children: React.ReactNode;
 }
 
-export function DashboardLayout({
-  role,
-  userName,
-  userEmail,
-  notificationCount = 0,
-  children,
-}: DashboardLayoutProps) {
+export function DashboardLayout({ role, userName, userEmail, children }: DashboardLayoutProps) {
   return (
     <div data-role={role}>
       <SidebarProvider>

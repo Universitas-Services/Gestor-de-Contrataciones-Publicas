@@ -43,7 +43,6 @@ function renderHeader({
         userName="Pedro Jose Rodriguez Hernandez"
         userEmail="visualizadorprueba@dominio-muy-largo-ejemplo.com"
         userRole={role}
-        notificationCount={3}
       />
     </SidebarProvider>
   );
@@ -66,7 +65,6 @@ describe("Header", () => {
           userName="Pedro Jose Rodriguez Hernandez"
           userEmail="visualizadorprueba@dominio-muy-largo-ejemplo.com"
           userRole="visualizador"
-          notificationCount={3}
         />
       </SidebarProvider>
     );

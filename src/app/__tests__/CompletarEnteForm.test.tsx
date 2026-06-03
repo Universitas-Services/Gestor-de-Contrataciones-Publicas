@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 // Importamos los servicios para poder asertar sobre ellos
@@ -92,6 +92,7 @@ vi.mock("@universitas/sdk-global", () => {
 // --- 2. Mock de Navegación y Toasts ---
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
+  useSearchParams: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -143,6 +144,11 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
       replace: mockReplace,
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
+
+    // Mock de useSearchParams (no edit mode por defecto)
+    vi.mocked(useSearchParams).mockReturnValue({
+      get: vi.fn().mockReturnValue(null),
+    } as unknown as ReturnType<typeof useSearchParams>);
 
     // Mock de window.scrollTo
     window.scrollTo = vi.fn();
