@@ -211,7 +211,7 @@ export function Fase3Panel({ expedienteId, readOnly = false }: Fase3PanelProps) 
                     RIF
                   </TableHead>
                   <TableHead className="text-color-titulos font-bold px-2 h-11 text-[11px] text-center w-[20%]">
-                    Estado Actual
+                    Estado actual
                   </TableHead>
                   <TableHead className="text-color-titulos font-bold px-2 h-11 text-[11px] text-center w-[13%]">
                     Prelación

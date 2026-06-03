@@ -33,6 +33,7 @@ import { getProveedores, getProveedorById } from "@/services/proveedores.service
 
 import { oferenteSchema, type OferenteFormValues } from "@/lib/schemas/fase2Schema";
 import { type ProveedorBusqueda } from "@/types/expediente.types";
+import { MoneyInput } from "@/components/ui/money-input";
 
 interface OferenteSheetProps {
   open: boolean;
@@ -305,7 +306,12 @@ export function OferenteSheet({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="J">J-</SelectItem>
-                          <SelectItem value="G">G-</SelectItem>
+                          <SelectItem value="G" disabled>
+                            G- (No elegible)
+                          </SelectItem>
+                          <SelectItem value="V" disabled>
+                            V- (No elegible)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -447,7 +453,7 @@ export function OferenteSheet({
                 {/* Cédula representante */}
                 <div className="space-y-1">
                   <FormLabel className="font-bold text-color-titulos text-[11px]">
-                    Indique C.I del Representante legal de la empresa oferente.
+                    Indique número de cédula (C.I) del Representante legal de la empresa oferente.
                   </FormLabel>
                   <p className="text-[10px] text-muted-foreground italic">
                     Artículos 91, 92 LCP; 96 RLCP; 18.4 LOPA; 5 NORMAS DE CONTROL INTERNO SUNAI.
@@ -490,7 +496,7 @@ export function OferenteSheet({
                   render={({ field }) => (
                     <FormItem className="space-y-1">
                       <FormLabel className="font-bold text-color-titulos text-[11px]">
-                        Indique los datos de Registro Mercantil de la empresa oferente.
+                        Indique los datos de Registro mercantil de la empresa oferente.
                       </FormLabel>
                       <p className="text-[10px] text-muted-foreground italic">
                         Ejemplo: Registro Mercantil Segundo del Estado Lara, bajo el N° 0, Tomo 00-A
@@ -504,7 +510,7 @@ export function OferenteSheet({
                             <input
                               {...field}
                               className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
-                              placeholder="Registro Mercantil..."
+                              placeholder="Registro mercantil..."
                               maxLength={250}
                             />
                           )}
@@ -572,7 +578,7 @@ export function OferenteSheet({
                   render={({ field }) => (
                     <FormItem className="space-y-1">
                       <FormLabel className="font-bold text-color-titulos text-[11px]">
-                        Indique el monto (Bs) de la oferta presentada.
+                        Indique el monto en bolívares (Bs) de la oferta presentada.
                       </FormLabel>
                       <p className="text-[10px] text-muted-foreground italic">
                         Artículos 58, 59 LCP; 91, 93, 94 RLCP; 18.5 LOPA; 25 NORMAS DE CONTROL
@@ -583,10 +589,11 @@ export function OferenteSheet({
                           {!isEditing ? (
                             field.value || "-"
                           ) : (
-                            <input
-                              {...field}
-                              className="w-full bg-transparent outline-none text-[11px] italic font-medium text-slate-500"
-                              placeholder="Bs. 0,00"
+                            <MoneyInput
+                              value={field.value}
+                              onValueChange={(cleanValue) => field.onChange(cleanValue)}
+                              className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-[11px] !text-[11px] h-auto italic font-medium text-slate-500 placeholder:text-slate-400 placeholder:italic placeholder:font-medium"
+                              placeholder="Monto de la oferta"
                               maxLength={50}
                             />
                           )}

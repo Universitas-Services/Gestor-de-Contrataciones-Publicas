@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   Select,
   SelectContent,
@@ -89,7 +90,7 @@ const ORDINALES = [
 ];
 
 const generarOpcionesPrelacion = (total: number): string[] =>
-  Array.from({ length: Math.min(total, ORDINALES.length) }, (_, i) => `${ORDINALES[i]} Opción`);
+  Array.from({ length: Math.min(total, ORDINALES.length) }, (_, i) => `${ORDINALES[i]} opción`);
 
 interface CriterioEvaluado {
   id: string;
@@ -215,19 +216,24 @@ export default function MatrizEvaluacionPage({
         }
 
         if (evaluacionData?.posicionPrelacion) {
-          setOrdenPrelacion(evaluacionData.posicionPrelacion);
+          const rawPrel = String(evaluacionData.posicionPrelacion);
+          const normalized = rawPrel.charAt(0).toUpperCase() + rawPrel.slice(1).toLowerCase();
+          setOrdenPrelacion(normalized);
         }
 
         // Generar opciones de prelación dinámicas y filtrar las ya usadas
         const totalOferentes = statsData?.ofertasRecibidas || oferentesList.length || 6;
         const todasOpciones = generarOpcionesPrelacion(totalOferentes);
 
-        // Obtener posiciones ya ocupadas por OTROS oferentes
+        // Obtener posiciones ya ocupadas por OTROS oferentes normalizadas a minúsculas
         const prelacionesOcupadas = oferentesList
           .filter((o: any) => String(o.id) !== String(oferenteId) && o.posicionPrelacion)
-          .map((o: any) => o.posicionPrelacion);
+          .map((o: any) => String(o.posicionPrelacion).toLowerCase().trim());
 
-        const disponibles = todasOpciones.filter((op) => !prelacionesOcupadas.includes(op));
+        const disponibles = todasOpciones.filter((op) => {
+          const opLower = op.toLowerCase().trim();
+          return !prelacionesOcupadas.includes(opLower);
+        });
         setOpcionesPrelacion(disponibles);
       } catch (err) {
         toast.error("Error al cargar los datos");
@@ -307,7 +313,13 @@ export default function MatrizEvaluacionPage({
         criterio4Evaluacion: criteriosEvaluados[3]?.nombre || "",
         puntuacionCriterio4: criteriosEvaluados[3]?.puntaje || 0,
 
-        montoOfertaBs: Number(montoEconomico),
+        montoOfertaBs: (() => {
+          const cleanMonto =
+            typeof montoEconomico === "string"
+              ? montoEconomico.replace(/\./g, "").replace(",", ".")
+              : String(montoEconomico);
+          return parseFloat(cleanMonto) || 0;
+        })(),
         porcentajeVan: van ? Number(van) : 0,
 
         oferenteCalificado: true,
@@ -410,7 +422,11 @@ export default function MatrizEvaluacionPage({
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10 lg:p-12">
       <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <h1 className="text-[22px] font-bold text-color-titulos mb-6">Matriz de evaluación</h1>
+        <h1 className="text-[22px] font-bold text-color-titulos mb-2">Matriz de evaluación</h1>
+        <p className="text-[13px] text-muted-foreground italic mb-6">
+          Si el oferente cumplió con los recaudos anteriores, asigne los puntajes técnicos y
+          económicos según los criterios del Pliego.
+        </p>
 
         {/* Header Oferente */}
         <Card className="mb-8 border-slate-200 shadow-sm rounded-lg overflow-hidden bg-white">
@@ -444,10 +460,13 @@ export default function MatrizEvaluacionPage({
 
         {/* Evaluaciones Blocks */}
         <div className="space-y-6">
-          {/* BLOQUE A: Evaluación Técnica */}
+          {/* BLOQUE A: Evaluación técnica */}
           <Card className="border-slate-200 shadow-sm rounded-lg overflow-hidden bg-white">
             <CardContent className="p-8">
-              <h3 className="text-[17px] font-bold text-navy mb-6">Evaluación Técnica</h3>
+              <h3 className="text-[17px] font-bold text-navy mb-1">Evaluación técnica</h3>
+              <p className="text-[11px] text-muted-foreground italic mb-6">
+                Artículos 95, 109 LCP (Criterios definidos en el Pliego).
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end mb-8">
                 <div className="md:col-span-6">
@@ -577,17 +596,16 @@ export default function MatrizEvaluacionPage({
               <h3 className="text-[17px] font-bold text-navy mb-4">Evaluación económica</h3>
               <div className="mb-2">
                 <label className="block text-[13px] font-bold text-color-titulos">
-                  Indique el monto Bs de la oferta de la empresa oferente
+                  Indique el monto bolívares (Bs.) de la oferta de la empresa oferente
                 </label>
                 <p className="text-[11px] text-muted-foreground italic mb-2">
                   Artículos 95, 109 LCP; 18. 4 LOPA; 25 NORMAS DE CONTROL INTERNO SUNAI
                 </p>
-                <Input
-                  type="text"
-                  placeholder="Ej: 1500.50"
+                <MoneyInput
+                  placeholder="Ej: 1.500,50"
                   value={montoEconomico}
                   disabled={readOnly}
-                  onChange={(e) => setMontoEconomico(e.target.value)}
+                  onValueChange={(cleanValue) => setMontoEconomico(cleanValue)}
                   className="h-11"
                 />
               </div>
@@ -608,10 +626,22 @@ export default function MatrizEvaluacionPage({
                 </p>
                 <Input
                   type="number"
+                  min="0"
+                  max="100"
                   placeholder="Ej: 20"
                   value={van}
                   disabled={readOnly}
-                  onChange={(e) => setVan(e.target.value)}
+                  onChange={(e) => {
+                    const valStr = e.target.value;
+                    if (valStr === "") {
+                      setVan("");
+                      return;
+                    }
+                    let val = Number(valStr);
+                    if (val < 0) val = 0;
+                    if (val > 100) val = 100;
+                    setVan(String(val));
+                  }}
                   className="h-11"
                 />
               </div>

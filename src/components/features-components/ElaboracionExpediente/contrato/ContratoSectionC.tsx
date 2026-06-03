@@ -98,7 +98,7 @@ export function ContratoSectionC({ control, readOnly }: ContratoSectionCProps) {
         control={control}
         name="unidadRespCumplimientoCrsAuAu"
         readOnly={readOnly}
-        label="Indique nombre de la unidad técnica administrativa responsable de dar seguimiento y controlar la ejecución y el cumplimiento del compromiso de responsabilidad social (RS)"
+        label="Indique nombre de la unidad técnica administrativa responsable de dar seguimiento y controlar la ejecución y el cumplimiento del compromiso de responsabilidad social"
         legal="Artículos 44 RLCP; 5 NORMAS DE CONTROL INTERNO SUNAI."
       />
     </div>

@@ -2,12 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 // Importamos los servicios para poder asertar sobre ellos
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
-import { generarManual } from "@/services/manualService";
 import type { EnteResponse } from "@/types/ente.types";
 
 // --- 0. Polyfills para Radix UI Select en JSDOM ---
@@ -73,8 +72,8 @@ vi.mock("@/services/enteService", () => ({
   actualizarLogoEnte: vi.fn(),
 }));
 
-vi.mock("@/services/manualService", () => ({
-  generarManual: vi.fn(),
+vi.mock("@/lib/auth/auth", () => ({
+  markDatosConfirmadosAction: vi.fn(),
 }));
 
 vi.mock("@universitas/sdk-global", () => {
@@ -93,6 +92,7 @@ vi.mock("@universitas/sdk-global", () => {
 // --- 2. Mock de Navegación y Toasts ---
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
+  useSearchParams: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -105,7 +105,7 @@ vi.mock("sonner", () => ({
 }));
 
 describe("Flujo Primer Login: <CompletarEnteForm />", () => {
-  const mockPush = vi.fn();
+  const mockReplace = vi.fn();
   const mockRefresh = vi.fn();
 
   // Creamos un Mock del Ente estrictamente tipado según lo que espera tu componente
@@ -137,13 +137,18 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
 
     // Mock del Router estrictamente tipado
     vi.mocked(useRouter).mockReturnValue({
-      push: mockPush,
+      push: vi.fn(),
       refresh: mockRefresh,
       back: vi.fn(),
       forward: vi.fn(),
-      replace: vi.fn(),
+      replace: mockReplace,
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
+
+    // Mock de useSearchParams (no edit mode por defecto)
+    vi.mocked(useSearchParams).mockReturnValue({
+      get: vi.fn().mockReturnValue(null),
+    } as unknown as ReturnType<typeof useSearchParams>);
 
     // Mock de window.scrollTo
     window.scrollTo = vi.fn();
@@ -291,16 +296,6 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
 
     // --- Enviar Formulario ---
     vi.mocked(actualizarEnte).mockResolvedValueOnce({ message: "Éxito" });
-    // Debe retornar un objeto ManualResponse simulado
-    vi.mocked(generarManual).mockResolvedValueOnce({
-      id: "manual-1",
-      url: "http://example.com/manual.docx",
-      fileName: "manual.docx",
-      version: 1,
-      generatedAt: new Date().toISOString(),
-      tipoManual: "General",
-      titulo: "Manual Generado",
-    });
 
     await user.click(screen.getByRole("button", { name: /guardar/i }));
 
@@ -324,10 +319,9 @@ describe("Flujo Primer Login: <CompletarEnteForm />", () => {
         })
       );
 
-      expect(generarManual).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith("/admin_ente/dashboard");
+      expect(mockReplace).toHaveBeenCalledWith("/admin_ente/dashboard");
       expect(toast.success).toHaveBeenCalledWith(
-        "Datos guardados y manual generado correctamente",
+        "Datos guardados correctamente",
         expect.anything()
       );
     });

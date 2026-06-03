@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { List, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { List, ArrowUpDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { BsFillPeopleFill, BsFillCheckSquareFill, BsEye, BsPencilSquare } from "react-icons/bs";
 import { IoAlertCircleOutline } from "react-icons/io5";
 import { IoIosBriefcase, IoIosHammer, IoIosPrint, IoMdWarning } from "react-icons/io";
@@ -34,6 +34,7 @@ interface Provider {
   nombre: string;
   rif: string;
   nombreRepLegal: string;
+  nombreAutoridadProveedor?: string | null;
   areaEspecialidad: string | null;
   estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
@@ -122,10 +123,9 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
             Resume general y control de solicitudes pendientes
           </p>
         </div>
-        <Link href="/registro-proveedores/listado">
+        <Link href="/registro-proveedores/nuevo">
           <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
-            <List className="w-5 h-5" />
-            Ver lista de proveedores
+            + Agregar nuevo proveedor
           </Button>
         </Link>
       </div>
@@ -220,9 +220,17 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
 
       {/* Table Section */}
       <div className="pt-6">
-        <h2 className="text-2xl font-bold text-heading-dark tracking-tight mb-6">
-          Lista de proveedores por aprobar
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-heading-dark tracking-tight">
+            Lista de proveedores por aprobar
+          </h2>
+          <Link href="/registro-proveedores/listado">
+            <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
+              <List className="w-5 h-5" />
+              Ver lista de proveedores
+            </Button>
+          </Link>
+        </div>
 
         <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm relative min-h-[200px]">
           {loading && (
@@ -240,8 +248,10 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
                   </div>
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
-                  Representante legal
+                <th className="px-4 py-3 font-semibold text-center leading-tight">
+                  Representante legal/
+                  <br />
+                  Máxima autoridad
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
@@ -274,7 +284,22 @@ export function RegistroProveedoresDashboard({ readOnly = false }: { readOnly?: 
                           {provider.rif}
                         </td>
                         <td className="px-4 py-3 text-slate-600 text-center font-medium whitespace-nowrap max-w-[150px] truncate">
-                          {provider.nombreRepLegal}
+                          {(() => {
+                            const firstChar = provider.rif
+                              ? provider.rif.trim().charAt(0).toUpperCase()
+                              : "";
+                            if (firstChar === "J") {
+                              return provider.nombreRepLegal || "N/A";
+                            } else if (firstChar === "G") {
+                              return provider.nombreAutoridadProveedor || "N/A";
+                            } else {
+                              return (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                  No aplica
+                                </span>
+                              );
+                            }
+                          })()}
                         </td>
 
                         {/* Area Pill */}

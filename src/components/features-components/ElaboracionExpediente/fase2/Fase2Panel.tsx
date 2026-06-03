@@ -95,6 +95,13 @@ const TIPO_TO_ICON: Record<string, "receipt" | "clipboard"> = {
   ACTA_APERTURA: "receipt",
 };
 
+/** Mapeo de nombres con mayúsculas corregidas para visualización en Fase 2 */
+const DOCUMENTOS_DISPLAY: Record<string, string> = {
+  REGISTRO_ADQUIRENTES: "Registro de adquirentes del pliego",
+  ACTA_RECEPCION: "Acta de recepción de sobres",
+  ACTA_APERTURA: "Acta de apertura de sobres",
+};
+
 // ─── Sub-componente: Botón Generar con validación ───────────────────
 
 interface GenerarDocBtnProps {
@@ -151,7 +158,9 @@ interface Fase2PanelProps {
 
 export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) {
   // ── Estado de Adquirentes ──
-  const [adquirentes, setAdquirentes] = useState<Adquirente[]>([]);
+  const [adquirentes, setAdreadquirentes] = useState<Adquirente[]>([]);
+  const [adquirentesPage, setAdquirentesPage] = useState(1);
+  const ADQ_PAGE_SIZE = 5;
   const [adquirenteSheetOpen, setAdquirenteSheetOpen] = useState(false);
   const [adquirenteEditando, setAdquirenteEditando] = useState<Adquirente | null>(null);
   const [deleteAdquirenteOpen, setDeleteAdquirenteOpen] = useState(false);
@@ -160,6 +169,8 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
 
   // ── Estado de Oferentes ──
   const [oferentes, setOferentes] = useState<Oferente[]>([]);
+  const [oferentesPage, setOferentesPage] = useState(1);
+  const OFE_PAGE_SIZE = 5;
   const [oferenteSheetOpen, setOferenteSheetOpen] = useState(false);
   const [oferenteEditando, setOferenteEditando] = useState<Oferente | null>(null);
   const [deleteOferenteOpen, setDeleteOferenteOpen] = useState(false);
@@ -202,6 +213,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
           : "—",
       }));
       setOferentes(mapped);
+      setOferentesPage(1); // Reiniciar a página 1 tras cargar
     } catch (error) {
       console.error("Error al cargar oferentes:", error);
       toast.error("No se pudo cargar la lista de oferentes");
@@ -224,7 +236,8 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
         correo: item.correoProveedorAdquiriente,
         deposito: item.datosPagoPliego || "—",
       }));
-      setAdquirentes(mapped);
+      setAdreadquirentes(mapped);
+      setAdquirentesPage(1); // Reiniciar a página 1 tras cargar
     } catch (error) {
       console.error("Error al cargar adquirentes:", error);
       toast.error("No se pudo cargar la lista de adquirentes");
@@ -541,59 +554,66 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                     </TableCell>
                   </TableRow>
                 ) : (
-                  adquirentes.map((adq) => (
-                    <TableRow key={adq.id} className="border-b border-border hover:bg-slate-50/50">
-                      <TableCell className="text-[13px] font-semibold text-color-subtitulos text-center py-3 px-2 whitespace-normal break-words leading-tight">
-                        {formatDate(adq.fecha)}
-                      </TableCell>
-                      <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 whitespace-normal break-all leading-tight">
-                        {adq.empresa}
-                      </TableCell>
-                      <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 tabular-nums whitespace-normal break-all leading-tight">
-                        {adq.deposito}
-                      </TableCell>
-                      <TableCell className="text-center py-4">
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            className="text-slate-500 hover:text-navy transition-colors"
-                            onClick={async () => {
-                              try {
-                                const detallado = await obtenerAdquirente(adq.id);
-                                setAdquirenteEditando({
-                                  id: detallado.id,
-                                  fecha: detallado.fechaAdquisicion,
-                                  empresa: detallado.nombreProveedorAdquiriente,
-                                  domicilioFiscal: detallado.direccionFiscalProveedorAdquirente,
-                                  telefono: detallado.telefonoProveedorAdquirente,
-                                  correo: detallado.correoProveedorAdquirente,
-                                  deposito:
-                                    detallado.datosPagoPliego && detallado.datosPagoPliego !== "—"
-                                      ? detallado.datosPagoPliego
-                                      : "",
-                                });
-                                setAdquirenteSheetOpen(true);
-                              } catch (e) {
-                                toast.error("Error al obtener detalles del adquirente");
-                              }
-                            }}
-                          >
-                            <BsEye className="w-[18px] h-[18px]" />
-                          </button>
-                          {!readOnly && (
+                  (() => {
+                    const start = (adquirentesPage - 1) * ADQ_PAGE_SIZE;
+                    const paginados = adquirentes.slice(start, start + ADQ_PAGE_SIZE);
+                    return paginados.map((adq) => (
+                      <TableRow
+                        key={adq.id}
+                        className="border-b border-border hover:bg-slate-50/50"
+                      >
+                        <TableCell className="text-[13px] font-semibold text-color-subtitulos text-center py-3 px-2 whitespace-normal break-words leading-tight">
+                          {formatDate(adq.fecha)}
+                        </TableCell>
+                        <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 whitespace-normal break-all leading-tight">
+                          {adq.empresa}
+                        </TableCell>
+                        <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 tabular-nums whitespace-normal break-all leading-tight">
+                          {adq.deposito}
+                        </TableCell>
+                        <TableCell className="text-center py-4">
+                          <div className="flex items-center justify-center gap-3">
                             <button
-                              className="text-red-400 hover:text-red-600 transition-colors"
-                              onClick={() => {
-                                setAdquirenteToDelete(adq.id);
-                                setDeleteAdquirenteOpen(true);
+                              className="text-slate-500 hover:text-navy transition-colors"
+                              onClick={async () => {
+                                try {
+                                  const detallado = await obtenerAdquirente(adq.id);
+                                  setAdquirenteEditando({
+                                    id: detallado.id,
+                                    fecha: detallado.fechaAdquisicion,
+                                    empresa: detallado.nombreProveedorAdquiriente,
+                                    domicilioFiscal: detallado.direccionFiscalProveedorAdquirente,
+                                    telefono: detallado.telefonoProveedorAdquirente,
+                                    correo: detallado.correoProveedorAdquirente,
+                                    deposito:
+                                      detallado.datosPagoPliego && detallado.datosPagoPliego !== "—"
+                                        ? detallado.datosPagoPliego
+                                        : "",
+                                  });
+                                  setAdquirenteSheetOpen(true);
+                                } catch (e) {
+                                  toast.error("Error al obtener detalles del adquirente");
+                                }
                               }}
                             >
-                              <FaRegTrashAlt className="w-4 h-4" />
+                              <BsEye className="w-[18px] h-[18px]" />
                             </button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            {!readOnly && (
+                              <button
+                                className="text-red-400 hover:text-red-600 transition-colors"
+                                onClick={() => {
+                                  setAdquirenteToDelete(adq.id);
+                                  setDeleteAdquirenteOpen(true);
+                                }}
+                              >
+                                <FaRegTrashAlt className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ));
+                  })()
                 )}
               </TableBody>
             </Table>
@@ -602,53 +622,52 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
               <Pagination className="justify-end">
                 <PaginationContent className="gap-1">
                   <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      className="h-8 w-8 p-0 border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md"
+                    <button
+                      disabled={adquirentesPage === 1}
+                      onClick={() => setAdquirentesPage((prev) => Math.max(prev - 1, 1))}
+                      className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       &lt;
-                    </PaginationLink>
+                    </button>
                   </PaginationItem>
+                  {Array.from(
+                    { length: Math.max(Math.ceil(adquirentes.length / ADQ_PAGE_SIZE), 1) },
+                    (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <button
+                            onClick={() => setAdquirentesPage(pageNum)}
+                            className={`h-8 w-8 flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
+                              adquirentesPage === pageNum
+                                ? "bg-navy text-white hover:bg-navy-hover"
+                                : "bg-white border border-border text-muted-foreground hover:bg-slate-100"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        </PaginationItem>
+                      );
+                    }
+                  )}
                   <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      isActive
-                      className="h-8 w-8 p-0 bg-navy text-white hover:bg-navy-hover border-transparent rounded-md"
-                    >
-                      1
-                    </PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      className="h-8 w-8 p-0 bg-white border border-border text-muted-foreground hover:bg-slate-100 rounded-md"
-                    >
-                      2
-                    </PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      className="h-8 w-8 p-0 bg-white border border-border text-muted-foreground hover:bg-slate-100 rounded-md"
-                    >
-                      3
-                    </PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      className="h-8 w-8 p-0 bg-white border border-border text-muted-foreground hover:bg-slate-100 rounded-md"
-                    >
-                      4
-                    </PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      className="h-8 w-8 p-0 border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md"
+                    <button
+                      disabled={
+                        adquirentesPage ===
+                        Math.max(Math.ceil(adquirentes.length / ADQ_PAGE_SIZE), 1)
+                      }
+                      onClick={() =>
+                        setAdquirentesPage((prev) =>
+                          Math.min(
+                            prev + 1,
+                            Math.max(Math.ceil(adquirentes.length / ADQ_PAGE_SIZE), 1)
+                          )
+                        )
+                      }
+                      className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       &gt;
-                    </PaginationLink>
+                    </button>
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -662,7 +681,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
             <div className="flex items-center gap-4">
               <IoDocumentTextOutline className="w-6 h-6 text-color-titulos" />
               <CardTitle className="text-[17px] font-bold text-color-titulos">
-                Documentos del Procedimiento
+                Documentos del procedimiento
               </CardTitle>
             </div>
           </CardHeader>
@@ -722,7 +741,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                         </div>
                       )}
                       <p className="text-[14px] font-bold text-color-titulos leading-tight max-w-[130px]">
-                        {doc.label}
+                        {DOCUMENTOS_DISPLAY[doc.tipo] || doc.label}
                       </p>
                     </div>
 
@@ -862,69 +881,73 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                   </TableCell>
                 </TableRow>
               ) : (
-                oferentes.map((ofe) => (
-                  <TableRow key={ofe.id} className="border-b border-border hover:bg-slate-50/50">
-                    <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
-                      {ofe.nombreEmpresa}
-                    </TableCell>
-                    <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
-                      {ofe.rif}
-                    </TableCell>
-                    <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
-                      {ofe.representanteLegal}
-                    </TableCell>
-                    <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
-                      {ofe.cedula}
-                    </TableCell>
-                    <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
-                      {ofe.registroMercantil}
-                    </TableCell>
-                    <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 tabular-nums text-center whitespace-normal break-all leading-tight">
-                      {ofe.montoOferta}
-                    </TableCell>
-                    <TableCell className="text-center py-4">
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          className="text-slate-500 hover:text-navy transition-colors"
-                          onClick={async () => {
-                            try {
-                              const detallado = await obtenerOferente(ofe.id);
-                              setOferenteEditando({
-                                id: detallado.id,
-                                nombreEmpresa: detallado.nombreProveedorOferente,
-                                rif: detallado.rifProveedorOferente,
-                                representanteLegal: detallado.nombreRepLegalOferente,
-                                cedula: detallado.cedulaRepLegalOferente,
-                                registroMercantil:
-                                  detallado.datosRegistroMercantilProveedorOferente || "—",
-                                cantidadSobres: detallado.numeroSobresEntregados
-                                  ? String(detallado.numeroSobresEntregados)
-                                  : "0",
-                                montoOferta: String(detallado.montoOfertaBs),
-                              });
-                              setOferenteSheetOpen(true);
-                            } catch (e) {
-                              toast.error("Error al obtener detalles del oferente");
-                            }
-                          }}
-                        >
-                          <BsEye className="w-[18px] h-[18px]" />
-                        </button>
-                        {!readOnly && (
+                (() => {
+                  const start = (oferentesPage - 1) * OFE_PAGE_SIZE;
+                  const paginados = oferentes.slice(start, start + OFE_PAGE_SIZE);
+                  return paginados.map((ofe) => (
+                    <TableRow key={ofe.id} className="border-b border-border hover:bg-slate-50/50">
+                      <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                        {ofe.nombreEmpresa}
+                      </TableCell>
+                      <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
+                        {ofe.rif}
+                      </TableCell>
+                      <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                        {ofe.representanteLegal}
+                      </TableCell>
+                      <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
+                        {ofe.cedula}
+                      </TableCell>
+                      <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                        {ofe.registroMercantil}
+                      </TableCell>
+                      <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 tabular-nums text-center whitespace-normal break-all leading-tight">
+                        {ofe.montoOferta}
+                      </TableCell>
+                      <TableCell className="text-center py-4">
+                        <div className="flex items-center justify-center gap-3">
                           <button
-                            className="text-red-400 hover:text-red-600 transition-colors"
-                            onClick={() => {
-                              setOferenteToDelete(ofe.id);
-                              setDeleteOferenteOpen(true);
+                            className="text-slate-500 hover:text-navy transition-colors"
+                            onClick={async () => {
+                              try {
+                                const detallado = await obtenerOferente(ofe.id);
+                                setOferenteEditando({
+                                  id: detallado.id,
+                                  nombreEmpresa: detallado.nombreProveedorOferente,
+                                  rif: detallado.rifProveedorOferente,
+                                  representanteLegal: detallado.nombreRepLegalOferente,
+                                  cedula: detallado.cedulaRepLegalOferente,
+                                  registroMercantil:
+                                    detallado.datosRegistroMercantilProveedorOferente || "—",
+                                  cantidadSobres: detallado.numeroSobresEntregados
+                                    ? String(detallado.numeroSobresEntregados)
+                                    : "0",
+                                  montoOferta: String(detallado.montoOfertaBs),
+                                });
+                                setOferenteSheetOpen(true);
+                              } catch (e) {
+                                toast.error("Error al obtener detalles del oferente");
+                              }
                             }}
                           >
-                            <FaRegTrashAlt className="w-4 h-4" />
+                            <BsEye className="w-[18px] h-[18px]" />
                           </button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                          {!readOnly && (
+                            <button
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              onClick={() => {
+                                setOferenteToDelete(ofe.id);
+                                setDeleteOferenteOpen(true);
+                              }}
+                            >
+                              <FaRegTrashAlt className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ));
+                })()
               )}
             </TableBody>
           </Table>
@@ -933,53 +956,48 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
             <Pagination className="justify-end">
               <PaginationContent className="gap-1">
                 <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    className="h-8 w-8 p-0 border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md"
+                  <button
+                    disabled={oferentesPage === 1}
+                    onClick={() => setOferentesPage((prev) => Math.max(prev - 1, 1))}
+                    className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     &lt;
-                  </PaginationLink>
+                  </button>
                 </PaginationItem>
+                {Array.from(
+                  { length: Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1) },
+                  (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <button
+                          onClick={() => setOferentesPage(pageNum)}
+                          className={`h-8 w-8 flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
+                            oferentesPage === pageNum
+                              ? "bg-navy text-white hover:bg-navy-hover"
+                              : "bg-white border border-border text-muted-foreground hover:bg-slate-100"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      </PaginationItem>
+                    );
+                  }
+                )}
                 <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    isActive
-                    className="h-8 w-8 p-0 bg-navy text-white hover:bg-navy-hover border-transparent rounded-md"
-                  >
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    className="h-8 w-8 p-0 bg-white border border-border text-muted-foreground hover:bg-slate-100 rounded-md"
-                  >
-                    2
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    className="h-8 w-8 p-0 bg-white border border-border text-muted-foreground hover:bg-slate-100 rounded-md"
-                  >
-                    3
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    className="h-8 w-8 p-0 bg-white border border-border text-muted-foreground hover:bg-slate-100 rounded-md"
-                  >
-                    4
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    className="h-8 w-8 p-0 border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md"
+                  <button
+                    disabled={
+                      oferentesPage === Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1)
+                    }
+                    onClick={() =>
+                      setOferentesPage((prev) =>
+                        Math.min(prev + 1, Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1))
+                      )
+                    }
+                    className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     &gt;
-                  </PaginationLink>
+                  </button>
                 </PaginationItem>
               </PaginationContent>
             </Pagination>

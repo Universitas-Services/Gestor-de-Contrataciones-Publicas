@@ -1,5 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 import type { SessionPayload } from "@/types/auth.types";
 import { SESSION_CONSTANTS } from "@/types/auth.types";
 
@@ -119,6 +120,60 @@ export async function deleteSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_CONSTANTS.COOKIE_NAME);
   cookieStore.delete(`${SESSION_CONSTANTS.COOKIE_NAME}_payload`);
+}
+
+/**
+ * Obtener sesión desde cookies del request (proxy/middleware).
+ * Prioriza el payload enriquecido con flags de onboarding.
+ */
+export async function getSessionFromRequest(request: NextRequest): Promise<SessionPayload | null> {
+  const token = request.cookies.get(SESSION_CONSTANTS.COOKIE_NAME)?.value;
+  const payloadCookie = request.cookies.get(`${SESSION_CONSTANTS.COOKIE_NAME}_payload`);
+
+  if (payloadCookie?.value) {
+    try {
+      const payload = JSON.parse(payloadCookie.value) as SessionPayload;
+
+      if (token) {
+        const verified = await verifySession(token);
+        if (!verified) {
+          return null;
+        }
+      }
+
+      return payload;
+    } catch (error) {
+      console.error("Error parseando payload de sesión en request:", error);
+    }
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  return verifySession(token);
+}
+
+/**
+ * Actualizar flags del payload de sesión sin invalidar el token.
+ */
+export async function updateSessionPayload(
+  updates: Partial<
+    Pick<SessionPayload, "cambioPasswordDefault" | "passwordPerdido" | "datosConfirmados">
+  >
+): Promise<void> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_CONSTANTS.COOKIE_NAME)?.value;
+  const currentSession = await getSessionCookie();
+
+  if (!token || !currentSession) {
+    return;
+  }
+
+  await setSessionCookie(token, {
+    ...currentSession,
+    ...updates,
+  });
 }
 
 /**

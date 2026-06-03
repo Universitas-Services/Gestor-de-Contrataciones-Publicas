@@ -46,7 +46,13 @@ export const contratoFormSchema = z.object({
   plazoGarantiaCalidad: dateField("El plazo de garantía"),
 
   nombreSupervisor: textField("El nombre del supervisor", 200),
-  cedulaSupervisor: textField("La cédula del supervisor", 20),
+  cedulaSupervisor: z
+    .string()
+    .min(1, { message: "La cédula del supervisor es requerida" })
+    .regex(
+      /^[EV]-[0-9]{1,8}$|^[EV][0-9]{1,8}$/,
+      "Debe comenzar con E o V seguido de máximo 8 números"
+    ),
   cargoSupervisor: textField("El cargo del supervisor", 150),
   criterioAceptacionContratoAuAu: textField("Los criterios de aceptación", 500),
   plazoConsignarFacturasDias: numericField("El plazo para consignar facturas"),

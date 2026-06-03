@@ -12,6 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { MoneyInput } from "@/components/ui/money-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import type { ContratoFormValues } from "@/lib/schemas/contratoSchema";
 import {
   CONTRATO_INPUT_CLASS,
@@ -149,20 +158,102 @@ export function ContratoMontoField({
           <FormLabel className="text-base font-bold text-color-titulos">{label}</FormLabel>
           {legal ? <p className="text-sm text-slate-500 italic">{legal}</p> : null}
           <FormControl>
-            <Input
-              {...field}
+            <MoneyInput
+              name={field.name}
               value={field.value ?? ""}
+              onValueChange={(cleanValue) => field.onChange(cleanValue)}
+              onBlur={field.onBlur}
               disabled={readOnly}
-              inputMode="decimal"
-              autoComplete="off"
               placeholder={placeholder}
               className={CONTRATO_INPUT_CLASS}
-              onChange={(e) => field.onChange(sanitizeMontoInput(e.target.value))}
             />
           </FormControl>
           <FormMessage />
         </FormItem>
       )}
+    />
+  );
+}
+
+export function ContratoCedulaField({ name, control, label, legal, readOnly }: FieldBaseProps) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => {
+        const val = field.value || "";
+        const prefix = val.startsWith("E-") ? "E" : "V";
+        const numberPart = val.replace(/^[EV]-?/, "");
+
+        const handlePrefixChange = (newPrefix: string) => {
+          field.onChange(`${newPrefix}-${numberPart}`);
+        };
+
+        return (
+          <FormItem className="space-y-1">
+            <FormLabel className="text-base font-bold text-color-titulos">{label}</FormLabel>
+            {legal ? <p className="text-sm text-slate-500 italic">{legal}</p> : null}
+            <FormControl>
+              <div className="flex items-center gap-2">
+                <Select value={prefix} onValueChange={handlePrefixChange} disabled={readOnly}>
+                  <SelectTrigger className="w-[70px] h-11 border border-slate-300 bg-white text-[13px] font-medium text-slate-500 shadow-none focus:ring-0">
+                    <SelectValue placeholder="V" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="V">V-</SelectItem>
+                    <SelectItem value="E">E-</SelectItem>
+                  </SelectContent>
+                </Select>
+                <InputOTP
+                  maxLength={8}
+                  value={numberPart}
+                  onChange={(val) => {
+                    const cleanNum = val.replace(/\D/g, "");
+                    field.onChange(`${prefix}-${cleanNum}`);
+                  }}
+                  disabled={readOnly}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot
+                      index={0}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={1}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={2}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={3}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={4}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={5}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={6}
+                      className="border-r-0 shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                    <InputOTPSlot
+                      index={7}
+                      className="rounded-r-md border-r shadow-none h-11 w-10 text-[13px] font-medium text-slate-500"
+                    />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        );
+      }}
     />
   );
 }

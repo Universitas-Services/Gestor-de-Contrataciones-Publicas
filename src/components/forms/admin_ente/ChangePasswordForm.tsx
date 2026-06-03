@@ -6,8 +6,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { cambiarContrasena } from "@/services/authService";
+import { markPasswordChangedAction } from "@/lib/auth/auth";
 import {
   Form,
   FormControl,
@@ -36,6 +37,9 @@ export function ChangePasswordForm({
 }: ChangePasswordFormProps = {}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -56,8 +60,10 @@ export function ChangePasswordForm({
         newPassword: values.newPassword,
       });
 
+      await markPasswordChangedAction();
+
       toast.success("Contraseña actualizada correctamente");
-      router.push(onSuccessRedirect);
+      router.replace(onSuccessRedirect);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Error al cambiar la contraseña";
       toast.error(message);
@@ -89,15 +95,29 @@ export function ChangePasswordForm({
                   <FormLabel className="text-xs font-semibold text-[slate-700]">
                     Ingresa tu contraseña anterior
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Mínimo de caracteres"
-                      className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30"
-                      {...field}
+                  <div className="relative">
+                    <FormControl>
+                      <Input
+                        type={showCurrentPassword ? "text" : "password"}
+                        placeholder="Mínimo de caracteres"
+                        className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 pr-10"
+                        {...field}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors outline-none cursor-pointer"
                       disabled={isLoading}
-                    />
-                  </FormControl>
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff className="size-5" />
+                      ) : (
+                        <Eye className="size-5" />
+                      )}
+                    </button>
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -112,15 +132,25 @@ export function ChangePasswordForm({
                   <FormLabel className="text-xs font-semibold text-[slate-700]">
                     Nueva contraseña
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Mínimo de caracteres"
-                      className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30"
-                      {...field}
+                  <div className="relative">
+                    <FormControl>
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="Mínimo de caracteres"
+                        className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 pr-10"
+                        {...field}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors outline-none cursor-pointer"
                       disabled={isLoading}
-                    />
-                  </FormControl>
+                    >
+                      {showNewPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -135,15 +165,29 @@ export function ChangePasswordForm({
                   <FormLabel className="text-xs font-semibold text-[slate-700]">
                     Confirmar nueva contraseña
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Confirma tu nueva contraseña"
-                      className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30"
-                      {...field}
+                  <div className="relative">
+                    <FormControl>
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirma tu nueva contraseña"
+                        className="h-11 bg-slate-50/50 border-slate-200 text-sm placeholder:text-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 pr-10"
+                        {...field}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors outline-none cursor-pointer"
                       disabled={isLoading}
-                    />
-                  </FormControl>
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="size-5" />
+                      ) : (
+                        <Eye className="size-5" />
+                      )}
+                    </button>
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}

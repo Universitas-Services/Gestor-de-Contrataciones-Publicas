@@ -29,13 +29,11 @@ export default async function SharedDashboardLayout({ children }: { children: Re
       role={authenticatedUser.role}
       userName={authenticatedUser.name}
       userEmail={authenticatedUser.email}
-      notificationCount={3}
     >
       <Header
         userName={authenticatedUser.name}
         userEmail={authenticatedUser.email}
         userRole={authenticatedUser.role}
-        notificationCount={3}
       />
       <div className="p-8">
         <Breadcrumbs />

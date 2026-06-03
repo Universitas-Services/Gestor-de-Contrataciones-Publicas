@@ -25,13 +25,11 @@ export default async function SupervisorLayout({ children }: { children: React.R
       role={ROLES.SUPERVISOR}
       userName={authenticatedUser.name}
       userEmail={authenticatedUser.email}
-      notificationCount={3}
     >
       <Header
         userName={authenticatedUser.name}
         userEmail={authenticatedUser.email}
         userRole={authenticatedUser.role}
-        notificationCount={3}
       />
       <div className="p-8">
         <Breadcrumbs />

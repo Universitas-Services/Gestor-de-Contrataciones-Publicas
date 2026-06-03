@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,7 @@ import {
 } from "@/lib/schemas/completarEnteSchema";
 import { UniversitasAPI, Estado, Municipio, Ciudad, Parroquia } from "@universitas/sdk-global";
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
-import { generarManual } from "@/services/manualService";
+import { markDatosConfirmadosAction } from "@/lib/auth/auth";
 
 // Lazy getter: el SDK solo se instancia cuando se invoca por primera vez (en runtime),
 // no durante la importación del módulo (build-time). Evita el crash en Vercel.
@@ -80,6 +80,8 @@ export function CompletarEnteForm({
   readOnly = false,
 }: CompletarEnteFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEdit = searchParams.get("edit") === "true";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -344,12 +346,14 @@ export function CompletarEnteForm({
       };
 
       await actualizarEnte(enteId, payload);
+      await markDatosConfirmadosAction();
 
-      toast.loading("Generando manual del ente...", { id: toastId });
-      await generarManual();
-
-      toast.success("Datos guardados y manual generado correctamente", { id: toastId });
-      router.push("/admin_ente/dashboard");
+      toast.success("Datos guardados correctamente", { id: toastId });
+      if (isEdit) {
+        router.replace("/gestion-datos/perfil");
+      } else {
+        router.replace("/admin_ente/dashboard");
+      }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error al guardar los datos del ente";
@@ -380,7 +384,9 @@ export function CompletarEnteForm({
           {step === 1 ? "Datos generales" : "Ubicación y estructura"}
         </CardTitle>
         <CardDescription className="text-slate-500 italic mt-1 font-inter text-base">
-          Ingresa los datos básicos para comenzar el registro
+          {isEdit
+            ? "Modifica los datos del ente contratante"
+            : "Ingresa los datos básicos para comenzar el registro"}
         </CardDescription>
       </CardHeader>
 

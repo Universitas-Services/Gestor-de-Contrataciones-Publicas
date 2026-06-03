@@ -358,7 +358,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
 
           {/* P2: Garantía de mantenimiento */}
           <PreguntaCard
-            pregunta="Indique si se verificó que todos los oferentes calificados consignaron la Garantía de Mantenimiento de la Oferta."
+            pregunta="Indique si se verificó que todos los oferentes calificados consignaron la garantía de mantenimiento de la oferta."
             referencia="Artículos 64 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI."
             valor={form.indVerificadoGarantia}
             onToggle={(v) => set("indVerificadoGarantia", v)}
@@ -367,7 +367,7 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
 
           {/* P3: Compromiso de Responsabilidad Social */}
           <PreguntaCard
-            pregunta="Indique si se verificó que todos los oferentes calificados presentaron el Compromiso de Responsabilidad Social."
+            pregunta="Indique si se verificó que todos los oferentes calificados presentaron el compromiso de responsabilidad social."
             referencia="Artículos 66.15 LCP; 5 NORMAS DE CONTROL INTERNO SUNAI."
             valor={form.indVerificadoCrs}
             onToggle={(v) => set("indVerificadoCrs", v)}

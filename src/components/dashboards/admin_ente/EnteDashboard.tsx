@@ -8,7 +8,7 @@ import { BsFillPeopleFill, BsEye } from "react-icons/bs";
 import { IoIosSend, IoMdTime, IoIosPrint, IoIosHammer, IoIosBriefcase } from "react-icons/io";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { FaRegAddressBook, FaHandPointRight, FaRobot } from "react-icons/fa";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { DashboardOperativoResponse } from "@/types/dashboard-operativo.types";
 
@@ -42,6 +42,7 @@ const ROUTES = {
   usuarios: "/admin_ente/gestion-datos/usuarios",
   ejecutores: "/admin_ente/gestion-datos/usuarios?rol=EJECUTOR",
   visualizadores: "/admin_ente/gestion-datos/usuarios?rol=VISUALIZADOR",
+  administradores: "/admin_ente/gestion-datos/usuarios?rol=ADMIN_ENTE",
   expedientes: "/elaboracion-expediente",
   proveedores: "/registro-proveedores",
   consultorIA: "/consultor-ia",
@@ -93,7 +94,7 @@ export function EnteDashboard({ data, hideManualButtons = false }: EnteDashboard
         <section className="space-y-3">
           <h3 className="text-lg font-bold text-heading-dark">Usuarios de la plataforma</h3>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {/* Total de usuarios */}
             <Card className={clickableCardClass} onClick={() => handleNavigation(ROUTES.usuarios)}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -104,6 +105,24 @@ export function EnteDashboard({ data, hideManualButtons = false }: EnteDashboard
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold text-heading-dark">{data.usuarios.total}</p>
+              </CardContent>
+            </Card>
+
+            {/* Administradores */}
+            <Card
+              className={clickableCardClass}
+              onClick={() => handleNavigation(ROUTES.administradores)}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Administradores
+                </CardTitle>
+                <ShieldCheck className="h-5 w-5 text-icon-people" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-heading-dark">
+                  {data.usuarios.administradores}
+                </p>
               </CardContent>
             </Card>
 
