@@ -45,6 +45,12 @@ function getDocSubtitulo(doc: DocumentoStatus): string {
   return fecha ? `Generado el ${formatDocFecha(fecha)}` : "Documento generado";
 }
 
+function getDocLabel(doc: DocumentoStatus): string {
+  if (doc.tipo === "ACTA_ADJUDICACION") return "Acta de adjudicación";
+  if (doc.tipo === "CONTRATO") return "Contrato formalizado";
+  return doc.label;
+}
+
 interface Fase4PanelProps {
   expedienteId: string;
   readOnly?: boolean;
@@ -154,7 +160,7 @@ function DocumentosProcesoCard({
               >
                 <div>
                   <p className="text-[13px] font-bold text-color-titulos leading-tight">
-                    {doc.label}
+                    {getDocLabel(doc)}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5 italic">
                     {getDocSubtitulo(doc)}

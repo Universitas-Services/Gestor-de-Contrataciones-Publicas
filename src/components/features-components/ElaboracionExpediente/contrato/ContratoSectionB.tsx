@@ -4,7 +4,11 @@ import type { Control } from "react-hook-form";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import type { ContratoFormValues } from "@/lib/schemas/contratoSchema";
 import { getCriterioAceptacionCopy } from "@/lib/constants/contratoFieldCopy";
-import { ContratoTextField, ContratoTextareaField } from "./ContratoFieldPrimitives";
+import {
+  ContratoTextField,
+  ContratoTextareaField,
+  ContratoCedulaField,
+} from "./ContratoFieldPrimitives";
 
 interface ContratoSectionBProps {
   control: Control<ContratoFormValues>;
@@ -24,7 +28,7 @@ export function ContratoSectionB({ control, tipoContratacion, readOnly }: Contra
         label="Indique el nombre y apellido del supervisor o ingeniero inspector del contrato designado por la Unidad Usuaria."
         legal="Artículos 136, 138 LCP; 35 NORMAS DE CONTROL INTERNO SUNAI."
       />
-      <ContratoTextField
+      <ContratoCedulaField
         control={control}
         name="cedulaSupervisor"
         readOnly={readOnly}

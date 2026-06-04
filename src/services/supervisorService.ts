@@ -59,7 +59,7 @@ export const obtenerMetricasEnte = async (enteId: string): Promise<DashboardOper
 
     // Retornar métricas vacías si falla la petición
     return {
-      usuarios: { total: 0, ejecutores: 0, visualizadores: 0 },
+      usuarios: { total: 0, ejecutores: 0, visualizadores: 0, administradores: 0 },
       expedientesEnProceso: { total: 0, bienes: 0, obras: 0, servicios: 0 },
       expedientesTerminados: { total: 0, bienes: 0, obras: 0, servicios: 0 },
       proveedores: { total: 0 },

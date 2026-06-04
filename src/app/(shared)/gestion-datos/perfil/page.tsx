@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import { canAccessEnteModules, isReadOnlyRole } from "@/lib/permissions/roleAccess";
-import { Building2 } from "lucide-react";
+import { Building2, Pencil, IdCard, Network, MapPin } from "lucide-react";
 import Image from "next/image";
 import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons";
+import { IoMdAttach } from "react-icons/io";
+import { ManualHistoryTable } from "@/components/dashboards/admin_ente/ManualHistoryTable";
 
 export default async function PerfilEntePage() {
   const user = await getCurrentUser();
@@ -57,11 +59,24 @@ export default async function PerfilEntePage() {
                   {enteInfo.organoAdscripcion || "Sin órgano de adscripción asociado"}
                 </p>
               </div>
-              {!readOnly && (
-                <Button asChild className="w-32 bg-color-boton-2 font-semibold hover:bg-navy-deep">
-                  <Link href={ROLE_ROUTES.admin_ente.completarEnte}>Editar</Link>
-                </Button>
-              )}
+              <div className="flex items-center gap-3">
+                {!readOnly && (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="px-4 bg-color-boton-2 hover:bg-navy-deep shadow-sm hover:shadow-md gap-2 font-semibold text-white transition-all duration-200"
+                  >
+                    <Link
+                      href={`${ROLE_ROUTES.admin_ente.completarEnte}?edit=true`}
+                      className="flex items-center gap-2"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Editar
+                    </Link>
+                  </Button>
+                )}
+                <ManualButtons />
+              </div>
             </CardContent>
           </Card>
 
@@ -70,7 +85,8 @@ export default async function PerfilEntePage() {
             <div className="flex flex-col gap-8">
               {/* Datos de Identificación */}
               <section>
-                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2">
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2 flex items-center gap-2">
+                  <IdCard className="h-5 w-5 text-color-boton-2" />
                   Datos de Identificación
                 </h3>
                 <div className="rounded-lg border bg-white p-5 pr-10 shadow-sm space-y-4">
@@ -119,7 +135,8 @@ export default async function PerfilEntePage() {
 
               {/* Estructura Organizativa */}
               <section>
-                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2">
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2 flex items-center gap-2">
+                  <Network className="h-5 w-5 text-color-boton-2" />
                   Estructura Organizativa (Unidades responsables)
                 </h3>
                 <div className="rounded-lg border bg-white p-5 pr-10 shadow-sm space-y-4">
@@ -161,7 +178,8 @@ export default async function PerfilEntePage() {
             <div className="flex flex-col gap-8">
               {/* Ubicación Geográfica */}
               <section>
-                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2">
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-color-boton-2" />
                   Ubicación Geográfica
                 </h3>
                 <div className="rounded-lg border bg-white p-5 pr-10 shadow-sm space-y-4">
@@ -199,9 +217,16 @@ export default async function PerfilEntePage() {
                   </div>
                 </div>
               </section>
-
-              {/* Botones Manuales */}
-              <ManualButtons orientation="vertical" />
+              {/* Histórico del manual de procedimientos */}
+              <section>
+                <h3 className="mb-4 text-lg font-bold text-color-boton-2 border-b pb-2 flex items-center gap-2">
+                  <IoMdAttach className="h-5 w-5 text-color-boton-2 rotate-45" />
+                  Histórico del manual de procedimientos
+                </h3>
+                <Card className="border border-slate-100 bg-white shadow-sm rounded-lg overflow-hidden">
+                  <ManualHistoryTable />
+                </Card>
+              </section>
             </div>
           </div>
         </div>

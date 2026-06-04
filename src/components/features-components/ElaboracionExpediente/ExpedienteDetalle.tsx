@@ -248,10 +248,28 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
     MODALIDAD_DISPLAY[data.modalidad?.modalidadSeleccion ?? ""] ??
     data.modalidad?.modalidadSeleccion ??
     "—";
-  const estado = ESTADO_STYLES[data.estatusProceso] ?? {
-    label: data.estatusProceso,
-    className: "bg-slate-100 text-slate-600 border-slate-200",
+  // Mapear los estados de Swagger a los 3 visuales solicitados
+  const getEstadoVisual = (estatus: string) => {
+    switch (estatus) {
+      case "CONTRATADO":
+        return {
+          label: "Contratado",
+          className: "bg-slate-100 text-slate-700 border-slate-300",
+        };
+      case "ANULADO":
+        return {
+          label: "Anulado",
+          className: "bg-red-100 text-red-700 border-red-300",
+        };
+      default:
+        // BORRADOR, EN_PREPARACION, PUBLICADO, EN_EVALUACION, ADJUDICADO, etc. -> Activo
+        return {
+          label: "Activo",
+          className: "bg-green-100 text-green-700 border-green-300",
+        };
+    }
   };
+  const estado = getEstadoVisual(data.estatusProceso);
   const shortId = data.id?.slice(0, 8).toUpperCase() ?? "—";
 
   const ucau =
@@ -319,7 +337,9 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
               {/* Lado izquierdo */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl font-bold font-inter tracking-wide">EXP-{shortId}</h2>
+                  <h2 className="text-2xl font-bold font-inter tracking-wide">
+                    EXP-{data.codigoNomenclatura ?? shortId}
+                  </h2>
                   <Badge
                     className={`${estado.className} text-xs font-semibold px-2.5 py-0.5 rounded-full border`}
                   >
@@ -342,7 +362,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
               {/* Lado derecho: Progreso — barra verde usando CSS var */}
               <div className="min-w-[220px] space-y-2">
                 <div className="flex justify-between text-sm text-slate-300">
-                  <span>Progreso del Expediente</span>
+                  <span>Progreso del expediente</span>
                   <span className="font-bold text-white">15%</span>
                 </div>
                 {/* bg-slate-600 es el track, la barra interna usa --progress-bar definido en globals.css */}
@@ -350,7 +370,6 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                   value={15}
                   className="h-1.5 bg-slate-600 [&>div]:bg-[var(--progress-bar)]"
                 />
-                <p className="text-xs text-slate-400">Fase 0: Ficha Técnica en curso</p>
               </div>
             </div>
           </CardContent>
@@ -467,11 +486,11 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                   </CardContent>
                 </Card>
 
-                {/* Fecha del Llamado */}
+                {/* Fecha del llamado */}
                 <Card className="border border-slate-200 shadow-sm">
                   <CardContent className="px-6 py-5">
                     <p className="text-xs text-slate-400 font-inter italic mb-1">
-                      Fecha del Llamado
+                      Fecha del llamado
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <CalendarDays className="w-4 h-4 text-navy" />
@@ -526,7 +545,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                 </Card>
               </div>
 
-              {/* ── Botones de acción: Editar Ficha  ── */}
+              {/* ── Botones de acción: Editar ficha  ── */}
               {!readOnly && (
                 <div className="flex justify-end mt-6 mb-2">
                   <Button
@@ -534,7 +553,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                     className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
                   >
                     <Pencil className="w-4 h-4" />
-                    Editar Ficha
+                    Editar ficha
                   </Button>
                 </div>
               )}

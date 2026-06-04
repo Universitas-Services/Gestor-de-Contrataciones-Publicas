@@ -3,6 +3,8 @@ import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Header } from "@/components/shared/Header";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { getOnboardingRedirect } from "@/lib/auth/onboardingGuard";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Admin Ente | Dashboard",
@@ -15,21 +17,27 @@ export const metadata: Metadata = {
 export default async function EnteDashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
-  // user is guaranteed non-null by parent layout's enforceRoleAccess
-  const authenticatedUser = user!;
+  if (!user) {
+    redirect("/login");
+  }
+
+  const onboardingRedirect = getOnboardingRedirect(user);
+  if (onboardingRedirect) {
+    redirect(onboardingRedirect);
+  }
+
+  const authenticatedUser = user;
 
   return (
     <DashboardLayout
       role={authenticatedUser.role}
       userName={authenticatedUser.name}
       userEmail={authenticatedUser.email}
-      notificationCount={3}
     >
       <Header
         userName={authenticatedUser.name}
         userEmail={authenticatedUser.email}
         userRole={authenticatedUser.role}
-        notificationCount={3}
       />
       <div className="p-8">
         <Breadcrumbs />

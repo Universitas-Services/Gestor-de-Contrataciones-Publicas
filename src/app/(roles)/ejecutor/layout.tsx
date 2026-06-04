@@ -25,13 +25,11 @@ export default async function EjecutorLayout({ children }: { children: React.Rea
       role={ROLES.EJECUTOR}
       userName={authenticatedUser.name}
       userEmail={authenticatedUser.email}
-      notificationCount={3}
     >
       <Header
         userName={authenticatedUser.name}
         userEmail={authenticatedUser.email}
         userRole={authenticatedUser.role}
-        notificationCount={3}
       />
       <div className="p-8">
         <Breadcrumbs />

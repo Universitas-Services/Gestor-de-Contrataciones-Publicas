@@ -43,6 +43,7 @@ interface Provider {
   nombre: string;
   rif: string;
   nombreRepLegal: string;
+  nombreAutoridadProveedor?: string | null;
   areaEspecialidad: string | null;
   estatusValidacion: "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION";
 }
@@ -216,8 +217,10 @@ export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean })
                   </div>
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Rif</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
-                  Representante Legal
+                <th className="px-4 py-3 font-semibold text-center leading-tight">
+                  Representante legal/
+                  <br />
+                  Máxima autoridad
                 </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">tipo</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Estatus</th>
@@ -248,7 +251,22 @@ export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean })
                         </td>
                         <td className="px-4 py-3 text-slate-600 text-center">{provider.rif}</td>
                         <td className="px-4 py-3 text-slate-600 text-center font-medium max-w-[150px] truncate">
-                          {provider.nombreRepLegal}
+                          {(() => {
+                            const firstChar = provider.rif
+                              ? provider.rif.trim().charAt(0).toUpperCase()
+                              : "";
+                            if (firstChar === "J") {
+                              return provider.nombreRepLegal || "N/A";
+                            } else if (firstChar === "G") {
+                              return provider.nombreAutoridadProveedor || "N/A";
+                            } else {
+                              return (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                  No aplica
+                                </span>
+                              );
+                            }
+                          })()}
                         </td>
 
                         {/* Tipo Pill */}
@@ -476,63 +494,6 @@ export function ListadoProveedores({ readOnly = false }: { readOnly?: boolean })
               <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
-        </div>
-
-        {/* Footer KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-100">
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-2.5">
-              <div className="flex justify-between items-start mb-0">
-                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Total Proveedores
-                </h3>
-                <div className="transition-colors">
-                  <BsFillPeopleFill className="w-4 h-4 text-navy" />
-                </div>
-              </div>
-              <div className="text-xl font-extrabold text-navy leading-tight">
-                {stats?.resumen?.totalRegistrados || totalCount}
-              </div>
-              <p className="text-[9px] font-bold text-success-text">
-                {stats?.crecimientoMensual?.registradosEsteMes >= 0 ? "+" : ""}
-                {stats?.crecimientoMensual?.registradosEsteMes || 0} este mes
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-2.5">
-              <div className="flex justify-between items-start mb-0">
-                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Documentación vencida
-                </h3>
-                <div className="transition-colors">
-                  <BsFillCheckSquareFill className="w-4 h-4 text-navy" />
-                </div>
-              </div>
-              <div className="text-xl font-extrabold text-danger leading-tight">
-                {stats?.resumen?.totalRechazados || 0}
-              </div>
-              <p className="text-[9px] font-bold text-danger">Requiere atención</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white hover:border-navy transition-all group">
-            <CardContent className="p-2.5">
-              <div className="flex justify-between items-start mb-0">
-                <h3 className="text-[10px] font-bold text-slate-600 group-hover:text-navy transition-colors uppercase tracking-wider">
-                  Proceso de aprobación
-                </h3>
-                <div className="transition-colors">
-                  <IoAlertCircleOutline className="w-5 h-5 text-navy" />
-                </div>
-              </div>
-              <div className="text-xl font-extrabold text-navy leading-tight">
-                {stats?.resumen?.totalPendientes || 0}
-              </div>
-              <p className="text-[9px] font-bold text-amber-dark">Pendiente revisión</p>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

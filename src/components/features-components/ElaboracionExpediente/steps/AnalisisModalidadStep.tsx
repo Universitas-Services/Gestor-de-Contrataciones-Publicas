@@ -61,11 +61,12 @@ export function AnalisisModalidadStep({
     <div className="space-y-4">
       <InfoCard title="Objeto del Proceso" value={data.objetoProceso} />
       <InfoCard title="Tipo de contratación" value={data.tipoContratacion} />
-      <InfoCard title="Monto en Bs" value={formatBs(data.montoBs)} />
+      <InfoCard title="Monto en bolívares (Bs.)" value={formatBs(data.montoBs)} />
 
       {/* Monto USD — calculado dinámicamente desde el SDK (BCV) */}
       <InfoCard
-        title="Monto en $ (Referencia BCV)"
+        title="Monto en dólares $ USD (Referencia BCV)
+"
         value={
           data.montoDolares !== null
             ? `${formatUsd(data.montoDolares)}${data.tasaBcvUsd ? ` — Tasa BCV: Bs. ${data.tasaBcvUsd.toFixed(4)}` : ""}`

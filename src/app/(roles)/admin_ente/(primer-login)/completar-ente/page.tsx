@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { getAdminEnteOnboardingRedirect, needsCompletarEnte } from "@/lib/auth/onboardingGuard";
+import { getDashboardRoute } from "@/lib/constants/routes";
 import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { redirect } from "next/navigation";
 import { CompletarEnteForm } from "@/components/forms/admin_ente/CompletarEnteForm";
@@ -11,11 +13,29 @@ export const metadata: Metadata = {
   description: "Completa la información de tu Ente para continuar",
 };
 
-export default async function CompletarEntePage() {
+interface CompletarEntePageProps {
+  searchParams?: Promise<{ edit?: string | string[] }>;
+}
+
+export default async function CompletarEntePage({ searchParams }: CompletarEntePageProps) {
   const user = await getCurrentUser();
 
   if (!user || !user.enteId) {
     redirect("/login");
+  }
+
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const isEdit = resolvedSearchParams?.edit === "true";
+
+  if (!isEdit) {
+    const onboardingRedirect = getAdminEnteOnboardingRedirect(user);
+    if (onboardingRedirect && onboardingRedirect !== "/admin_ente/completar-ente") {
+      redirect(onboardingRedirect);
+    }
+
+    if (!needsCompletarEnte(user)) {
+      redirect(getDashboardRoute(user.role));
+    }
   }
 
   const readOnly = isReadOnlyRole(user.role);
@@ -38,7 +58,9 @@ export default async function CompletarEntePage() {
           className="h-16 w-auto object-contain"
         />
         <h1 className="text-2xl font-bold text-color-titulos flex-1 text-center pr-16 md:pr-0 font-inter">
-          Configuración Inicial del Órgano o Ente Contratante
+          {isEdit
+            ? "Editar Datos del Órgano o Ente Contratante"
+            : "Configuración Inicial del Órgano o Ente Contratante"}
         </h1>
       </header>
 

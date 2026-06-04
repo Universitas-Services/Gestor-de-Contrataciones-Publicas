@@ -39,7 +39,7 @@ export function ContratoSectionA({ control, tipoContratacion, readOnly }: Contra
         control={control}
         name="montoContratacionConIva"
         readOnly={readOnly}
-        label="Ingrese el monto de la contratación (Bs), incluyendo el Impuesto al Valor Agregado (IVA)."
+        label="Ingrese el monto de la contratación en bolívares (Bs), incluyendo el Impuesto al Valor Agregado (IVA)"
         legal="Artículos 74 LCP; 25 NORMAS DE CONTROL INTERNO SUNAI."
         placeholder="0,00"
       />

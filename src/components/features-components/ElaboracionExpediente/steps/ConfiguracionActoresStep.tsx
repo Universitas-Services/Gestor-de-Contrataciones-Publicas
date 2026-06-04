@@ -279,10 +279,11 @@ export function ConfiguracionActoresStep({
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-heading-dark font-bold font-inter text-base">
-                  Indique la fecha del Llamado a participar
+                  Indique la fecha del llamado a participar
                 </FormLabel>
                 <p className="text-slate-500 italic text-sm mt-0.5 mb-3 font-inter">
-                  Artículos 79, 95 LCP; 5 NORMAS DE CONTROL INTERNO SUNAI.
+                  Artículos 78.1, 79 LCP; 103 RLCP; 17 LCC; 91.29 LOCGR; 23 NORMAS DE CONTROL
+                  INTERNO SUNAI.
                 </p>
                 <Popover>
                   <PopoverTrigger asChild>

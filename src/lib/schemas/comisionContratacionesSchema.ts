@@ -100,7 +100,24 @@ export const comisionContratacionesSchema = z.object({
         }
       }
       return true;
-    }, "Debe haber exactamente un miembro principal y un suplente por cada área"),
+    }, "Debe haber exactamente un miembro principal y un suplente por cada área")
+    .superRefine((miembros, ctx) => {
+      const seenCedulas = new Map<string, number>();
+      miembros.forEach((miembro, index) => {
+        const cedula = miembro.cedulaMiembro?.trim().toUpperCase();
+        if (!cedula) return;
+
+        if (seenCedulas.has(cedula)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Esta cédula ya está registrada para otro miembro",
+            path: [index, "cedulaMiembro"],
+          });
+        } else {
+          seenCedulas.set(cedula, index);
+        }
+      });
+    }),
 });
 
 export type MiembroFormValues = z.infer<typeof miembroSchema>;

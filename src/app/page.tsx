@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { getOnboardingRedirect } from "@/lib/auth/onboardingGuard";
 import { getDashboardRoute } from "@/lib/constants/routes";
 
 export default async function HomePage() {
@@ -7,9 +8,12 @@ export default async function HomePage() {
   const user = await getCurrentUser();
 
   if (user) {
-    // Redirigir al dashboard del rol correspondiente
-    const dashboardRoute = getDashboardRoute(user.role);
-    redirect(dashboardRoute);
+    const onboardingRedirect = getOnboardingRedirect(user);
+    if (onboardingRedirect) {
+      redirect(onboardingRedirect);
+    }
+
+    redirect(getDashboardRoute(user.role));
   }
 
   // Si no hay sesión, redirigir a login

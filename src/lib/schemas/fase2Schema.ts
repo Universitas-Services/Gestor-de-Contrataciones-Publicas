@@ -66,7 +66,10 @@ export const oferenteSchema = z.object({
     .string()
     .min(1, { message: "El monto de la oferta es requerido" })
     .max(50, { message: "Máximo 50 caracteres permitidos" })
-    .regex(/^[0-9]+(\.[0-9]+)?$/, "El monto debe ser numérico"),
+    .regex(
+      /^[0-9]+(,[0-9]+)?$|^[0-9]{1,3}(\.[0-9]{3})*(,[0-9]{2})?$/,
+      "El monto debe ser un formato monetario válido (Ej: 12.345,67)"
+    ),
 });
 
 export type OferenteFormValues = z.infer<typeof oferenteSchema>;

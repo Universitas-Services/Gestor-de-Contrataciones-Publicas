@@ -16,7 +16,7 @@ vi.mock("@/lib/auth/auth", () => ({
 }));
 
 describe("Flujo de Autenticación: <LoginForm />", () => {
-  const mockPush = vi.fn();
+  const mockReplace = vi.fn();
   const mockRefresh = vi.fn();
 
   beforeEach(() => {
@@ -24,11 +24,11 @@ describe("Flujo de Autenticación: <LoginForm />", () => {
 
     // Utilizamos ReturnType para asegurar que cumple con la interfaz de Next.js
     vi.mocked(useRouter).mockReturnValue({
-      push: mockPush,
+      push: vi.fn(),
       refresh: mockRefresh,
       back: vi.fn(),
       forward: vi.fn(),
-      replace: vi.fn(),
+      replace: mockReplace,
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
   });
@@ -88,7 +88,7 @@ describe("Flujo de Autenticación: <LoginForm />", () => {
       await screen.findByText("Credenciales inválidas o usuario inactivo")
     ).toBeInTheDocument();
 
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   const casosDeUsoRoles = [
@@ -134,7 +134,7 @@ describe("Flujo de Autenticación: <LoginForm />", () => {
 
       // Verificación de la redirección exacta para ese rol
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith(rutaEsperada);
+        expect(mockReplace).toHaveBeenCalledWith(rutaEsperada);
         expect(mockRefresh).toHaveBeenCalled();
       });
     }

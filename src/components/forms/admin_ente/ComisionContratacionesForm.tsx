@@ -294,7 +294,7 @@ export function ComisionContratacionesForm({ readOnly = false }: { readOnly?: bo
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[slate-700] font-bold font-inter text-base">
-                      Indique el correo electrónico de la comisión de contrataciones.
+                      Indique el correo electrónico de la Comisión de Contrataciones.
                     </FormLabel>
                     <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                       Artículos 66.24 LCP; 95 RLCP; 28 NORMAS DE CONTROL INTERNO SUNAI.
@@ -316,7 +316,7 @@ export function ComisionContratacionesForm({ readOnly = false }: { readOnly?: bo
               {/* Teléfono */}
               <div className="space-y-2">
                 <FormLabel className="text-[slate-700] font-bold font-inter text-base">
-                  Indique el número telefónico de la Comisión de contrataciones.
+                  Indique el número telefónico de la Comisión de Contrataciones.
                 </FormLabel>
                 <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                   Artículos 66. 24 LCP; 95 RLCP; 28 NORMAS DE CONTROL INTERNO SUNAI.

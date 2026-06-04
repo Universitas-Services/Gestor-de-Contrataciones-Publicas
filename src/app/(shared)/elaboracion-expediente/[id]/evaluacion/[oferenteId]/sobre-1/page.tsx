@@ -21,8 +21,8 @@ interface Pregunta {
 }
 
 const PREGUNTAS: Pregunta[] = [
-  { id: 1, texto: "¿Consignó carta de Manifestación de Voluntad?" },
-  { id: 2, texto: "¿Consignó Carta de Autorización?" },
+  { id: 1, texto: "¿Consignó carta de manifestación de voluntad?." },
+  { id: 2, texto: "¿Consignó carta de autorización?." },
   { id: 3, texto: "¿Consignó copia del Registro de Información Fiscal (R.I.F.) vigente?" },
   {
     id: 4,
@@ -31,24 +31,24 @@ const PREGUNTAS: Pregunta[] = [
   },
   {
     id: 5,
-    texto: "¿Consignó certificado de Solvencia Laboral o Declaración Jurada de Solvencia Laboral?",
+    texto: "¿Consignó certificado de solvencia laboral o declaración jurada de solvencia laboral?.",
   },
   {
     id: 6,
     texto:
-      "¿Consignó la Declaración Jurada de Conocimiento de no contar dentro de su conformación y organización con personas naturales que participen como socios, miembros o administradores de alguna empresa, sociedad o agrupación que se encuentre inhabilitada?",
+      "¿Consignó la declaración jurada de conocimiento de no contar dentro de su conformación y organización con personas naturales que participen como socios, miembros o administradores de alguna empresa, sociedad o agrupación que se encuentre inhabilitada?",
   },
   {
     id: 7,
     texto:
-      "*¿Consignó Declaración Jurada de Conocimiento de no poseer Obligaciones Exigibles con el Contratante?",
+      "¿Consignó declaración jurada de conocimiento de no poseer obligaciones exigibles con el contratante?",
   },
   {
     id: 8,
     texto:
-      "¿Consignó Declaración Jurada de No Tener impedimentos para participar en los procedimientos previstos en el Decreto con Rango, Valor y Fuerza de Ley de Contrataciones Públicas",
+      "¿Consignó declaración jurada de no tener impedimentos para participar en los procedimientos previstos en el Decreto con Rango, Valor y Fuerza de Ley de Contrataciones Públicas?",
   },
-  { id: 9, texto: "¿Consignó Declaración Jurada de información financiera?." },
+  { id: 9, texto: "¿Consignó declaración jurada de información financiera?." },
   { id: 10, texto: "¿Consignó relación de servicios prestados?" },
   { id: 11, texto: "¿Consignó referencias de empresas públicas o privadas?" },
 ];
