@@ -12,6 +12,7 @@ import {
   FASE1_WIZARD_DESCRIPTION,
   FASE1_WIZARD_TITLE,
 } from "@/lib/constants/fase1";
+import { shouldShowBudgetStepOnEntry } from "@/lib/utils/fase1Wizard";
 import { normalizeCrearPresupuestoItemResponse } from "@/lib/utils/fase1Presupuesto";
 import {
   fase1FormSchema,
@@ -19,6 +20,7 @@ import {
   type Fase1PayloadFormValues,
   type ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
+import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import {
   actualizarFasePreparatoria,
   crearPresupuestoItem,
@@ -64,6 +66,7 @@ interface Fase1WizardStep {
 
 export interface Fase1FormProps {
   expedienteId: string;
+  tipoContratacion: TipoContratacionBackend;
   direccionEnteDefault?: string;
   initialFasePreparatoria: FasePreparatoriaDetalleResponse | null;
   hasPersistedItems: boolean;
@@ -215,6 +218,7 @@ function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payl
 
 export function Fase1Form({
   expedienteId,
+  tipoContratacion,
   direccionEnteDefault = "",
   initialFasePreparatoria,
   hasPersistedItems,
@@ -228,8 +232,12 @@ export function Fase1Form({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [isSavingPhase, setIsSavingPhase] = useState(false);
-
-  const showBudgetStep = !isEditMode && !hasPersistedItems;
+  const [showBudgetStep] = useState(() =>
+    shouldShowBudgetStepOnEntry({
+      isEditMode,
+      hasPersistedItems,
+    })
+  );
   const defaultValues = useMemo(
     () =>
       buildDefaultValues({
@@ -259,7 +267,7 @@ export function Fase1Form({
       {
         id: "definicion",
         fields: FASE1_STEP_FIELDS[1],
-        render: () => <Paso1DefinicionStep form={form} />,
+        render: () => <Paso1DefinicionStep form={form} tipoContratacion={tipoContratacion} />,
       },
       ...(showBudgetStep
         ? [
@@ -286,7 +294,7 @@ export function Fase1Form({
         render: () => <Paso5ObservacionesStep form={form} />,
       },
     ],
-    [form, handleOpenItemSheet, items, pliegoGratuito, showBudgetStep]
+    [form, handleOpenItemSheet, items, pliegoGratuito, showBudgetStep, tipoContratacion]
   );
 
   const totalSteps = visibleSteps.length;
@@ -399,10 +407,12 @@ export function Fase1Form({
   };
 
   const renderCurrentStep = () =>
-    currentStepConfig?.render() ?? <Paso1DefinicionStep form={form} />;
+    currentStepConfig?.render() ?? (
+      <Paso1DefinicionStep form={form} tipoContratacion={tipoContratacion} />
+    );
 
   return (
-    <div className="min-h-screen w-full pb-16">
+    <div className="min-h-screen w-full">
       <div className="w-full px-0 py-6 sm:px-0">
         <div className="mx-auto max-w-5xl">
           <Card className="overflow-hidden border border-slate-200 bg-white shadow-sm">
@@ -417,7 +427,7 @@ export function Fase1Form({
               </div>
 
               <Form {...form}>
-                <form className="space-y-8" onSubmit={(event) => event.preventDefault()}>
+                <form className="space-y-0" onSubmit={(event) => event.preventDefault()}>
                   <div className="px-5 py-6 md:px-8 md:py-7">{renderCurrentStep()}</div>
 
                   <div className="border-t border-slate-200 bg-white px-5 py-5 md:px-8">

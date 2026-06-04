@@ -1,3 +1,4 @@
+import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import type { Fase1FieldCopy, Fase1StepMeta } from "@/types/fase1.types";
 
 export const FASE1_WIZARD_TITLE = "Fase de preparación y estructura del procedimiento";
@@ -81,7 +82,7 @@ export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
   },
   origenCrsRegistro: {
     label:
-      "Indique si el proyecto de Responsabilidad Social solicitado tiene su origen en el registro institucional de necesidades sociales del ente.",
+      "Indique si el proyecto de responsabilidad social solicitado tiene su origen en el registro institucional de necesidades sociales del Ente.",
     description: "Artículos 29, 32 LCP; 5 NORMAS DE CONTROL INTERNO SUNAI.",
   },
   diasValidezOferta: {
@@ -170,15 +171,15 @@ export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
     description: "Artículo 107.6 RLCP; 10 NORMAS DE CONTROL INTERNO SUNAI.",
   },
   descripcionItem: {
-    label: "Descripción del Item",
+    label: "Descripción del ítem",
     description: "Ejemplo: Estación de trabajo Tipo A - Ergonómica",
   },
   codigoPartida: {
-    label: "Partida Presupuestaria",
+    label: "Partida presupuestaria",
     description: "Ejemplo: 401-01-01-002",
   },
   unidadMedida: {
-    label: "Unidad de Medida",
+    label: "Unidad de medida",
     description: "(Kg, Mts, Horas, Unidad). Ejemplo: Unidad",
   },
   cantidadRequerida: {
@@ -186,10 +187,60 @@ export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
     description: "Ejemplo: 1",
   },
   precioUnitarioEstimado: {
-    label: "Precio Unitario Estimado (Bs.)",
+    label: "Precio unitario estimado en bolívares (Bs.)",
     description: "Ejemplo: 10.000,00",
   },
 };
+
+const FASE1_DYNAMIC_FIELD_COPY = {
+  detallesTecnicosCalidad: {
+    BIENES: {
+      label:
+        "Describa de manera precisa y detallada las caracteristicas tecnicas, funcionales y de calidad que deben cumplir los bienes a contratar.",
+      description:
+        "Articulo 66. 3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+    },
+    SERVICIOS: {
+      label:
+        "Describa de manera precisa y detallada las caracteristicas tecnicas, funcionales y de calidad que deben cumplir los servicios a contratar.",
+      description:
+        "Articulos 66.3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+    },
+    OBRAS: {
+      label:
+        "Describa de manera precisa y detallada las caracteristicas tecnicas, funcionales y de calidad que deben cumplir las obras a contratar.",
+      description:
+        "Articulos 66.3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+    },
+  },
+  alcanceCantidadesObra: {
+    BIENES: {
+      label: "Describa de manera precisa y detallada las cantidades del bien a contratar.",
+      description:
+        "Articulos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+    },
+    SERVICIOS: {
+      label: "Describa de manera precisa y detallada el alcance del servicio a contratar.",
+      description:
+        "Articulos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+    },
+    OBRAS: {
+      label: "Describa de manera precisa y detallada las cantidades de obra a contratar.",
+      description:
+        "Articulos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+    },
+  },
+} satisfies Record<
+  "detallesTecnicosCalidad" | "alcanceCantidadesObra",
+  Record<TipoContratacionBackend, Pick<Fase1FieldCopy, "label" | "description">>
+>;
+
+export function getFase1DynamicFieldCopy(
+  fieldName: "detallesTecnicosCalidad" | "alcanceCantidadesObra",
+  tipoContratacion: TipoContratacionBackend
+) {
+  return FASE1_DYNAMIC_FIELD_COPY[fieldName][tipoContratacion];
+}
 
 function buildTimeOptions() {
   const options: Array<{ value: string; label: string }> = [];

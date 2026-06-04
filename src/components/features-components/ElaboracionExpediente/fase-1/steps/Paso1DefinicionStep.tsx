@@ -5,7 +5,12 @@ import { es } from "date-fns/locale";
 import { CalendarDays } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
-import { FASE1_FIELD_COPY, FASE1_SECTION_DESCRIPTIONS } from "@/lib/constants/fase1";
+import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import {
+  FASE1_FIELD_COPY,
+  FASE1_SECTION_DESCRIPTIONS,
+  getFase1DynamicFieldCopy,
+} from "@/lib/constants/fase1";
 import { cn } from "@/lib/utils";
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
 import { Button } from "@/components/ui/button";
@@ -24,6 +29,7 @@ import { Fase1SectionHeader } from "../Fase1SectionHeader";
 
 interface Paso1DefinicionStepProps {
   form: UseFormReturn<Fase1FormInputValues>;
+  tipoContratacion: TipoContratacionBackend;
 }
 
 const compactLabelClass = "font-bold text-color-titulos text-[11px] leading-snug";
@@ -38,7 +44,13 @@ const compactChoiceBaseClass =
   "h-8 min-w-[68px] cursor-pointer rounded-md border px-3 text-[11px] font-bold transition-colors";
 const compactMessageClass = "text-[11px]";
 
-export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
+export function Paso1DefinicionStep({ form, tipoContratacion }: Paso1DefinicionStepProps) {
+  const detallesTecnicosCalidadCopy = getFase1DynamicFieldCopy(
+    "detallesTecnicosCalidad",
+    tipoContratacion
+  );
+  const alcanceCantidadesCopy = getFase1DynamicFieldCopy("alcanceCantidadesObra", tipoContratacion);
+
   return (
     <div className="space-y-6">
       <Fase1SectionHeader
@@ -113,9 +125,9 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="detallesTecnicosCalidad"
           render={({ field }) => (
             <FormItem className="max-w-3xl">
-              <p className={compactLabelClass}>{FASE1_FIELD_COPY.detallesTecnicosCalidad.label}</p>
+              <p className={compactLabelClass}>{detallesTecnicosCalidadCopy.label}</p>
               <FormDescription className={compactDescriptionClass}>
-                {FASE1_FIELD_COPY.detallesTecnicosCalidad.description}
+                {detallesTecnicosCalidadCopy.description}
               </FormDescription>
               <FormControl>
                 <Textarea {...field} className={compactTextareaClass} />
@@ -130,9 +142,9 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="alcanceCantidadesObra"
           render={({ field }) => (
             <FormItem className="max-w-3xl">
-              <p className={compactLabelClass}>{FASE1_FIELD_COPY.alcanceCantidadesObra.label}</p>
+              <p className={compactLabelClass}>{alcanceCantidadesCopy.label}</p>
               <FormDescription className={compactDescriptionClass}>
-                {FASE1_FIELD_COPY.alcanceCantidadesObra.description}
+                {alcanceCantidadesCopy.description}
               </FormDescription>
               <FormControl>
                 <Textarea {...field} className={compactTextareaClass} />
@@ -177,8 +189,8 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
                     className={cn(
                       compactChoiceBaseClass,
                       field.value === true
-                        ? "!border-navy !bg-navy !text-white hover:!border-navy hover:!bg-navy-hover hover:!text-white"
-                        : "!border-slate-200 !bg-white !text-slate-500 hover:!border-slate-300 hover:!text-slate-700"
+                        ? "border-navy! bg-navy! text-white! hover:border-navy! hover:bg-navy-hover! hover:text-white!"
+                        : "border-slate-200! bg-white! text-slate-500! hover:border-slate-300! hover:text-slate-700!"
                     )}
                     onClick={() => field.onChange(true)}
                   >
@@ -191,8 +203,8 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
                     className={cn(
                       compactChoiceBaseClass,
                       field.value === false
-                        ? "!border-navy !bg-navy !text-white hover:!border-navy hover:!bg-navy-hover hover:!text-white"
-                        : "!border-slate-200 !bg-white !text-slate-500 hover:!border-slate-300 hover:!text-slate-700"
+                        ? "border-navy! bg-navy! text-white! hover:border-navy! hover:bg-navy-hover! hover:text-white!"
+                        : "border-slate-200! bg-white! text-slate-500! hover:border-slate-300! hover:text-slate-700!"
                     )}
                     onClick={() => field.onChange(false)}
                   >

@@ -68,7 +68,7 @@ function buildColumns({
       accessorKey: "descripcionItem",
       header: "Descripción del ítem",
       cell: ({ row }) => (
-        <span className="block min-w-[220px] whitespace-normal font-medium text-slate-700">
+        <span className="block min-w-[160px] whitespace-normal text-[12px] leading-5 font-medium text-slate-700">
           {row.original.descripcionItem}
         </span>
       ),
@@ -142,6 +142,26 @@ function buildColumns({
   ];
 }
 
+const COLUMN_HEADER_CLASSNAMES: Record<string, string> = {
+  descripcionItem: "w-[20%] min-w-[160px]",
+  codigoPartida: "w-[16%] min-w-[128px]",
+  unidadMedida: "w-[14%] min-w-[110px]",
+  cantidadRequerida: "w-[11%] min-w-[82px]",
+  precioUnitarioEstimado: "w-[16%] min-w-[118px]",
+  totalItems: "w-[13%] min-w-[96px]",
+  acciones: "w-[10%] min-w-[84px]",
+};
+
+const COLUMN_CELL_CLASSNAMES: Record<string, string> = {
+  descripcionItem: "min-w-[160px]",
+  codigoPartida: "min-w-[128px]",
+  unidadMedida: "min-w-[110px]",
+  cantidadRequerida: "min-w-[82px]",
+  precioUnitarioEstimado: "min-w-[118px]",
+  totalItems: "min-w-[96px]",
+  acciones: "min-w-[84px]",
+};
+
 const SKELETON_CELL_WIDTHS = [
   "w-[85%]",
   "w-[70%]",
@@ -157,7 +177,7 @@ export function PresupuestoItemsTable({
   readOnly = false,
   showAddButton = false,
   addButtonDisabled = false,
-  addButtonLabel = "Agregar Item",
+  addButtonLabel = "Agregar item",
   onAdd,
   onEdit,
   onDelete,
@@ -214,7 +234,7 @@ export function PresupuestoItemsTable({
       <CardHeader className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2 text-[17px] font-bold text-color-titulos">
           <WalletCards className="h-5 w-5 text-navy" />
-          Presupuesto Base
+          Presupuesto base
         </CardTitle>
 
         {showAddButton && (
@@ -227,7 +247,7 @@ export function PresupuestoItemsTable({
             }}
             disabled={addButtonDisabled}
             size="sm"
-            className="w-fit bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
+            className="cursor-pointer w-fit bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
           >
             <Plus className="h-4 w-4" />
             {addButtonLabel}
@@ -236,14 +256,14 @@ export function PresupuestoItemsTable({
       </CardHeader>
 
       <CardContent className="px-0 pb-4">
-        <Table>
+        <Table className="table-fixed min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 first:pl-6 last:pr-6"
+                    className={`bg-slate-50 px-3 py-2.5 text-[10px] font-semibold uppercase leading-[1.25] tracking-[0.04em] whitespace-normal text-slate-500 first:pl-5 last:pr-5 ${COLUMN_HEADER_CLASSNAMES[header.column.id] ?? ""}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -261,7 +281,7 @@ export function PresupuestoItemsTable({
                   {table.getVisibleLeafColumns().map((column, columnIndex) => (
                     <TableCell
                       key={`skeleton-cell-${rowIndex}-${column.id}`}
-                      className="px-4 py-4 align-top first:pl-6 last:pr-6"
+                      className={`px-3 py-3 align-top first:pl-5 last:pr-5 ${COLUMN_CELL_CLASSNAMES[column.id] ?? ""}`}
                     >
                       {columnIndex === table.getVisibleLeafColumns().length - 1 ? (
                         <div className="flex items-center justify-center gap-2">
@@ -284,7 +304,7 @@ export function PresupuestoItemsTable({
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className="px-4 py-4 align-top text-sm text-slate-700 first:pl-6 last:pr-6"
+                        className={`px-3 py-3 align-top text-[12px] leading-5 text-slate-700 first:pl-5 last:pr-5 ${COLUMN_CELL_CLASSNAMES[cell.column.id] ?? ""}`}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -297,7 +317,7 @@ export function PresupuestoItemsTable({
                     {table.getVisibleLeafColumns().map((column) => (
                       <TableCell
                         key={`filler-cell-${index}-${column.id}`}
-                        className="px-4 py-4 text-sm first:pl-6 last:pr-6"
+                        className={`px-3 py-3 text-[12px] first:pl-5 last:pr-5 ${COLUMN_CELL_CLASSNAMES[column.id] ?? ""}`}
                       >
                         &nbsp;
                       </TableCell>
@@ -363,7 +383,7 @@ export function PresupuestoItemsTable({
           </TableFooter>
         </Table>
 
-        <div className="px-4 pt-4 sm:px-6">
+        <div className="px-4 pt-2 sm:px-6">
           <Pagination className="justify-end">
             <PaginationContent className="gap-1">
               <PaginationItem>

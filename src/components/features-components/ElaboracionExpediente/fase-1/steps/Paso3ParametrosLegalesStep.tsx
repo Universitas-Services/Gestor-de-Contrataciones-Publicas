@@ -1,9 +1,10 @@
 "use client";
 
-import type { UseFormReturn } from "react-hook-form";
+import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { FASE1_FIELD_COPY, FASE1_SECTION_DESCRIPTIONS } from "@/lib/constants/fase1";
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
+import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 import {
   FormControl,
   FormDescription,
@@ -11,8 +12,8 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Fase1SectionHeader } from "../Fase1SectionHeader";
 
 interface Paso3ParametrosLegalesStepProps {
@@ -39,7 +40,7 @@ export function Paso3ParametrosLegalesStep({ form }: Paso3ParametrosLegalesStepP
         <FormField
           control={form.control}
           name="diasValidezOferta"
-          render={({ field }) => (
+          render={() => (
             <FormItem className="max-w-sm">
               <p className={compactLabelClass}>{FASE1_FIELD_COPY.diasValidezOferta.label}</p>
               <FormDescription className={compactDescriptionClass}>
@@ -49,12 +50,21 @@ export function Paso3ParametrosLegalesStep({ form }: Paso3ParametrosLegalesStepP
                 {FASE1_FIELD_COPY.diasValidezOferta.placeholder}
               </p>
               <FormControl>
-                <Input
-                  value={field.value ?? ""}
-                  type="number"
-                  min="1"
-                  onChange={(event) => field.onChange(event.target.value)}
-                  className={compactInputClass}
+                <Controller
+                  control={form.control}
+                  name="diasValidezOferta"
+                  render={({ field: controlledField }) => (
+                    <LocalizedDecimalInput
+                      name={controlledField.name}
+                      ref={controlledField.ref}
+                      value={controlledField.value}
+                      onBlur={controlledField.onBlur}
+                      onValueChange={controlledField.onChange}
+                      fractionDigits={0}
+                      outputMode="raw"
+                      className={compactInputClass}
+                    />
+                  )}
                 />
               </FormControl>
               <FormMessage className={compactMessageClass} />
@@ -99,7 +109,7 @@ export function Paso3ParametrosLegalesStep({ form }: Paso3ParametrosLegalesStepP
         <FormField
           control={form.control}
           name="diasVigenciaGarantiaExtension"
-          render={({ field }) => (
+          render={() => (
             <FormItem className="max-w-sm">
               <p className={compactLabelClass}>
                 {FASE1_FIELD_COPY.diasVigenciaGarantiaExtension.label}
@@ -111,12 +121,21 @@ export function Paso3ParametrosLegalesStep({ form }: Paso3ParametrosLegalesStepP
                 {FASE1_FIELD_COPY.diasVigenciaGarantiaExtension.placeholder}
               </p>
               <FormControl>
-                <Input
-                  value={field.value ?? ""}
-                  type="number"
-                  min="1"
-                  onChange={(event) => field.onChange(event.target.value)}
-                  className={compactInputClass}
+                <Controller
+                  control={form.control}
+                  name="diasVigenciaGarantiaExtension"
+                  render={({ field: controlledField }) => (
+                    <LocalizedDecimalInput
+                      name={controlledField.name}
+                      ref={controlledField.ref}
+                      value={controlledField.value}
+                      onBlur={controlledField.onBlur}
+                      onValueChange={controlledField.onChange}
+                      fractionDigits={0}
+                      outputMode="raw"
+                      className={compactInputClass}
+                    />
+                  )}
                 />
               </FormControl>
               <FormMessage className={compactMessageClass} />

@@ -1,6 +1,6 @@
 "use client";
 
-import type { UseFormReturn } from "react-hook-form";
+import { Controller, type UseFormReturn } from "react-hook-form";
 
 import {
   FASE1_FIELD_COPY,
@@ -9,6 +9,8 @@ import {
 } from "@/lib/constants/fase1";
 import { cn } from "@/lib/utils";
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
+import { BankAccountInput } from "@/components/bank-account-input";
+import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 import { Button } from "@/components/ui/button";
 import {
   FormControl,
@@ -214,19 +216,27 @@ export function Paso4LlamadoPublicoStep({ form }: Paso4LlamadoPublicoStepProps) 
             <FormField
               control={form.control}
               name="costoPliegoBs"
-              render={({ field }) => (
+              render={() => (
                 <FormItem className="max-w-xl">
                   <p className={compactLabelClass}>{FASE1_FIELD_COPY.costoPliegoBs.label}</p>
                   <FormDescription className={compactDescriptionClass}>
                     {FASE1_FIELD_COPY.costoPliegoBs.description}
                   </FormDescription>
                   <FormControl>
-                    <Input
-                      value={field.value ?? ""}
-                      inputMode="decimal"
-                      onChange={(event) => field.onChange(event.target.value)}
-                      placeholder={FASE1_FIELD_COPY.costoPliegoBs.placeholder}
-                      className={compactInputClass}
+                    <Controller
+                      control={form.control}
+                      name="costoPliegoBs"
+                      render={({ field }) => (
+                        <LocalizedDecimalInput
+                          name={field.name}
+                          ref={field.ref}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onValueChange={field.onChange}
+                          placeholder={FASE1_FIELD_COPY.costoPliegoBs.placeholder}
+                          className={compactInputClass}
+                        />
+                      )}
                     />
                   </FormControl>
                   <FormMessage className={compactMessageClass} />
@@ -254,14 +264,27 @@ export function Paso4LlamadoPublicoStep({ form }: Paso4LlamadoPublicoStepProps) 
             <FormField
               control={form.control}
               name="cuentaPagoPliego"
-              render={({ field }) => (
+              render={() => (
                 <FormItem className="max-w-2xl">
                   <p className={compactLabelClass}>{FASE1_FIELD_COPY.cuentaPagoPliego.label}</p>
                   <FormDescription className={compactDescriptionClass}>
                     {FASE1_FIELD_COPY.cuentaPagoPliego.description}
                   </FormDescription>
                   <FormControl>
-                    <Input {...field} className={compactInputClass} />
+                    <Controller
+                      control={form.control}
+                      name="cuentaPagoPliego"
+                      render={({ field }) => (
+                        <BankAccountInput
+                          name={field.name}
+                          ref={field.ref}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onValueChange={field.onChange}
+                          inputClassName={compactInputClass}
+                        />
+                      )}
+                    />
                   </FormControl>
                   <FormMessage className={compactMessageClass} />
                 </FormItem>

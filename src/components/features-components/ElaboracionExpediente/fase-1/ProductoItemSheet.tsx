@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { Controller, useForm, type Resolver } from "react-hook-form";
 import { X } from "lucide-react";
 
 import { FASE1_FIELD_COPY } from "@/lib/constants/fase1";
@@ -12,13 +12,14 @@ import {
   type ProductoItemFormInputValues,
   type ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
+import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 
 const DEFAULT_FORM_VALUES: ProductoItemFormInputValues = {
   descripcionItem: "",
   codigoPartida: "",
   unidadMedida: "",
-  cantidadRequerida: "",
-  precioUnitarioEstimado: "",
+  cantidadRequerida: "0,00",
+  precioUnitarioEstimado: "0,00",
 };
 
 export interface ProductoItemSheetProps {
@@ -79,6 +80,7 @@ export function ProductoItemSheet({
 
   const {
     reset,
+    control,
     register,
     handleSubmit,
     formState: { errors },
@@ -231,12 +233,19 @@ export function ProductoItemSheet({
                 description={FASE1_FIELD_COPY.cantidadRequerida.description}
                 error={errors.cantidadRequerida?.message}
               >
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className={compactInputClass}
-                  {...register("cantidadRequerida")}
+                <Controller
+                  control={control}
+                  name="cantidadRequerida"
+                  render={({ field }) => (
+                    <LocalizedDecimalInput
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onValueChange={field.onChange}
+                      className={compactInputClass}
+                    />
+                  )}
                 />
               </FieldBlock>
 
@@ -245,10 +254,19 @@ export function ProductoItemSheet({
                 description={FASE1_FIELD_COPY.precioUnitarioEstimado.description}
                 error={errors.precioUnitarioEstimado?.message}
               >
-                <input
-                  inputMode="decimal"
-                  className={compactInputClass}
-                  {...register("precioUnitarioEstimado")}
+                <Controller
+                  control={control}
+                  name="precioUnitarioEstimado"
+                  render={({ field }) => (
+                    <LocalizedDecimalInput
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onValueChange={field.onChange}
+                      className={compactInputClass}
+                    />
+                  )}
                 />
               </FieldBlock>
             </form>
@@ -259,7 +277,7 @@ export function ProductoItemSheet({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-8 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                className="cursor-pointer inline-flex h-8 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
               >
                 Cancelar
               </button>
@@ -267,7 +285,7 @@ export function ProductoItemSheet({
                 type="submit"
                 form="producto-item-form"
                 disabled={isSubmitting}
-                className="inline-flex h-8 items-center justify-center rounded-md bg-navy px-4 text-[11px] font-semibold text-white hover:bg-navy-hover disabled:opacity-50"
+                className="cursor-pointer inline-flex h-8 items-center justify-center rounded-md bg-navy px-4 text-[11px] font-semibold text-white hover:bg-navy-hover disabled:opacity-50"
               >
                 {isSubmitting ? "Guardando..." : submitLabel}
               </button>

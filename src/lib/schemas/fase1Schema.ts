@@ -58,6 +58,14 @@ const optionalDecimal = z
   })
   .transform((value) => (value === "" ? undefined : parseDecimalString(value)));
 
+const optionalBankAccount = z
+  .string()
+  .transform((value) => value.trim())
+  .refine((value) => value === "" || /^\d{4}-\d{4}-\d{2}-\d{10}$/.test(value), {
+    message: "Debe ingresar una cuenta bancaria valida",
+  })
+  .transform((value) => (value === "" ? undefined : value));
+
 export const productoItemSchema = z.object({
   descripcionItem: requiredText("La descripcion del item es requerida"),
   codigoPartida: requiredText("La partida presupuestaria es requerida", 50),
@@ -94,7 +102,7 @@ export const fase1FormSchema = z
     pliegoGratuito: z.boolean().optional(),
     costoPliegoBs: optionalDecimal,
     bancoPagoPliego: optionalText(MAX_TEXT_100),
-    cuentaPagoPliego: optionalText(20),
+    cuentaPagoPliego: optionalBankAccount,
     titularPagoPliego: optionalText(MAX_TEXT_100),
     horaActoRecepAper: requiredText("La hora del acto de recepcion y apertura es requerida", 50),
     condicionPlurianual: requiredText("La condicion plurianual es requerida", MAX_TEXT_100),
