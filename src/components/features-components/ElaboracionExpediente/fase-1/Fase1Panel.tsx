@@ -75,13 +75,13 @@ interface Fase1DocumentoConfig {
 const FASE1_DOCUMENTOS: Fase1DocumentoConfig[] = [
   {
     tipo: "ACTA_INICIO",
-    label: "Acta de Inicio",
+    label: "Acta de inicio",
     endpoint: "acta-inicio",
     icon: "receipt",
   },
   {
     tipo: "PLIEGO_CONDICIONES",
-    label: "Pliego de Condiciones",
+    label: "Pliego de condiciones",
     endpoint: "pliego-condiciones",
     icon: "clipboard",
   },
@@ -146,13 +146,13 @@ function toProductoItemFormInputValues(
 
 function EmptyText({
   children,
-  minHeightClassName = "min-h-[3rem]",
+  minHeightClassName = "min-h-[2.5rem]",
 }: {
   children: ReactNode;
   minHeightClassName?: string;
 }) {
   return (
-    <p className={`line-clamp-3 text-sm leading-6 text-slate-500 ${minHeightClassName}`}>
+    <p className={`line-clamp-3 text-[12px] leading-5 text-slate-500 ${minHeightClassName}`}>
       {children}
     </p>
   );
@@ -186,10 +186,10 @@ function Fase1TechnicalCardSkeleton() {
 function Fase1NoIniciadaNotice() {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-100 px-5 py-6">
-      <p className="text-base font-semibold text-heading-dark">
+      <p className="text-[15px] font-semibold text-heading-dark">
         Debes llenar el formulario de la Fase 1.
       </p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
+      <p className="mt-2 text-[12px] leading-5 text-slate-600">
         Completa la fase preparatoria para visualizar la definicion tecnica y financiera del
         expediente.
       </p>
@@ -220,26 +220,28 @@ function Fase1TechnicalContent({
   return (
     <div className="space-y-6">
       <section className="space-y-2">
-        <h3 className="text-base font-semibold text-heading-dark">Caracteristicas tecnicas</h3>
+        <h3 className="text-[15px] font-semibold text-heading-dark">Caracteristicas tecnicas</h3>
         <EmptyText>{fasePreparatoria.detallesTecnicosCalidad}</EmptyText>
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-base font-semibold text-heading-dark">Cantidades y alcance</h3>
+        <h3 className="text-[15px] font-semibold text-heading-dark">Cantidades y alcance</h3>
         <EmptyText>{fasePreparatoria.alcanceCantidadesObra}</EmptyText>
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-base font-semibold text-heading-dark">Ventajas economicas/tecnicas</h3>
+        <h3 className="text-[15px] font-semibold text-heading-dark">
+          Ventajas economicas/tecnicas
+        </h3>
         <EmptyText>{fasePreparatoria.justificacionVentajas}</EmptyText>
       </section>
 
       <section className="flex flex-col gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-heading-dark">
+          <h3 className="text-[13px] font-semibold text-heading-dark">
             Proyecto de Responsabilidad Social
           </h3>
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-[12px] leading-5 text-slate-500">
             Origen en el registro institucional de necesidades sociales del ente.
           </p>
         </div>
@@ -558,7 +560,7 @@ export function Fase1Panel({
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.9fr)]">
         <Card className="border border-slate-200 shadow-sm">
           <CardHeader className="space-y-0 pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-heading-dark">
+            <CardTitle className="flex items-center gap-2 text-[17px] font-bold text-color-titulos">
               <Settings2 className="h-5 w-5 text-navy" />
               Definicion tecnica y financiera
             </CardTitle>

@@ -29,18 +29,23 @@ export function Fase1WizardFooter({
   backDisabled = false,
   nextDisabled = false,
 }: Fase1WizardFooterProps) {
+  const showBackButton = !backDisabled;
+
   return (
     <div className="flex flex-col gap-4 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center">
       <div className="flex justify-start">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          disabled={backDisabled || isLoading}
-          className="min-w-[140px]"
-        >
-          Anterior
-        </Button>
+        {showBackButton ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onBack}
+            disabled={isLoading}
+            className="cursor-pointer min-w-30 border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Anterior
+          </Button>
+        ) : null}
       </div>
 
       <Pagination className="justify-center">
@@ -55,9 +60,9 @@ export function Fase1WizardFooter({
                   href="#"
                   isActive={isActive}
                   className={[
-                    "pointer-events-none rounded-full border px-3 py-2 text-sm",
+                    "pointer-events-none rounded-lg border px-3 py-1.5 text-[11px] font-semibold",
                     isActive
-                      ? "border-navy bg-navy text-white hover:bg-navy"
+                      ? "border-navy bg-navy hover:bg-navy"
                       : "border-slate-200 bg-white text-slate-500",
                   ].join(" ")}
                   onClick={(event) => event.preventDefault()}
@@ -73,9 +78,10 @@ export function Fase1WizardFooter({
       <div className="flex justify-end">
         <Button
           type="button"
+          size="sm"
           onClick={onNext}
           disabled={nextDisabled || isLoading}
-          className="min-w-[160px] bg-navy text-white hover:bg-navy-hover"
+          className="cursor-pointer min-w-35 bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
         >
           {isLoading ? "Procesando..." : nextLabel}
         </Button>

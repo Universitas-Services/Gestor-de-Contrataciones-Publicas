@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Fase1Form } from "@/components/features-components/ElaboracionExpediente/fase-1/Fase1Form";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
+import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import { obtenerEnte } from "@/services/enteService";
 import { obtenerExpediente } from "@/services/expedienteService";
 import { listarPresupuestoItems, obtenerFasePreparatoria } from "@/services/fase1Service";
@@ -21,8 +22,17 @@ export default async function Fase1Page({ params, searchParams }: Props) {
     ? await searchParams
     : ({ fase1Id: undefined } as { fase1Id?: string | string[] });
 
+  let tipoContratacion: TipoContratacionBackend = "BIENES";
+
   try {
-    await obtenerExpediente(id);
+    const expediente = await obtenerExpediente(id);
+    if (
+      expediente.modalidad?.tipoContratacion === "BIENES" ||
+      expediente.modalidad?.tipoContratacion === "SERVICIOS" ||
+      expediente.modalidad?.tipoContratacion === "OBRAS"
+    ) {
+      tipoContratacion = expediente.modalidad.tipoContratacion;
+    }
   } catch {
     notFound();
   }
@@ -50,6 +60,7 @@ export default async function Fase1Page({ params, searchParams }: Props) {
     <div className="mx-auto flex w-full min-w-0 max-w-full flex-col items-start overflow-x-hidden p-0">
       <Fase1Form
         expedienteId={id}
+        tipoContratacion={tipoContratacion}
         direccionEnteDefault={direccionEnteDefault}
         initialFasePreparatoria={initialFasePreparatoria}
         hasPersistedItems={presupuestoItemsResponse.meta.total > 0}

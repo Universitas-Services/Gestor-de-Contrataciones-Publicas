@@ -5,7 +5,13 @@ import { es } from "date-fns/locale";
 import { CalendarDays } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
-import { FASE1_FIELD_COPY, FASE1_SECTION_DESCRIPTIONS } from "@/lib/constants/fase1";
+import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import {
+  FASE1_FIELD_COPY,
+  FASE1_SECTION_DESCRIPTIONS,
+  getFase1DynamicFieldCopy,
+} from "@/lib/constants/fase1";
+import { cn } from "@/lib/utils";
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +20,6 @@ import {
   FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -24,36 +29,54 @@ import { Fase1SectionHeader } from "../Fase1SectionHeader";
 
 interface Paso1DefinicionStepProps {
   form: UseFormReturn<Fase1FormInputValues>;
+  tipoContratacion: TipoContratacionBackend;
 }
 
-export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
+const compactLabelClass = "font-bold text-color-titulos text-[11px] leading-snug";
+const compactDescriptionClass = "text-[10px] text-muted-foreground italic leading-relaxed";
+const compactInputClass =
+  "h-[32px] rounded-md border-slate-300 bg-white text-[11px] font-medium text-slate-600 shadow-none placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/60 focus-visible:ring-[2px]";
+const compactTextareaClass =
+  "min-h-[88px] rounded-md border-slate-300 bg-white px-3 py-2 text-[11px] font-medium text-slate-600 shadow-none placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/60 focus-visible:ring-[2px]";
+const compactDateTriggerClass =
+  "h-[32px] w-full justify-start rounded-md border-slate-300 bg-white text-left text-[11px] font-medium text-slate-500 shadow-none focus-visible:ring-[2px]";
+const compactChoiceBaseClass =
+  "h-8 min-w-[68px] cursor-pointer rounded-md border px-3 text-[11px] font-bold transition-colors";
+const compactMessageClass = "text-[11px]";
+
+export function Paso1DefinicionStep({ form, tipoContratacion }: Paso1DefinicionStepProps) {
+  const detallesTecnicosCalidadCopy = getFase1DynamicFieldCopy(
+    "detallesTecnicosCalidad",
+    tipoContratacion
+  );
+  const alcanceCantidadesCopy = getFase1DynamicFieldCopy("alcanceCantidadesObra", tipoContratacion);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Fase1SectionHeader
-        title="Definición técnica y financiera"
+        title="Definicion tecnica y financiera"
         description={FASE1_SECTION_DESCRIPTIONS[1]}
       />
 
-      <div className="space-y-7">
+      <div className="space-y-5">
         <FormField
           control={form.control}
           name="datosActoAutorizacionInicio"
           render={({ field }) => (
             <FormItem className="max-w-2xl">
-              <FormLabel className="text-base font-bold leading-tight text-heading-dark">
+              <p className={compactLabelClass}>
                 {FASE1_FIELD_COPY.datosActoAutorizacionInicio.label}
-              </FormLabel>
-              <FormDescription className="text-sm italic text-slate-500">
+              </p>
+              <FormDescription className={compactDescriptionClass}>
                 {FASE1_FIELD_COPY.datosActoAutorizacionInicio.description}
               </FormDescription>
+              <p className="text-[10px] italic text-slate-400">
+                {FASE1_FIELD_COPY.datosActoAutorizacionInicio.placeholder}
+              </p>
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder={FASE1_FIELD_COPY.datosActoAutorizacionInicio.placeholder}
-                  className="h-11 rounded-md border-slate-300 bg-white"
-                />
+                <Input {...field} className={compactInputClass} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={compactMessageClass} />
             </FormItem>
           )}
         />
@@ -63,20 +86,14 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="fechaActaInicio"
           render={({ field }) => (
             <FormItem className="max-w-sm">
-              <FormLabel className="text-base font-bold leading-tight text-heading-dark">
-                {FASE1_FIELD_COPY.fechaActaInicio.label}
-              </FormLabel>
-              <FormDescription className="text-sm italic text-slate-500">
+              <p className={compactLabelClass}>{FASE1_FIELD_COPY.fechaActaInicio.label}</p>
+              <FormDescription className={compactDescriptionClass}>
                 {FASE1_FIELD_COPY.fechaActaInicio.description}
               </FormDescription>
               <Popover>
-                <PopoverTrigger asChild>
+                <PopoverTrigger asChild className="cursor-pointer">
                   <FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full justify-start rounded-md border-slate-300 bg-white text-left font-normal"
-                    >
+                    <Button type="button" variant="outline" className={compactDateTriggerClass}>
                       <CalendarDays className="mr-2 h-4 w-4 text-navy" />
                       {field.value
                         ? format(new Date(`${field.value}T12:00:00`), "dd 'de' MMMM, yyyy", {
@@ -98,7 +115,7 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
                   />
                 </PopoverContent>
               </Popover>
-              <FormMessage />
+              <FormMessage className={compactMessageClass} />
             </FormItem>
           )}
         />
@@ -108,16 +125,14 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="detallesTecnicosCalidad"
           render={({ field }) => (
             <FormItem className="max-w-3xl">
-              <FormLabel className="text-base font-bold leading-tight text-heading-dark">
-                {FASE1_FIELD_COPY.detallesTecnicosCalidad.label}
-              </FormLabel>
-              <FormDescription className="text-sm italic text-slate-500">
-                {FASE1_FIELD_COPY.detallesTecnicosCalidad.description}
+              <p className={compactLabelClass}>{detallesTecnicosCalidadCopy.label}</p>
+              <FormDescription className={compactDescriptionClass}>
+                {detallesTecnicosCalidadCopy.description}
               </FormDescription>
               <FormControl>
-                <Textarea {...field} className="min-h-28 rounded-md border-slate-300 bg-white" />
+                <Textarea {...field} className={compactTextareaClass} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={compactMessageClass} />
             </FormItem>
           )}
         />
@@ -127,16 +142,14 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="alcanceCantidadesObra"
           render={({ field }) => (
             <FormItem className="max-w-3xl">
-              <FormLabel className="text-base font-bold leading-tight text-heading-dark">
-                {FASE1_FIELD_COPY.alcanceCantidadesObra.label}
-              </FormLabel>
-              <FormDescription className="text-sm italic text-slate-500">
-                {FASE1_FIELD_COPY.alcanceCantidadesObra.description}
+              <p className={compactLabelClass}>{alcanceCantidadesCopy.label}</p>
+              <FormDescription className={compactDescriptionClass}>
+                {alcanceCantidadesCopy.description}
               </FormDescription>
               <FormControl>
-                <Textarea {...field} className="min-h-28 rounded-md border-slate-300 bg-white" />
+                <Textarea {...field} className={compactTextareaClass} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={compactMessageClass} />
             </FormItem>
           )}
         />
@@ -146,16 +159,14 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="justificacionVentajas"
           render={({ field }) => (
             <FormItem className="max-w-3xl">
-              <FormLabel className="text-base font-bold leading-tight text-heading-dark">
-                {FASE1_FIELD_COPY.justificacionVentajas.label}
-              </FormLabel>
-              <FormDescription className="text-sm italic text-slate-500">
+              <p className={compactLabelClass}>{FASE1_FIELD_COPY.justificacionVentajas.label}</p>
+              <FormDescription className={compactDescriptionClass}>
                 {FASE1_FIELD_COPY.justificacionVentajas.description}
               </FormDescription>
               <FormControl>
-                <Textarea {...field} className="min-h-28 rounded-md border-slate-300 bg-white" />
+                <Textarea {...field} className={compactTextareaClass} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={compactMessageClass} />
             </FormItem>
           )}
         />
@@ -165,33 +176,43 @@ export function Paso1DefinicionStep({ form }: Paso1DefinicionStepProps) {
           name="origenCrsRegistro"
           render={({ field }) => (
             <FormItem className="max-w-3xl">
-              <FormLabel className="text-base font-bold leading-tight text-heading-dark">
-                {FASE1_FIELD_COPY.origenCrsRegistro.label}
-              </FormLabel>
-              <FormDescription className="text-sm italic text-slate-500">
+              <p className={compactLabelClass}>{FASE1_FIELD_COPY.origenCrsRegistro.label}</p>
+              <FormDescription className={compactDescriptionClass}>
                 {FASE1_FIELD_COPY.origenCrsRegistro.description}
               </FormDescription>
               <FormControl>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant={field.value === true ? "default" : "outline"}
-                    className={field.value === true ? "bg-[#83bf3a] hover:bg-[#74aa32]" : ""}
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      compactChoiceBaseClass,
+                      field.value === true
+                        ? "border-navy! bg-navy! text-white! hover:border-navy! hover:bg-navy-hover! hover:text-white!"
+                        : "border-slate-200! bg-white! text-slate-500! hover:border-slate-300! hover:text-slate-700!"
+                    )}
                     onClick={() => field.onChange(true)}
                   >
                     Sí
                   </Button>
                   <Button
                     type="button"
-                    variant={field.value === false ? "default" : "outline"}
-                    className={field.value === false ? "bg-slate-500 hover:bg-slate-600" : ""}
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      compactChoiceBaseClass,
+                      field.value === false
+                        ? "border-navy! bg-navy! text-white! hover:border-navy! hover:bg-navy-hover! hover:text-white!"
+                        : "border-slate-200! bg-white! text-slate-500! hover:border-slate-300! hover:text-slate-700!"
+                    )}
                     onClick={() => field.onChange(false)}
                   >
                     No
                   </Button>
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage className={compactMessageClass} />
             </FormItem>
           )}
         />
