@@ -50,3 +50,11 @@ export interface ChangePasswordPayload {
   currentPassword: string;
   newPassword: string;
 }
+
+// --- Payload para POST /auth/change-user-password ---
+
+export interface ChangeUserPasswordPayload {
+  targetUserId: string;
+  currentPassword: string;
+  newPassword: string;
+}
