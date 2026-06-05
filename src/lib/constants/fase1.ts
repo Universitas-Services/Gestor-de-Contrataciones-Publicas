@@ -50,7 +50,7 @@ export const FASE1_STEP_FIELDS = {
     "cuentaPagoPliego",
     "titularPagoPliego",
   ],
-  5: ["condicionPlurianual", "viabilidadContratoMarco"],
+  5: ["condicionPlurianual", "viabilidadContratoMarco", "justificacionContratoMarco"],
 } as const;
 
 export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
@@ -161,14 +161,21 @@ export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
     placeholder: "Seleccione una hora",
   },
   condicionPlurianual: {
-    label:
-      "Si la contratación es de ejecución plurianual, refleje esta condición en el cronograma o en las condiciones del procedimiento.",
-    description: "Artículo 107.2 RLCP; 10 NORMAS DE CONTROL INTERNO SUNAI.",
+    label: "¿La contratación es de ejecución plurianual?",
+    description:
+      "Artículo 107.2 RLCP; 17, 22, 65 LCC; 38.5, 91.1, 9.29 LOCGR; 10 NORMAS DE CONTROL INTERNO SUNAI.",
   },
   viabilidadContratoMarco: {
+    label: "¿Se optó por agrupar esta contratación o utilizar un contrato marco?",
+    description:
+      "Artículo 107.6 RLCP; 17, 22, 65 LCC; 38.5, 91.1, 9.29 LOCGR; 11, 24.J NORMAS DE CONTROL INTERNO SUNAI.",
+  },
+  justificacionContratoMarco: {
     label:
       "Deje constancia de la evaluación sobre la viabilidad de agrupar esta contratación o utilizar un contrato marco.",
-    description: "Artículo 107.6 RLCP; 10 NORMAS DE CONTROL INTERNO SUNAI.",
+    description:
+      "Artículo 107.6 RLCP; 17, 22, 65 LCC; 38.5, 91.1, 9.29 LOCGR; 11, 24.J NORMAS DE CONTROL INTERNO SUNAI.",
+    placeholder: "Ingrese la evaluación correspondiente",
   },
   descripcionItem: {
     label: "Descripción del ítem",
@@ -196,38 +203,38 @@ const FASE1_DYNAMIC_FIELD_COPY = {
   detallesTecnicosCalidad: {
     BIENES: {
       label:
-        "Describa de manera precisa y detallada las caracteristicas tecnicas, funcionales y de calidad que deben cumplir los bienes a contratar.",
+        "Describa de manera precisa y detallada las características técnicas, funcionales y de calidad que deben cumplir los bienes a contratar.",
       description:
-        "Articulo 66. 3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+        "Artículo 66. 3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
     },
     SERVICIOS: {
       label:
-        "Describa de manera precisa y detallada las caracteristicas tecnicas, funcionales y de calidad que deben cumplir los servicios a contratar.",
+        "Describa de manera precisa y detallada las características técnicas, funcionales y de calidad que deben cumplir los servicios a contratar.",
       description:
-        "Articulos 66.3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+        "Artículos 66.3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
     },
     OBRAS: {
       label:
-        "Describa de manera precisa y detallada las caracteristicas tecnicas, funcionales y de calidad que deben cumplir las obras a contratar.",
+        "Describa de manera precisa y detallada las características técnicas, funcionales y de calidad que deben cumplir las obras a contratar.",
       description:
-        "Articulos 66.3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+        "Artículos 66.3.4 LCP; 7 RLCP; (criterio ver sentencia Eduardo Manuit); 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
     },
   },
   alcanceCantidadesObra: {
     BIENES: {
       label: "Describa de manera precisa y detallada las cantidades del bien a contratar.",
       description:
-        "Articulos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+        "Artículos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
     },
     SERVICIOS: {
       label: "Describa de manera precisa y detallada el alcance del servicio a contratar.",
       description:
-        "Articulos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+        "Artículos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
     },
     OBRAS: {
       label: "Describa de manera precisa y detallada las cantidades de obra a contratar.",
       description:
-        "Articulos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
+        "Artículos 7 RLCP; 38.5, 91.1 LOCGR; 65 LCC; 24 LIT. B NORMAS DE CONTROL INTERNO SUNAI.",
     },
   },
 } satisfies Record<
@@ -292,6 +299,7 @@ export const FASE1_PDF_MARKER_MAP: Record<string, string> = {
   horaActoRecepAper: "hora_acto_recep_aper_au_au",
   condicionPlurianual: "condicion_plurianual_au_au",
   viabilidadContratoMarco: "viabilidad_contrato_marco_au_au",
+  justificacionContratoMarco: "justificacion_contrato_marco_au_au",
 };
 
 export const FASE1_IVA_RATE = 0.16;

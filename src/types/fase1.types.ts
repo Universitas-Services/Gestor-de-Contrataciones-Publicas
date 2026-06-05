@@ -94,8 +94,9 @@ export interface CrearOActualizarFase1Payload {
   cuentaPagoPliego?: string;
   titularPagoPliego?: string;
   horaActoRecepAper: string;
-  condicionPlurianual: string;
-  viabilidadContratoMarco: string;
+  condicionPlurianual: boolean;
+  viabilidadContratoMarco: boolean;
+  justificacionContratoMarco?: string;
 }
 
 export interface FasePreparatoriaDetalleResponse {
@@ -124,8 +125,9 @@ export interface FasePreparatoriaDetalleResponse {
   horaActoRecepAper: string;
   correoComision?: string;
   telefonoComision?: string;
-  condicionPlurianual: string;
-  viabilidadContratoMarco: string;
+  condicionPlurianual: boolean;
+  viabilidadContratoMarco: boolean;
+  justificacionContratoMarco?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;

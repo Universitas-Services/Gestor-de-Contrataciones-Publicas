@@ -105,11 +105,9 @@ export const fase1FormSchema = z
     cuentaPagoPliego: optionalBankAccount,
     titularPagoPliego: optionalText(MAX_TEXT_100),
     horaActoRecepAper: requiredText("La hora del acto de recepcion y apertura es requerida", 50),
-    condicionPlurianual: requiredText("La condicion plurianual es requerida", MAX_TEXT_100),
-    viabilidadContratoMarco: requiredText(
-      "La viabilidad del contrato marco es requerida",
-      MAX_TEXT_100
-    ),
+    condicionPlurianual: z.boolean().optional(),
+    viabilidadContratoMarco: z.boolean().optional(),
+    justificacionContratoMarco: optionalText(MAX_TEXT_100),
   })
   .superRefine((data, ctx) => {
     if (data.origenCrsRegistro === undefined) {
@@ -161,6 +159,30 @@ export const fase1FormSchema = z
           message: "El titular de la cuenta es requerido",
         });
       }
+    }
+
+    if (data.condicionPlurianual === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["condicionPlurianual"],
+        message: "Debe indicar si la contratacion es de ejecucion plurianual",
+      });
+    }
+
+    if (data.viabilidadContratoMarco === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["viabilidadContratoMarco"],
+        message: "Debe indicar si se opto por agrupar esta contratacion o usar un contrato marco",
+      });
+    }
+
+    if (data.viabilidadContratoMarco === true && !data.justificacionContratoMarco) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["justificacionContratoMarco"],
+        message: "La evaluacion sobre el contrato marco es requerida",
+      });
     }
   });
 

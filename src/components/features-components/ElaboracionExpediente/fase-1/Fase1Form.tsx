@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
@@ -31,15 +31,7 @@ import type {
   FasePreparatoriaDetalleResponse,
   PresupuestoItemRecord,
 } from "@/types/fase1.types";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -119,8 +111,9 @@ function buildDefaultValues({
       cuentaPagoPliego: "",
       titularPagoPliego: "",
       horaActoRecepAper: "",
-      condicionPlurianual: "",
-      viabilidadContratoMarco: "",
+      condicionPlurianual: undefined,
+      viabilidadContratoMarco: undefined,
+      justificacionContratoMarco: "",
     };
   }
 
@@ -150,8 +143,9 @@ function buildDefaultValues({
     cuentaPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.cuentaPagoPliego ?? ""),
     titularPagoPliego: shouldClearPaymentFields ? "" : (fasePreparatoria.titularPagoPliego ?? ""),
     horaActoRecepAper: fasePreparatoria.horaActoRecepAper ?? "",
-    condicionPlurianual: fasePreparatoria.condicionPlurianual ?? "",
-    viabilidadContratoMarco: fasePreparatoria.viabilidadContratoMarco ?? "",
+    condicionPlurianual: fasePreparatoria.condicionPlurianual,
+    viabilidadContratoMarco: fasePreparatoria.viabilidadContratoMarco,
+    justificacionContratoMarco: fasePreparatoria.justificacionContratoMarco ?? "",
   };
 }
 
@@ -179,8 +173,23 @@ function getLlamadoPublicoFields(pliegoGratuito: boolean | undefined) {
   return baseFields;
 }
 
+function getObservacionesFields(viabilidadContratoMarco: boolean | undefined) {
+  const baseFields = ["condicionPlurianual", "viabilidadContratoMarco"] as const;
+
+  if (viabilidadContratoMarco === true) {
+    return [...baseFields, "justificacionContratoMarco"] as const;
+  }
+
+  return baseFields;
+}
+
 function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payload {
-  if (values.origenCrsRegistro === undefined || values.pliegoGratuito === undefined) {
+  if (
+    values.origenCrsRegistro === undefined ||
+    values.pliegoGratuito === undefined ||
+    values.condicionPlurianual === undefined ||
+    values.viabilidadContratoMarco === undefined
+  ) {
     throw new Error("Faltan datos obligatorios del formulario.");
   }
 
@@ -211,6 +220,10 @@ function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payl
     payload.bancoPagoPliego = values.bancoPagoPliego;
     payload.cuentaPagoPliego = values.cuentaPagoPliego;
     payload.titularPagoPliego = values.titularPagoPliego;
+  }
+
+  if (values.viabilidadContratoMarco === true) {
+    payload.justificacionContratoMarco = values.justificacionContratoMarco;
   }
 
   return payload;
@@ -254,6 +267,13 @@ export function Fase1Form({
     defaultValues,
   });
   const pliegoGratuito = form.watch("pliegoGratuito");
+  const viabilidadContratoMarco = form.watch("viabilidadContratoMarco");
+
+  useEffect(() => {
+    if (viabilidadContratoMarco !== true) {
+      form.clearErrors("justificacionContratoMarco");
+    }
+  }, [form, viabilidadContratoMarco]);
 
   const handleOpenItemSheet = useCallback(() => {
     if (readOnly) return;
@@ -290,11 +310,19 @@ export function Fase1Form({
       },
       {
         id: "observaciones",
-        fields: FASE1_STEP_FIELDS[5],
+        fields: getObservacionesFields(viabilidadContratoMarco),
         render: () => <Paso5ObservacionesStep form={form} />,
       },
     ],
-    [form, handleOpenItemSheet, items, pliegoGratuito, showBudgetStep, tipoContratacion]
+    [
+      form,
+      handleOpenItemSheet,
+      items,
+      pliegoGratuito,
+      showBudgetStep,
+      tipoContratacion,
+      viabilidadContratoMarco,
+    ]
   );
 
   const totalSteps = visibleSteps.length;
@@ -336,7 +364,7 @@ export function Fase1Form({
     if (!isValid) return;
 
     if (isLastStep) {
-      setIsConfirmOpen(true);
+      await handleFinalSubmit();
       return;
     }
 
@@ -365,8 +393,6 @@ export function Fase1Form({
   const handleFinalSubmit = async () => {
     if (readOnly) return;
     if (showBudgetStep && items.length === 0) {
-      setIsConfirmOpen(false);
-
       const budgetStepIndex = visibleSteps.findIndex((step) => step.id === "presupuesto");
       if (budgetStepIndex >= 0) {
         setCurrentStep(budgetStepIndex + 1);
@@ -379,7 +405,6 @@ export function Fase1Form({
 
     const isValid = await form.trigger(undefined, { shouldFocus: true });
     if (!isValid) {
-      setIsConfirmOpen(false);
       toast.error("Complete los campos obligatorios antes de finalizar.");
       return;
     }
@@ -393,17 +418,20 @@ export function Fase1Form({
       } else {
         await guardarFasePreparatoria(expedienteId, payload);
       }
-      toast.success(
-        isEditMode
-          ? "La Fase 1 fue actualizada correctamente."
-          : "La Fase 1 fue guardada correctamente."
-      );
-      router.push(`/elaboracion-expediente/${expedienteId}?tab=fase-1`);
+
+      // Mostrar popup de éxito. Los documentos se generan individualmente
+      // desde el panel principal (tarjeta "Documentos del Procedimiento").
+      setIsConfirmOpen(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar la Fase 1.");
     } finally {
       setIsSavingPhase(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setIsConfirmOpen(false);
+    router.push(`/elaboracion-expediente/${expedienteId}?tab=fase-1`);
   };
 
   const renderCurrentStep = () =>
@@ -455,36 +483,70 @@ export function Fase1Form({
         isSubmitting={isSavingItem}
       />
 
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent className="max-w-[540px] border border-slate-200 px-6 py-7 shadow-xl sm:px-8">
-          <AlertDialogHeader className="space-y-3 text-center">
-            <AlertDialogMedia className="mx-auto mb-0 size-14 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
-              <Check className="h-7 w-7" />
-            </AlertDialogMedia>
-            <AlertDialogTitle className="text-center text-[24px] font-extrabold text-color-titulos sm:text-[28px]">
-              ¡Excelente!
-            </AlertDialogTitle>
-            <div className="space-y-2">
-              <p className="text-center text-[18px] font-bold leading-tight text-color-titulos sm:text-[20px]">
-                Ha completado la carga de datos de la fase preparatoria.
-              </p>
-              <AlertDialogDescription className="mx-auto max-w-xl text-center text-[12px] italic leading-relaxed text-muted-foreground sm:text-[13px]">
-                El sistema está listo para generar el Acta de Inicio, el Pliego de Condiciones y el
-                Llamado a Participar.
-              </AlertDialogDescription>
-            </div>
-          </AlertDialogHeader>
+      <AlertDialog
+        open={isConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) handleSuccessClose();
+        }}
+      >
+        <AlertDialogContent className="max-w-[480px] overflow-hidden border-0 p-0 shadow-2xl">
+          {/* Título oculto requerido por Radix para accesibilidad ARIA */}
+          <AlertDialogTitle className="sr-only">Fase preparatoria completada</AlertDialogTitle>
 
-          <AlertDialogFooter className="mt-3 justify-center">
+          {/* Franja superior con gradiente */}
+          <div className="relative flex flex-col items-center bg-linear-to-br from-emerald-500 via-emerald-600 to-teal-700 px-8 pb-8 pt-10">
+            {/* Círculo de icono con efecto glassmorphism */}
+            <div className="mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-white/20 shadow-lg ring-4 ring-white/30 backdrop-blur-sm">
+              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-white shadow-inner">
+                <CheckCircle2 className="h-[30px] w-[30px] text-emerald-600" strokeWidth={2.5} />
+              </div>
+            </div>
+
+            {/* Título */}
+            <h2 className="text-center text-[26px] font-extrabold leading-tight tracking-tight text-white drop-shadow-sm sm:text-[28px]">
+              ¡Excelente!
+            </h2>
+
+            {/* Subtítulo principal */}
+            <p className="mt-2 max-w-[340px] text-center text-[14px] font-semibold leading-snug text-white/90">
+              Ha completado la carga de datos de la fase preparatoria.
+            </p>
+
+            {/* Detalle adicional */}
+            <p className="mt-3 max-w-[360px] text-center text-[12px] leading-relaxed text-white/75">
+              El sistema está listo para generar el acta de inicio, el pliego de condiciones y el
+              llamado a participar.
+            </p>
+
+            {/* Decorative blobs */}
+            <div className="pointer-events-none absolute -left-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
+          </div>
+
+          {/* Sección inferior */}
+          <div className="flex flex-col items-center gap-4 bg-white px-8 pb-7 pt-6">
+            {/* Chips de documentos */}
+            <div className="flex flex-wrap justify-center gap-2">
+              {["Acta de Inicio", "Pliego de Condiciones", "Llamado a Participar"].map((doc) => (
+                <span
+                  key={doc}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+                >
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                  {doc}
+                </span>
+              ))}
+            </div>
+
+            {/* Botón de acción */}
             <Button
               type="button"
-              onClick={handleFinalSubmit}
-              disabled={isSavingPhase}
-              className="min-w-[240px] bg-navy text-white hover:bg-navy-hover"
+              onClick={handleSuccessClose}
+              className="cursor-pointer mt-1 w-full max-w-[280px] bg-navy text-[13px] font-semibold text-white shadow-sm transition-all duration-200 hover:bg-navy-hover hover:shadow-md"
             >
-              {isSavingPhase ? "Procesando..." : finalButtonLabel}
+              Volver al expediente
             </Button>
-          </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>
