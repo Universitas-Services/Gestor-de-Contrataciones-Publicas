@@ -81,7 +81,7 @@ describe("UserDetailManagementCard", () => {
     );
 
     expect(await screen.findByRole("tab", { name: "Ver/Editar usuario" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Cambiar contrasena" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Cambiar contraseña" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Eliminar cuenta" })).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Editar usuario" })).toBeInTheDocument();
@@ -131,19 +131,19 @@ describe("UserDetailManagementCard", () => {
       />
     );
 
-    await screen.findByRole("tab", { name: "Cambiar contrasena" });
-    await user.click(screen.getByRole("tab", { name: "Cambiar contrasena" }));
+    await screen.findByRole("tab", { name: "Cambiar contraseña" });
+    await user.click(screen.getByRole("tab", { name: "Cambiar contraseña" }));
 
     const currentPasswordInput = screen.getByLabelText(
-      "Contrasena actual de Roberto Rojas"
+      "Contraseña actual de Roberto Rojas"
     ) as HTMLInputElement;
     const newPasswordInput = screen.getByLabelText(
-      "Nueva contrasena para Pedro Perez"
+      "Nueva contraseña para Pedro Perez"
     ) as HTMLInputElement;
 
     await user.type(currentPasswordInput, "AdminActual123!");
     await user.type(newPasswordInput, "NuevaClave123!");
-    await user.click(screen.getByRole("button", { name: "Actualizar contrasena" }));
+    await user.click(screen.getByRole("button", { name: "Actualizar contraseña" }));
 
     await waitFor(() => {
       expect(cambiarContrasenaDeUsuarioMock).toHaveBeenCalledWith({

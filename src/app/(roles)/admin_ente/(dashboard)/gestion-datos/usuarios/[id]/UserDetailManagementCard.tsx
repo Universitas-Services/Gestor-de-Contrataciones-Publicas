@@ -170,7 +170,7 @@ export function UserDetailManagementCard({
 
   const onSubmitPassword = async (values: ChangeUserPasswordFormValues) => {
     setIsPasswordSubmitting(true);
-    const toastId = toast.loading("Actualizando contrasena del usuario...");
+    const toastId = toast.loading("Actualizando contraseña del usuario...");
 
     try {
       await cambiarContrasenaDeUsuario({
@@ -184,9 +184,9 @@ export function UserDetailManagementCard({
         newPassword: "",
       });
 
-      toast.success("Contrasena del usuario actualizada correctamente", { id: toastId });
+      toast.success("Contraseña del usuario actualizada correctamente", { id: toastId });
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Error al cambiar la contrasena del usuario"), {
+      toast.error(getErrorMessage(error, "Error al cambiar la contraseña del usuario"), {
         id: toastId,
       });
     } finally {
@@ -266,7 +266,7 @@ export function UserDetailManagementCard({
               </TabsTrigger>
               <TabsTrigger value="password" className={managementTabTriggerClassName}>
                 <KeyRound className="h-4 w-4 shrink-0" />
-                <span>Cambiar contrasena</span>
+                <span>Cambiar contraseña</span>
               </TabsTrigger>
               <TabsTrigger
                 value="danger"
@@ -351,7 +351,7 @@ export function UserDetailManagementCard({
                           render={({ field }) => (
                             <FormItem className="space-y-2">
                               <FormLabel className="text-sm font-bold text-slate-700">
-                                Correo electronico
+                                Correo electrónico
                               </FormLabel>
                               <FormControl>
                                 <Input
@@ -410,7 +410,7 @@ export function UserDetailManagementCard({
                       {!isEditing ? (
                         <Button
                           onClick={() => setIsEditing(true)}
-                          className="rounded-xl bg-color-boton-1 px-6 shadow-sm hover:bg-color-boton-hover"
+                          className="cursor-pointer rounded-xl bg-color-boton-1 px-6 shadow-sm hover:bg-color-boton-hover"
                         >
                           Editar usuario
                           <SquarePen className="h-4 w-4" />
@@ -450,9 +450,9 @@ export function UserDetailManagementCard({
               <Card className="overflow-hidden rounded-[1.75rem] border-slate-200/80 shadow-[0_14px_34px_rgba(15,23,42,0.05)]">
                 <CardContent className="space-y-8 p-8">
                   <div className="space-y-1">
-                    <h2 className="text-2xl font-bold text-color-titulos">Cambiar contrasena</h2>
+                    <h2 className="text-2xl font-bold text-color-titulos">Cambiar contraseña</h2>
                     <p className="text-sm italic text-color-subtitulos">
-                      Valida la contrasena actual del administrador y define una nueva contrasena
+                      Valida la contraseña actual del administrador y define una nueva contraseña
                       para {managedUserName}.
                     </p>
                   </div>
@@ -479,7 +479,7 @@ export function UserDetailManagementCard({
                         render={({ field }) => (
                           <FormItem className="space-y-2">
                             <FormLabel className="text-sm font-bold text-slate-700">
-                              Contrasena actual de {adminDisplayName}
+                              Contraseña actual de {adminDisplayName}
                             </FormLabel>
                             <div className="relative">
                               <FormControl>
@@ -487,7 +487,7 @@ export function UserDetailManagementCard({
                                   {...field}
                                   type={showCurrentPassword ? "text" : "password"}
                                   disabled={isPasswordSubmitting}
-                                  placeholder="Ingresa tu contrasena actual"
+                                  placeholder="Ingresa tu contraseña actual"
                                   className="h-11 border-slate-200 bg-white pr-10 shadow-sm focus:border-color-boton-1 focus:ring-0"
                                 />
                               </FormControl>
@@ -498,8 +498,8 @@ export function UserDetailManagementCard({
                                 disabled={isPasswordSubmitting}
                                 aria-label={
                                   showCurrentPassword
-                                    ? "Ocultar contrasena actual"
-                                    : "Mostrar contrasena actual"
+                                    ? "Ocultar contraseña actual"
+                                    : "Mostrar contraseña actual"
                                 }
                               >
                                 {showCurrentPassword ? (
@@ -520,7 +520,7 @@ export function UserDetailManagementCard({
                         render={({ field }) => (
                           <FormItem className="space-y-2">
                             <FormLabel className="text-sm font-bold text-slate-700">
-                              Nueva contrasena para {managedUserName}
+                              Nueva contraseña para {managedUserName}
                             </FormLabel>
                             <div className="relative">
                               <FormControl>
@@ -528,7 +528,7 @@ export function UserDetailManagementCard({
                                   {...field}
                                   type={showNewPassword ? "text" : "password"}
                                   disabled={isPasswordSubmitting}
-                                  placeholder="Crea una contrasena segura"
+                                  placeholder="Crea una contraseña segura"
                                   className="h-11 border-slate-200 bg-white pr-10 shadow-sm focus:border-color-boton-1 focus:ring-0"
                                 />
                               </FormControl>
@@ -539,8 +539,8 @@ export function UserDetailManagementCard({
                                 disabled={isPasswordSubmitting}
                                 aria-label={
                                   showNewPassword
-                                    ? "Ocultar nueva contrasena"
-                                    : "Mostrar nueva contrasena"
+                                    ? "Ocultar nueva contraseña"
+                                    : "Mostrar nueva contraseña"
                                 }
                               >
                                 {showNewPassword ? (
@@ -558,7 +558,7 @@ export function UserDetailManagementCard({
                       <div className="flex justify-end border-t border-slate-100 pt-6">
                         <Button
                           type="submit"
-                          className="rounded-xl bg-color-boton-1 px-6 shadow-sm hover:bg-color-boton-hover"
+                          className="cursor-pointer rounded-xl bg-color-boton-1 px-6 shadow-sm hover:bg-color-boton-hover"
                           disabled={isPasswordSubmitting}
                         >
                           {isPasswordSubmitting ? (
@@ -566,7 +566,7 @@ export function UserDetailManagementCard({
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
                           )}
-                          Actualizar contrasena
+                          Actualizar contraseña
                         </Button>
                       </div>
                     </form>
@@ -576,7 +576,7 @@ export function UserDetailManagementCard({
             </TabsContent>
 
             <TabsContent value="danger" className="mt-0">
-              <Card className="overflow-hidden rounded-[1.75rem] border border-red-100 bg-gradient-to-b from-white to-red-50/40 shadow-[0_14px_34px_rgba(15,23,42,0.05)]">
+              <Card className="overflow-hidden rounded-[1.75rem] border border-red-100 bg-linear-to-b from-white to-red-50/40 shadow-[0_14px_34px_rgba(15,23,42,0.05)]">
                 <CardHeader className="border-b border-red-100 p-8 pt-6 pb-3">
                   <h2 className="text-2xl font-bold text-red-600">Zona de peligro</h2>
                 </CardHeader>
@@ -589,7 +589,7 @@ export function UserDetailManagementCard({
                   <div className="flex justify-end">
                     <Button
                       variant="destructive"
-                      className="h-11 rounded-xl bg-red-600 px-8 font-bold shadow-sm hover:bg-red-700"
+                      className="cursor-pointer h-11 rounded-xl bg-red-600 px-8 font-bold shadow-sm hover:bg-red-700"
                       onClick={() => setShowConfirmDelete(true)}
                       disabled={isDeleting}
                     >
