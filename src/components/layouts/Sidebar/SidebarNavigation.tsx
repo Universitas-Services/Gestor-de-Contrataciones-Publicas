@@ -99,7 +99,7 @@ export function SidebarNavigation({ role }: SidebarNavigationProps) {
         <SidebarGroupContent>
           <SidebarMenu>
             {config.items.map((item) => (
-              <NavItem key={item.href} item={item} roleCssVar={roleConfig.cssVar} />
+              <NavItem key={item.label} item={item} roleCssVar={roleConfig.cssVar} />
             ))}
           </SidebarMenu>
         </SidebarGroupContent>

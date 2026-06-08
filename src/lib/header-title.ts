@@ -67,6 +67,18 @@ const HEADER_TITLE_RULES: HeaderTitleRule[] = [
     title: "Comision de contrataciones",
     role: "admin_ente",
   },
+  {
+    type: "exact",
+    path: ROLE_ROUTES.admin_ente.configuracion,
+    title: "Configuracion",
+    role: "admin_ente",
+  },
+  {
+    type: "exact",
+    path: ROLE_ROUTES.admin_ente.diasNoLaborables,
+    title: "Dias no laborables",
+    role: "admin_ente",
+  },
   { type: "exact", path: "/consultor-ia", title: "Consultor IA" },
   { type: "exact", path: "/conocenos", title: "Conocenos" },
   { type: "exact", path: "/repositorio-legal", title: "Repositorio legal" },

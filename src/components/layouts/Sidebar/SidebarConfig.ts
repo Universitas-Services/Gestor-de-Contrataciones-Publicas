@@ -1,7 +1,15 @@
 import type { UserRole } from "@/types/role.types";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
-import { CheckCircle, Eye, ClipboardList, FolderOpen, Newspaper, SquarePen } from "lucide-react";
+import {
+  CheckCircle,
+  Eye,
+  ClipboardList,
+  FolderOpen,
+  Newspaper,
+  Settings,
+  SquarePen,
+} from "lucide-react";
 
 import { IconType } from "react-icons";
 import { LiaRobotSolid } from "react-icons/lia";
@@ -87,6 +95,17 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Elaboración de Expediente de selección de Contratista",
         href: "/elaboracion-expediente",
         icon: SquarePen,
+      },
+      {
+        label: "Configuración",
+        href: "#",
+        icon: Settings,
+        submenu: [
+          {
+            label: "Días no laborables",
+            href: ROLE_ROUTES.admin_ente.diasNoLaborables,
+          },
+        ],
       },
     ],
   },

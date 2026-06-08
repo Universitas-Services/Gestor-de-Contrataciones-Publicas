@@ -15,6 +15,8 @@ interface PlanificacionStepProps {
   isLoading?: boolean;
   /** Oculta los botones de navegación (para embeber en vista de detalle) */
   hideButtons?: boolean;
+  nonWorkingDays?: Set<string>;
+  feriadoDescriptions?: Map<string, string>;
 }
 
 // ─── 10 items = exactamente 5 por fila × 2 filas ─────────────────────
@@ -61,6 +63,8 @@ export function PlanificacionStep({
   onEventDrop,
   isLoading = false,
   hideButtons = false,
+  nonWorkingDays,
+  feriadoDescriptions,
 }: PlanificacionStepProps) {
   return (
     <div className="space-y-6">
@@ -70,6 +74,8 @@ export function PlanificacionStep({
           <ProcedureCalendar
             events={events}
             initialMonth={initialMonth}
+            nonWorkingDays={nonWorkingDays}
+            feriadoDescriptions={feriadoDescriptions}
             onEventDrop={onEventDrop}
           />
           <ProcedureLegend />

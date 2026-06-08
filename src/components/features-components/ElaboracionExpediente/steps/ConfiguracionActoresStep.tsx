@@ -8,8 +8,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { BusinessDayCalendar } from "@/components/shared/BusinessDayCalendar";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,19 @@ export function ConfiguracionActoresStep({
   const [comisiones, setComisiones] = useState<{ value: string; label: string }[]>([]);
   const [unidades, setUnidades] = useState<{ value: string; label: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+
+  const feriadosRange = React.useMemo(() => {
+    const year = new Date().getFullYear();
+    return {
+      desde: `${year - 1}-01-01`,
+      hasta: `${year + 5}-12-31`,
+    };
+  }, []);
+
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
+    feriadosRange.desde,
+    feriadosRange.hasta
+  );
 
   const form = useForm<ConfiguracionActoresFormValues>({
     resolver: zodResolver(configuracionActoresSchema),
@@ -302,13 +316,14 @@ export function ConfiguracionActoresStep({
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
+                    <BusinessDayCalendar
                       mode="single"
                       selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
                       onSelect={(date) => {
                         if (date) field.onChange(format(date, "yyyy-MM-dd"));
                       }}
-                      disabled={(date) => date.getDay() === 0 || date.getDay() === 6}
+                      nonWorkingDays={nonWorkingDays}
+                      feriadoDescriptions={feriadoDescriptions}
                       locale={es}
                       initialFocus
                     />

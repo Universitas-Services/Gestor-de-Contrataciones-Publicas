@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -33,6 +33,8 @@ import { guardarCronograma } from "@/services/expedienteService";
 import { isFechaEditable, moverFechaCronograma } from "@/lib/utils/cronogramaUtils";
 import type { IEvent } from "./calendar/types";
 import { PlanificacionStep } from "./steps/PlanificacionStep";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import { getYearRangeForCronograma } from "@/lib/utils/diasNoLaborablesUtils";
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -241,6 +243,22 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
     cronogramaData ? cronogramaToEvents(cronogramaData as unknown as Record<string, unknown>) : []
   );
 
+  const cronogramaRange = useMemo(() => {
+    if (!cronogramaData) {
+      const year = new Date().getFullYear();
+      return { desde: `${year}-01-01`, hasta: `${year + 1}-12-31` };
+    }
+    const fechas = Object.entries(cronogramaData)
+      .filter(([key, value]) => key.startsWith("fecha") && typeof value === "string")
+      .map(([, value]) => value as string);
+    return getYearRangeForCronograma(fechas);
+  }, [cronogramaData]);
+
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
+    cronogramaRange.desde,
+    cronogramaRange.hasta
+  );
+
   // Datos del expediente
   const tipoRaw = data.modalidad?.tipoContratacion ?? "";
   const tipoLabel = TIPO_DISPLAY[tipoRaw] ?? tipoRaw;
@@ -291,7 +309,8 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
       cronogramaData as unknown as Record<string, unknown>,
       eventId,
       diffInDays,
-      tipo
+      tipo,
+      nonWorkingDays
     );
     if (!result.success) {
       if (result.errorMsg) toast.error(result.errorMsg);
@@ -570,6 +589,8 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                     onEventDrop={readOnly ? undefined : handleEventDrop}
                     isLoading={false}
                     hideButtons
+                    nonWorkingDays={nonWorkingDays}
+                    feriadoDescriptions={feriadoDescriptions}
                   />
                 </CardContent>
               </Card>

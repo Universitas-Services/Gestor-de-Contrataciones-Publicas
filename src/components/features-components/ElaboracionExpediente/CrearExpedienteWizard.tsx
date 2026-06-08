@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +33,8 @@ import {
   calcularFechasSugeridas,
 } from "@/lib/utils/cronogramaUtils";
 import type { IEvent } from "./calendar/types";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import { getYearRangeForCronograma } from "@/lib/utils/diasNoLaborablesUtils";
 
 // ─── Step meta ───────────────────────────────────────────────────────
 
@@ -208,6 +210,22 @@ export function CrearExpedienteWizard({
   const [calendarEvents, setCalendarEvents] = useState<IEvent[]>([]);
   const [calendarInitialMonth, setCalendarInitialMonth] = useState<Date>(new Date(2026, 2, 1));
 
+  const cronogramaRange = useMemo(() => {
+    if (!cronogramaData) {
+      const year = new Date().getFullYear();
+      return { desde: `${year}-01-01`, hasta: `${year + 1}-12-31` };
+    }
+    const fechas = Object.entries(cronogramaData)
+      .filter(([key, value]) => key.startsWith("fecha") && typeof value === "string")
+      .map(([, value]) => value as string);
+    return getYearRangeForCronograma(fechas);
+  }, [cronogramaData]);
+
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
+    cronogramaRange.desde,
+    cronogramaRange.hasta
+  );
+
   // ─── Form Paso 1 (se mantiene vivo durante todo el wizard) ──────
   const datosBasicosForm = useForm<DatosBasicosFormValues>({
     resolver: zodResolver(datosBasicosSchema),
@@ -372,7 +390,8 @@ export function CrearExpedienteWizard({
       // Parche: sobrescribir con cascada lógica del frontend
       const fechasLogicasFront = calcularFechasSugeridas(
         actores.fechaLlamadoParticipar,
-        fd.tipoContratacion
+        fd.tipoContratacion,
+        nonWorkingDays
       );
       cronogramaGenerado = { ...cronogramaGenerado, ...fechasLogicasFront };
 
@@ -423,7 +442,7 @@ export function CrearExpedienteWizard({
     if (!cronogramaData || diffInDays === 0) return;
 
     const tipo = datosBasicosForm.getValues("tipoContratacion");
-    const result = moverFechaCronograma(cronogramaData, eventId, diffInDays, tipo);
+    const result = moverFechaCronograma(cronogramaData, eventId, diffInDays, tipo, nonWorkingDays);
 
     if (!result.success) {
       if (result.errorMsg) toast.error(result.errorMsg);
@@ -491,6 +510,8 @@ export function CrearExpedienteWizard({
             onFinish={handleFinish}
             onEventDrop={handleEventDrop}
             isLoading={isLoading}
+            nonWorkingDays={nonWorkingDays}
+            feriadoDescriptions={feriadoDescriptions}
           />
         )}
       </CardContent>
