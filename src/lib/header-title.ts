@@ -75,8 +75,8 @@ const HEADER_TITLE_RULES: HeaderTitleRule[] = [
   },
   {
     type: "exact",
-    path: ROLE_ROUTES.admin_ente.diasNoLaborables,
-    title: "Dias no laborables",
+    path: ROLE_ROUTES.admin_ente.calendarioEnte,
+    title: "Calendario del ente",
     role: "admin_ente",
   },
   { type: "exact", path: "/consultor-ia", title: "Consultor IA" },

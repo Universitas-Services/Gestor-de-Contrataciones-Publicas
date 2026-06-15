@@ -63,6 +63,8 @@ export function ConfiguracionActoresStep({
     return {
       desde: `${year - 1}-01-01`,
       hasta: `${year + 5}-12-31`,
+      fromYear: year - 1,
+      toYear: year + 5,
     };
   }, []);
 
@@ -318,6 +320,9 @@ export function ConfiguracionActoresStep({
                   <PopoverContent className="w-auto p-0" align="start">
                     <BusinessDayCalendar
                       mode="single"
+                      captionLayout="dropdown"
+                      fromYear={feriadosRange.fromYear}
+                      toYear={feriadosRange.toYear}
                       selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
                       onSelect={(date) => {
                         if (date) field.onChange(format(date, "yyyy-MM-dd"));

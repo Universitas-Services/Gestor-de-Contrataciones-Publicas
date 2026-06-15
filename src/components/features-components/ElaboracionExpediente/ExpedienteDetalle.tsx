@@ -564,9 +564,19 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                 </Card>
               </div>
 
-              {/* ── Botones de acción: Editar ficha  ── */}
+              {/* ── Botones de acción: cronograma + editar ficha ── */}
               {!readOnly && (
-                <div className="flex justify-end mt-6 mb-2">
+                <div className="flex justify-end gap-3 mt-6 mb-2">
+                  {cronogramaData && (
+                    <Button
+                      onClick={handleGuardarCronograma}
+                      disabled={isSaving || !isDirty}
+                      className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? "Guardando..." : "Guardar cambios del cronograma"}
+                    </Button>
+                  )}
                   <Button
                     onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
                     className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
@@ -594,20 +604,6 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                   />
                 </CardContent>
               </Card>
-
-              {/* ── Botón Guardar Cronograma — alineado a la derecha ── */}
-              {cronogramaData && !readOnly && (
-                <div className="flex justify-end mt-6">
-                  <Button
-                    onClick={handleGuardarCronograma}
-                    disabled={isSaving || !isDirty}
-                    className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Save className="w-4 h-4" />
-                    {isSaving ? "Guardando..." : "Guardar cambios del cronograma"}
-                  </Button>
-                </div>
-              )}
             </TabsContent>
 
             <TabsContent value="fase-1" className="mt-6">

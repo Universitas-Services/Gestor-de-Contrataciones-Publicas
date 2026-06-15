@@ -35,7 +35,9 @@ export const ROLE_ROUTES = {
     unidadContratante: "/admin_ente/configuracion/unidad-contratante",
     comisionContrataciones: "/admin_ente/configuracion/comision-contrataciones",
     configuracion: "/admin_ente/configuracion",
-    diasNoLaborables: "/admin_ente/configuracion/dias-no-laborables",
+    calendarioEnte: "/admin_ente/calendario-ente",
+    /** @deprecated Use calendarioEnte */
+    diasNoLaborables: "/admin_ente/calendario-ente",
     cambiarContrasena: "/admin_ente/cambiar-contrasena",
     completarEnte: "/admin_ente/completar-ente",
     consultorIA: "/consultor-ia",

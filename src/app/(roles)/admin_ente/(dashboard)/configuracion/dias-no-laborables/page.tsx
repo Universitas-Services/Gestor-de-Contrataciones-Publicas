@@ -1,9 +1,6 @@
-import { DiasNoLaborablesPanel } from "@/components/features-components/Configuracion/DiasNoLaborables/DiasNoLaborablesPanel";
+import { redirect } from "next/navigation";
+import { ROLE_ROUTES } from "@/lib/constants/routes";
 
-export default function DiasNoLaborablesPage() {
-  return (
-    <div className="w-full">
-      <DiasNoLaborablesPanel />
-    </div>
-  );
+export default function DiasNoLaborablesRedirectPage() {
+  redirect(ROLE_ROUTES.admin_ente.calendarioEnte);
 }

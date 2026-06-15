@@ -110,7 +110,7 @@ export function NotificationBell({ userRole }: NotificationBellProps) {
       title: getCronogramaAlertaTitle(alerta),
       description: getCronogramaAlertaDescription(alerta),
       type: "cronograma",
-      href: getCronogramaAlertaExpedienteHref(alerta) ?? ROLE_ROUTES.admin_ente.diasNoLaborables,
+      href: getCronogramaAlertaExpedienteHref(alerta) ?? ROLE_ROUTES.admin_ente.calendarioEnte,
       actionLabel: getCronogramaAlertaExpedienteHref(alerta) ? "Ver expediente" : "Ir a feriados",
       onDismiss: async () => {
         try {
@@ -226,10 +226,10 @@ export function NotificationBell({ userRole }: NotificationBellProps) {
             <Separator className="bg-border/50" />
             <div className="px-4 py-2">
               <Link
-                href={ROLE_ROUTES.admin_ente.diasNoLaborables}
+                href={ROLE_ROUTES.admin_ente.calendarioEnte}
                 className="text-xs font-medium text-navy hover:underline"
               >
-                Gestionar días no laborables
+                Ir al calendario del ente
               </Link>
             </div>
           </>

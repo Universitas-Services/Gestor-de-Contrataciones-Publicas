@@ -36,6 +36,7 @@ import { FeriadoFormDialog } from "./FeriadoFormDialog";
 import { BulkFeriadosDialog } from "./BulkFeriadosDialog";
 import { ConflictosDialog } from "./ConflictosDialog";
 import { EliminarFeriadoDialog } from "./EliminarFeriadoDialog";
+import { cn } from "@/lib/utils";
 
 type DiasNoLaborablesTab = "alertas" | "gestion";
 
@@ -82,16 +83,8 @@ export function DiasNoLaborablesPanel() {
   );
 
   const [activeTab, setActiveTab] = React.useState<DiasNoLaborablesTab>("gestion");
-  const [alertasLoaded, setAlertasLoaded] = React.useState(false);
-  const hasSetInitialTab = React.useRef(false);
 
-  React.useEffect(() => {
-    if (!alertasLoaded || hasSetInitialTab.current) return;
-    hasSetInitialTab.current = true;
-    if (alertasPendientes.length > 0) {
-      setActiveTab("alertas");
-    }
-  }, [alertasLoaded, alertasPendientes.length]);
+  const shouldBlinkAlertasTab = activeTab === "gestion" && alertasPendientes.length > 0;
 
   const selectedDatesList = React.useMemo(() => Array.from(selectedDates).sort(), [selectedDates]);
 
@@ -149,8 +142,6 @@ export function DiasNoLaborablesPanel() {
       setAlertas(response);
     } catch (error) {
       console.error(error);
-    } finally {
-      setAlertasLoaded(true);
     }
   }, []);
 
@@ -326,40 +317,48 @@ export function DiasNoLaborablesPanel() {
           <CardHeader className="p-8 pt-6 pb-5">
             <div className="space-y-1">
               <h1 className="text-3xl font-bold tracking-tight text-heading-dark">
-                Días no laborables
+                Calendario del ente
               </h1>
               <p className="text-sm font-medium italic text-text-muted-dark">
-                Gestione feriados del ente y revise advertencias de cronogramas afectados.
+                Registre días no laborables y consulte advertencias de cronogramas afectados.
               </p>
             </div>
           </CardHeader>
 
           <div className="border-y border-slate-100 px-8 py-5">
             <TabsList className="grid h-auto w-full grid-cols-1 items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 p-1.5 shadow-inner sm:min-h-14 sm:grid-cols-2">
-              <TabsTrigger value="alertas" className={diasNoLaborablesTabTriggerClassName}>
+              <TabsTrigger value="gestion" className={diasNoLaborablesTabTriggerClassName}>
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                <span>Calendario del ente</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="alertas"
+                className={cn(
+                  diasNoLaborablesTabTriggerClassName,
+                  shouldBlinkAlertasTab &&
+                    "animate-tab-alert-blink border-danger/40 text-danger hover:text-danger"
+                )}
+              >
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>Advertencias activas</span>
                 {alertasPendientes.length > 0 && (
                   <Badge
                     variant="outline"
-                    className="ml-1 border-cronograma-alert-border bg-cronograma-alert-bg text-cronograma-alert-text text-[10px] px-1.5 py-0"
+                    className={cn(
+                      "ml-1 text-[10px] px-1.5 py-0",
+                      shouldBlinkAlertasTab
+                        ? "border-danger/50 bg-danger/10 text-danger"
+                        : "border-cronograma-alert-border bg-cronograma-alert-bg text-cronograma-alert-text"
+                    )}
                   >
                     {alertasPendientes.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="gestion" className={diasNoLaborablesTabTriggerClassName}>
-                <CalendarDays className="h-4 w-4 shrink-0" />
-                <span>Gestionar días no laborables</span>
-              </TabsTrigger>
             </TabsList>
           </div>
 
           <CardContent className="p-8 pt-8">
-            <TabsContent value="alertas" className="mt-0">
-              <FeriadosAlertasTab alertas={alertas} onResolved={() => void fetchAlertas()} />
-            </TabsContent>
-
             <TabsContent value="gestion" className="mt-0 space-y-4">
               <p className="text-sm text-text-muted-dark">
                 Registre feriados del ente. Use selección múltiple en el calendario para registrar
@@ -395,6 +394,10 @@ export function DiasNoLaborablesPanel() {
                   onDelete={openDelete}
                 />
               </div>
+            </TabsContent>
+
+            <TabsContent value="alertas" className="mt-0">
+              <FeriadosAlertasTab alertas={alertas} onResolved={() => void fetchAlertas()} />
             </TabsContent>
           </CardContent>
         </Tabs>

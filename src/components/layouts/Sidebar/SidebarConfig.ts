@@ -2,12 +2,12 @@ import type { UserRole } from "@/types/role.types";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import type { LucideIcon } from "lucide-react";
 import {
+  CalendarDays,
   CheckCircle,
   Eye,
   ClipboardList,
   FolderOpen,
   Newspaper,
-  Settings,
   SquarePen,
 } from "lucide-react";
 
@@ -87,6 +87,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         ],
       },
       {
+        label: "Calendario del ente",
+        href: ROLE_ROUTES.admin_ente.calendarioEnte,
+        icon: CalendarDays,
+      },
+      {
         label: "Registro de proveedores",
         href: "/registro-proveedores",
         icon: Newspaper,
@@ -95,17 +100,6 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Elaboración de Expediente de selección de Contratista",
         href: "/elaboracion-expediente",
         icon: SquarePen,
-      },
-      {
-        label: "Configuración",
-        href: "#",
-        icon: Settings,
-        submenu: [
-          {
-            label: "Días no laborables",
-            href: ROLE_ROUTES.admin_ente.diasNoLaborables,
-          },
-        ],
       },
     ],
   },

@@ -57,7 +57,7 @@ export function FeriadosAlertasTab({ alertas, onResolved }: FeriadosAlertasTabPr
       <ul className="divide-y divide-cronograma-alert-border/40 max-h-[min(70vh,640px)] overflow-y-auto">
         {pendientes.map((alerta) => {
           const href =
-            getCronogramaAlertaExpedienteHref(alerta) ?? ROLE_ROUTES.admin_ente.diasNoLaborables;
+            getCronogramaAlertaExpedienteHref(alerta) ?? ROLE_ROUTES.admin_ente.calendarioEnte;
           const hasExpediente = Boolean(getCronogramaAlertaExpedienteHref(alerta));
 
           return (
@@ -74,7 +74,7 @@ export function FeriadosAlertasTab({ alertas, onResolved }: FeriadosAlertasTabPr
                   href={href}
                   className="inline-block text-xs font-semibold text-navy hover:underline"
                 >
-                  {hasExpediente ? "Ver expediente" : "Ir a días no laborables"}
+                  {hasExpediente ? "Ver expediente" : "Ir al calendario del ente"}
                 </Link>
               </div>
               <Button

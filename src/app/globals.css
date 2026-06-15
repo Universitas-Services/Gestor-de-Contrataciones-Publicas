@@ -440,3 +440,19 @@
 .pencil-icon-warning {
   animation: pencil-warn 2.4s ease-in-out infinite;
 }
+
+@keyframes tab-alert-blink {
+  0%,
+  100% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--danger) 30%, transparent);
+  }
+}
+
+.animate-tab-alert-blink {
+  animation: tab-alert-blink 1.4s ease-in-out infinite;
+}
