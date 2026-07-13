@@ -11,7 +11,8 @@ import {
   completarEnteSchema,
   type CompletarEnteFormValues,
 } from "@/lib/schemas/completarEnteSchema";
-import { UniversitasAPI, Estado, Municipio, Ciudad, Parroquia } from "@universitas/sdk-global";
+import { UniversitasAPI, Estado, Municipio, Parroquia } from "@universitas/sdk-global";
+import { getCiudadesPorEstado, type TerritorioCiudad } from "@/lib/territorio";
 import { obtenerEnte, actualizarEnte, actualizarLogoEnte } from "@/services/enteService";
 import { markDatosConfirmadosAction } from "@/lib/auth/auth";
 
@@ -94,7 +95,7 @@ export function CompletarEnteForm({
   // Estados para listas territoriales
   const [estadosList, setEstadosList] = useState<Estado[]>(initialEstados);
   const [municipiosList, setMunicipiosList] = useState<Municipio[]>([]);
-  const [ciudadesList, setCiudadesList] = useState<Ciudad[]>([]);
+  const [ciudadesList, setCiudadesList] = useState<TerritorioCiudad[]>([]);
   const [parroquiasList, setParroquiasList] = useState<Parroquia[]>([]);
 
   // Estados visuales para el RIF
@@ -129,10 +130,11 @@ export function CompletarEnteForm({
   //   getEstados().then(res => setEstadosList(res.data)).catch(console.error);
   // }, []);
 
-  // Cargar municipios cuando cambia el estado
+  // Cargar municipios y ciudades cuando cambia el estado
   useEffect(() => {
     if (!selectedEstado) {
       setMunicipiosList([]);
+      setCiudadesList([]);
       return;
     }
     const estadoObj = estadosList.find((e) => e.nombre === selectedEstado);
@@ -141,22 +143,24 @@ export function CompletarEnteForm({
         .territorio.getMunicipios(estadoObj.id)
         .then((res) => setMunicipiosList(res.data))
         .catch(console.error);
+
+      getCiudadesPorEstado(estadoObj.id)
+        .then((ciudades) => setCiudadesList(ciudades))
+        .catch((error) => {
+          console.error(error);
+          setCiudadesList([]);
+        });
     }
   }, [selectedEstado, estadosList]);
 
-  // Cargar ciudades y parroquias cuando cambia el municipio
+  // Cargar parroquias cuando cambia el municipio
   useEffect(() => {
     if (!selectedMunicipio) {
-      setCiudadesList([]);
       setParroquiasList([]);
       return;
     }
     const municipioObj = municipiosList.find((m) => m.nombre === selectedMunicipio);
     if (municipioObj) {
-      getClient()
-        .territorio.getCiudades(municipioObj.id)
-        .then((res) => setCiudadesList(res.data))
-        .catch(console.error);
       getClient()
         .territorio.getParroquias(municipioObj.id)
         .then((res) => setParroquiasList(res.data))
