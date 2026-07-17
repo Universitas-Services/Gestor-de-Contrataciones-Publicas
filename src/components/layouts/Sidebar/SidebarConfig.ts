@@ -54,6 +54,11 @@ const ENTE_FUNCTIONAL_ITEMS: SidebarItem[] = [
     href: "/elaboracion-expediente",
     icon: SquarePen,
   },
+  {
+    label: "Gestión de expedientes",
+    href: "/gestion-expedientes",
+    icon: FolderOpen,
+  },
 ];
 
 /**
@@ -100,6 +105,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Elaboración de Expediente de selección de Contratista",
         href: "/elaboracion-expediente",
         icon: SquarePen,
+      },
+      {
+        label: "Gestión de expedientes",
+        href: "/gestion-expedientes",
+        icon: FolderOpen,
       },
     ],
   },

@@ -25,6 +25,7 @@ const EXPEDIENTE_SUB_ROUTE_LABELS: Record<string, string> = {
 
 const ROUTE_SEGMENT_LABELS: Record<string, string> = {
   "elaboracion-expediente": "Elaboración de expediente",
+  "gestion-expedientes": "Panel expediente",
 };
 
 function trimExpedienteSegments(segments: string[]): string[] {
@@ -67,6 +68,10 @@ export function Breadcrumbs() {
 
     if (EXPEDIENTE_SUB_ROUTE_LABELS[segment]) {
       return EXPEDIENTE_SUB_ROUTE_LABELS[segment];
+    }
+
+    if (segment === "nuevo" && index > 0 && segments[index - 1] === "gestion-expedientes") {
+      return "Nuevo Expediente";
     }
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

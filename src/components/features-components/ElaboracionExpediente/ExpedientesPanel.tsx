@@ -67,7 +67,14 @@ const ITEMS_PER_PAGE = 5;
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export function ExpedientesPanel({ readOnly = false }: { readOnly?: boolean }) {
+export function ExpedientesPanel({
+  readOnly = false,
+  basePath = "/elaboracion-expediente",
+}: {
+  readOnly?: boolean;
+  /** Base URL for list CTAs (nuevo / detalle). Default preserves the legacy flow. */
+  basePath?: string;
+}) {
   const params = useSearchParams();
   const initialTipo = params.get("tipo") || "todos";
 
@@ -198,7 +205,7 @@ export function ExpedientesPanel({ readOnly = false }: { readOnly?: boolean }) {
             </p>
           </div>
           {!readOnly && (
-            <Link href="/elaboracion-expediente/nuevo">
+            <Link href={`${basePath}/nuevo`}>
               <Button className="bg-navy hover:bg-navy-hover text-white rounded-md px-6 py-5 h-12 flex items-center gap-2 font-semibold shadow-md cursor-pointer">
                 <Plus className="w-5 h-5" />
                 Crear nuevo expediente
@@ -320,6 +327,7 @@ export function ExpedientesPanel({ readOnly = false }: { readOnly?: boolean }) {
                     onDelete={() => setDeleteId(exp.id)}
                     isAnulado={exp.estatusProceso === "ANULADO"}
                     readOnly={readOnly}
+                    basePath={basePath}
                   />
                 ))
               ) : (
@@ -417,6 +425,7 @@ function ExpedienteRow({
   onDelete,
   isAnulado,
   readOnly = false,
+  basePath = "/elaboracion-expediente",
 }: {
   expediente: ExpedienteListItem;
   isEven: boolean;
@@ -425,6 +434,7 @@ function ExpedienteRow({
   onDelete: () => void;
   isAnulado?: boolean;
   readOnly?: boolean;
+  basePath?: string;
 }) {
   // Map backend tipo to display from nested modalidad object
   const tipoBackend = expediente.modalidad?.tipoContratacion || "BIENES";
@@ -555,7 +565,7 @@ function ExpedienteRow({
             </>
           ) : (
             <>
-              <Link href={`/elaboracion-expediente/${expediente.id}`}>
+              <Link href={`${basePath}/${expediente.id}`}>
                 <button className="text-slate-500 hover:text-navy transition-colors cursor-pointer">
                   <Eye className="w-4.5 h-4.5" />
                 </button>

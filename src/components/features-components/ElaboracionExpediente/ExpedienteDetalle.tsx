@@ -206,9 +206,16 @@ interface Props {
   data: ExpedienteResponse;
   initialTab?: Fase1TabValue;
   readOnly?: boolean;
+  /** Base de ruta para tabs / editar. Default: ruta legacy. */
+  basePath?: string;
 }
 
-export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = false }: Props) {
+export function ExpedienteDetalle({
+  data,
+  initialTab = "fase-0",
+  readOnly = false,
+  basePath = "/elaboracion-expediente",
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Fase1TabValue>(() =>
@@ -224,7 +231,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
   const handleTabChange = (value: string) => {
     const tab = value as Fase1TabValue;
     setActiveTab(tab);
-    router.replace(`/elaboracion-expediente/${data.id}?tab=${tab}`, { scroll: false });
+    router.replace(`${basePath}/${data.id}?tab=${tab}`, { scroll: false });
   };
 
   // Estado del cronograma (editable)
@@ -578,7 +585,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                     </Button>
                   )}
                   <Button
-                    onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
+                    onClick={() => router.push(`${basePath}/${data.id}/editar`)}
                     className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
                   >
                     <Pencil className="w-4 h-4" />

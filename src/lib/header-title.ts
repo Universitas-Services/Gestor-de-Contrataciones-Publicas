@@ -43,6 +43,12 @@ const HEADER_TITLE_RULES: HeaderTitleRule[] = [
   { type: "exact", path: "/registro-proveedores/nuevo", title: "Nuevo proveedor" },
   { type: "exact", path: "/elaboracion-expediente", title: "Elaboracion de expediente" },
   { type: "exact", path: "/elaboracion-expediente/nuevo", title: "Nuevo expediente" },
+  { type: "exact", path: "/gestion-expedientes", title: "Gestión de expedientes" },
+  {
+    type: "exact",
+    path: "/gestion-expedientes/nuevo",
+    title: "Elaboración de expedientes de contratación pública",
+  },
   {
     type: "exact",
     path: "/admin_ente/configuracion/maxima-autoridad",

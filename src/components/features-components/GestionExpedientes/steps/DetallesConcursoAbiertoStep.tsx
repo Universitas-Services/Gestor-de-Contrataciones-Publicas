@@ -1,0 +1,177 @@
+"use client";
+
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { FormDropdownSelect } from "@/components/features-components/GestionExpedientes/FormDropdownSelect";
+import {
+  detallesConcursoAbiertoSchema,
+  MODALIDAD_CONCURSO_ABIERTO_OPTIONS,
+  type DetallesConcursoAbiertoFormValues,
+} from "@/lib/schemas/gestionExpedienteSchema";
+
+export interface DetallesConcursoAbiertoStepProps {
+  initialValues?: DetallesConcursoAbiertoFormValues | null;
+  onBack: () => void;
+  onNext: (data: DetallesConcursoAbiertoFormValues) => void;
+  readOnly?: boolean;
+}
+
+export function DetallesConcursoAbiertoStep({
+  initialValues = null,
+  onBack,
+  onNext,
+  readOnly = false,
+}: DetallesConcursoAbiertoStepProps) {
+  const form = useForm<DetallesConcursoAbiertoFormValues>({
+    resolver: zodResolver(detallesConcursoAbiertoSchema),
+    defaultValues: {
+      modalidadConcursoAbierto:
+        initialValues?.modalidadConcursoAbierto ?? "ACTO_UNICO_APERTURA_UNICA",
+      descripcionObjeto: initialValues?.descripcionObjeto ?? "",
+      codigoNomenclatura: initialValues?.codigoNomenclatura ?? "",
+    },
+  });
+
+  const descripcionObjeto = form.watch("descripcionObjeto") ?? "";
+  const codigoNomenclatura = form.watch("codigoNomenclatura") ?? "";
+
+  const handleSubmit = async () => {
+    if (readOnly) return;
+    const valid = await form.trigger();
+    if (valid) onNext(form.getValues());
+  };
+
+  return (
+    <Form {...form}>
+      <form
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-8"
+      >
+        <FormField
+          control={form.control}
+          name="modalidadConcursoAbierto"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-heading-dark font-bold font-inter text-base">
+                Seleccione la modalidad de Concurso Abierto.
+              </FormLabel>
+              <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                Artículo 78, Numeral [1], DLCP
+              </p>
+              <FormControl>
+                <FormDropdownSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={readOnly}
+                  className="md:w-2/3"
+                  options={MODALIDAD_CONCURSO_ABIERTO_OPTIONS.map((opt) => ({
+                    value: opt.value,
+                    label: opt.enabled ? opt.label : `${opt.label} — Próximamente`,
+                    disabled: !opt.enabled,
+                  }))}
+                />
+              </FormControl>
+              <p className="text-slate-400 italic text-xs mt-1.5 font-inter">
+                Las opciones bloqueadas estarán disponibles próximamente.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="descripcionObjeto"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-heading-dark font-bold font-inter text-base">
+                Describa el objeto del procedimiento de contratación.
+              </FormLabel>
+              <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                Artículo 107.1 RLCP; 38 (1 al 5 primer párrafo), 91.9 LOCGR; 23 NORMAS DE CONTROL
+                INTERNO SUNAI.
+              </p>
+              <FormControl>
+                <div className="relative w-full min-w-0 max-w-full">
+                  <Textarea
+                    {...field}
+                    disabled={readOnly}
+                    maxLength={255}
+                    rows={4}
+                    className="resize-none border-slate-300 bg-white pr-16 pb-8"
+                    placeholder="Describa el objeto del procedimiento..."
+                  />
+                  <span className="absolute bottom-2 right-3 text-xs text-slate-400 font-inter">
+                    {descripcionObjeto.length} / 255
+                  </span>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="codigoNomenclatura"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-heading-dark font-bold font-inter text-base">
+                Indique el número o nomenclatura del procedimiento de contratación.
+              </FormLabel>
+              <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                Artículos 107.1 RLCP; 23 NORMAS DE CONTROL INTERNO SUNAI.
+              </p>
+              <FormControl>
+                <div className="relative w-full min-w-0 max-w-full md:w-2/3">
+                  <Textarea
+                    {...field}
+                    disabled={readOnly}
+                    maxLength={50}
+                    rows={2}
+                    className="resize-none border-slate-300 bg-white pr-14 pb-7"
+                    placeholder="Ej: PROC-2026-001"
+                  />
+                  <span className="absolute bottom-2 right-3 text-xs text-slate-400 font-inter">
+                    {codigoNomenclatura.length} / 50
+                  </span>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-between pt-6 border-t border-slate-200">
+          <Button type="button" variant="outline" onClick={onBack} className="h-11 px-6">
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={readOnly}
+            className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
+          >
+            Siguiente &gt;
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}

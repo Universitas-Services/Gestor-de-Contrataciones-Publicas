@@ -1,8 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { getServerToken } from "@/lib/auth/session";
+import {
+  revalidateExpedienteDetail,
+  revalidateExpedienteList,
+} from "@/lib/utils/expedienteRevalidate";
 import { normalizePresupuestoItemsResponse } from "@/lib/utils/fase1Presupuesto";
 import type {
   ActualizarPresupuestoItemPayload,
@@ -58,7 +60,7 @@ export const crearPresupuestoItem = async (
     "Error al guardar el ítem de presupuesto"
   );
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
   return result;
 };
 
@@ -83,7 +85,7 @@ export const actualizarPresupuestoItem = async (
     "Error al actualizar el item de presupuesto"
   );
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
   return result;
 };
 
@@ -108,7 +110,7 @@ export const eliminarPresupuestoItem = async (
     );
   }
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
 };
 
 export const listarPresupuestoItems = async (
@@ -220,8 +222,8 @@ export const guardarFasePreparatoria = async (
     "Error al guardar la fase preparatoria"
   );
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteDetail(expedienteId);
+  revalidateExpedienteList();
   return result;
 };
 
@@ -245,7 +247,7 @@ export const actualizarFasePreparatoria = async (
     "Error al actualizar la fase preparatoria"
   );
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteDetail(expedienteId);
+  revalidateExpedienteList();
   return result;
 };

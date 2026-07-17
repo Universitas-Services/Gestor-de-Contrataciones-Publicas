@@ -3,13 +3,16 @@
 import { getServerToken } from "@/lib/auth/session";
 import { parseAdjudicacionApiResponse } from "@/lib/utils/adjudicacionMapper";
 import { parseContratoFormalizadoApiResponse } from "@/lib/utils/contratoMapper";
-import { revalidatePath } from "next/cache";
 import type {
   DatosBasicosFormValues,
   CronogramaFormValues,
   TipoContratacionBackend,
   ModalidadSeleccion,
 } from "@/lib/schemas/expedienteSchema";
+import {
+  revalidateExpedienteDetail,
+  revalidateExpedienteList,
+} from "@/lib/utils/expedienteRevalidate";
 
 /**
  * Servicio para el módulo de Expedientes (Elaboración de Expediente)
@@ -319,7 +322,7 @@ export const guardarCronograma = async (
     response,
     "Error al guardar el cronograma"
   );
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
   return result;
 };
 
@@ -408,7 +411,7 @@ export const eliminarExpediente = async (id: string): Promise<void> => {
     );
   }
 
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
 };
 
 // ─── Adjudicación (Fase 4) ───────────────────────────────────────────
@@ -490,7 +493,7 @@ export const crearAdjudicacion = async (
     return payload;
   }
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
   return parsed;
 };
 
@@ -525,7 +528,7 @@ export const editarAdjudicacion = async (
   const parsed = parseAdjudicacionApiResponse(json);
   if (!parsed) return payload;
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
   return parsed;
 };
 
@@ -632,8 +635,8 @@ export const guardarContratoFormalizado = async (
     return { ...payload, expedienteId };
   }
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
-  revalidatePath(`/elaboracion-expediente/${expedienteId}/contrato`);
+  revalidateExpedienteDetail(expedienteId);
+  revalidateExpedienteDetail(expedienteId, "contrato");
   return parsed;
 };
 
@@ -668,7 +671,7 @@ export const editarContratoFormalizado = async (
   const parsed = parseContratoFormalizadoApiResponse(json);
   if (!parsed) return { ...payload, expedienteId };
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
-  revalidatePath(`/elaboracion-expediente/${expedienteId}/contrato`);
+  revalidateExpedienteDetail(expedienteId);
+  revalidateExpedienteDetail(expedienteId, "contrato");
   return parsed;
 };
