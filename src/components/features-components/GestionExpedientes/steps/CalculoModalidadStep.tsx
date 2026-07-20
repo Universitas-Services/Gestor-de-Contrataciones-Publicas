@@ -192,34 +192,36 @@ export function CalculoModalidadStep({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200 items-stretch">
           <FormField
             control={form.control}
             name="tipoContratacion"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex h-full flex-col gap-0">
                 <FormLabel className="text-heading-dark font-bold text-sm">
                   Seleccione el tipo de contratación:
                 </FormLabel>
                 <p className="text-slate-500 italic text-xs mt-0.5 mb-2">
                   Artículos 118.1 LCP; 34 NORMAS DE CONTROL INTERNO SUNAI.
                 </p>
-                <FormControl>
-                  <FormDropdownSelect
-                    value={field.value ?? ""}
-                    onValueChange={(v) => {
-                      field.onChange(v);
-                      setDictamen(null);
-                    }}
-                    disabled={readOnly || isValidating}
-                    placeholder="seleccione una opción"
-                    options={TIPOS_CONTRATACION_OPTIONS.map((opt) => ({
-                      value: opt.value,
-                      label: opt.label,
-                    }))}
-                  />
-                </FormControl>
-                <FormMessage />
+                <div className="mt-auto space-y-1">
+                  <FormControl>
+                    <FormDropdownSelect
+                      value={field.value ?? ""}
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        setDictamen(null);
+                      }}
+                      disabled={readOnly || isValidating}
+                      placeholder="seleccione una opción"
+                      options={TIPOS_CONTRATACION_OPTIONS.map((opt) => ({
+                        value: opt.value,
+                        label: opt.label,
+                      }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />
@@ -228,7 +230,7 @@ export function CalculoModalidadStep({
             control={form.control}
             name="montoEntrada"
             render={({ field, fieldState }) => (
-              <FormItem>
+              <FormItem className="flex h-full flex-col gap-0">
                 <FormLabel className="text-heading-dark font-bold text-sm">
                   Ingrese el monto estimado de la contratación, incluyendo el Impuesto al Valor
                   Agregado (IVA).
@@ -237,23 +239,25 @@ export function CalculoModalidadStep({
                   Artículo 107.2 RLCP; 6 LCC; 38 (1 al 5 primer párrafo), 91.1.9.17.23.29 LOCGR; 15
                   Y 24 NORMAS DE CONTROL INTERNO SUNAI.
                 </p>
-                <FormControl>
-                  <CurrencyMoneyInput
-                    moneda={form.watch("monedaEntrada")}
-                    onMonedaChange={(moneda: MonedaEntrada) => {
-                      form.setValue("monedaEntrada", moneda);
-                      setDictamen(null);
-                    }}
-                    value={typeof field.value === "number" ? field.value : null}
-                    onValueChange={(num) => {
-                      field.onChange(num ?? undefined);
-                      setDictamen(null);
-                    }}
-                    disabled={readOnly || isValidating}
-                    aria-invalid={!!fieldState.error}
-                  />
-                </FormControl>
-                <FormMessage />
+                <div className="mt-auto space-y-1">
+                  <FormControl>
+                    <CurrencyMoneyInput
+                      moneda={form.watch("monedaEntrada")}
+                      onMonedaChange={(moneda: MonedaEntrada) => {
+                        form.setValue("monedaEntrada", moneda);
+                        setDictamen(null);
+                      }}
+                      value={typeof field.value === "number" ? field.value : null}
+                      onValueChange={(num) => {
+                        field.onChange(num ?? undefined);
+                        setDictamen(null);
+                      }}
+                      disabled={readOnly || isValidating}
+                      aria-invalid={!!fieldState.error}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />

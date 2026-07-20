@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Search,
   Eye,
+  Trash2,
   SlidersHorizontal,
   ArrowUpDown,
   ChevronLeft,
@@ -13,7 +14,6 @@ import {
   Plus,
   Loader2,
 } from "lucide-react";
-import { FaRegTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { obtenerExpedientes, eliminarExpediente } from "@/services/expedienteService";
 import type { ExpedienteListItem } from "@/services/expedienteService";
+import { getModalidadDisplayLabel } from "@/lib/modalidades/modalidadDisplay";
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -303,7 +304,9 @@ export function ExpedientesPanel({
                 <th className="px-4 py-3 font-semibold text-center">Modalidad</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Progreso</th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Fases</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acción</th>
+                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap w-[88px]">
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -453,11 +456,7 @@ function ExpedienteRow({
   const faseDotColor = FASE_DOT_COLORS[fase] || FASE_DOT_COLORS["Fase 1"];
 
   // Modalidad display from nested modalidad object
-  const modSeleccion = expediente.modalidad?.modalidadSeleccion;
-  const modalidadDisplay =
-    modSeleccion === "LICITACION_PUBLICA"
-      ? "Concurso Abierto, Acto Único Apertura Única"
-      : modSeleccion || "—";
+  const modalidadDisplay = getModalidadDisplayLabel(expediente.modalidad?.modalidadSeleccion);
 
   // Estilos diferenciados para expedientes ANULADOS
   const rowBase = isAnulado
@@ -487,13 +486,24 @@ function ExpedienteRow({
         {expediente.codigoNomenclatura}
       </td>
 
-      {/* Objeto del Contrato */}
+      {/* Objeto del Contrato — 1 línea + tooltip */}
       <td
-        className={`px-4 py-3 text-center break-words max-w-[200px] ${
+        className={`px-4 py-3 text-center max-w-[200px] ${
           isAnulado ? "text-slate-400" : "text-slate-600"
         }`}
       >
-        {expediente.descripcionObjeto}
+        {expediente.descripcionObjeto ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="block truncate cursor-default">{expediente.descripcionObjeto}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-sm text-left text-balance">
+              {expediente.descripcionObjeto}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          "—"
+        )}
       </td>
 
       {/* Tipo Badge – en gris si ANULADO */}
@@ -552,30 +562,34 @@ function ExpedienteRow({
       </td>
 
       {/* Acción – todas deshabilitadas si ANULADO */}
-      <td className="px-4 py-3 text-center">
-        <div className="flex items-center justify-center gap-3">
+      <td className="px-4 py-3 text-center whitespace-nowrap w-[88px]">
+        <div className="inline-flex items-center justify-center gap-2">
           {isAnulado ? (
             <>
-              <span className="text-slate-300 cursor-not-allowed">
-                <Eye className="w-4.5 h-4.5" />
+              <span className="inline-flex size-8 items-center justify-center text-slate-300 cursor-not-allowed">
+                <Eye className="size-4 shrink-0" />
               </span>
-              <span className="text-slate-300 cursor-not-allowed">
-                <FaRegTrashAlt className="w-4 h-4" />
+              <span className="inline-flex size-8 items-center justify-center text-slate-300 cursor-not-allowed">
+                <Trash2 className="size-4 shrink-0" />
               </span>
             </>
           ) : (
             <>
-              <Link href={`${basePath}/${expediente.id}`}>
-                <button className="text-slate-500 hover:text-navy transition-colors cursor-pointer">
-                  <Eye className="w-4.5 h-4.5" />
-                </button>
+              <Link
+                href={`${basePath}/${expediente.id}`}
+                className="inline-flex size-8 items-center justify-center text-slate-500 hover:text-navy transition-colors"
+                aria-label="Ver expediente"
+              >
+                <Eye className="size-4 shrink-0" />
               </Link>
               {!readOnly && (
                 <button
+                  type="button"
                   onClick={onDelete}
-                  className="text-red-400 hover:text-red-600 transition-colors cursor-pointer"
+                  className="inline-flex size-8 items-center justify-center text-red-400 hover:text-red-600 transition-colors cursor-pointer"
+                  aria-label="Eliminar expediente"
                 >
-                  <FaRegTrashAlt className="w-4 h-4" />
+                  <Trash2 className="size-4 shrink-0" />
                 </button>
               )}
             </>

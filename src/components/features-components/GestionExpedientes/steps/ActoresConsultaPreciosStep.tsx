@@ -219,29 +219,31 @@ export function ActoresConsultaPreciosStep({
   return (
     <Form {...form}>
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-8 gap-y-6 min-w-0">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-8 gap-y-6 min-w-0 items-stretch">
           <FormField
             control={form.control}
             name="autoridadId"
             render={() => (
-              <FormItem className="min-w-0">
+              <FormItem className="min-w-0 flex h-full flex-col gap-0">
                 <FormLabel className="text-heading-dark font-semibold font-inter text-sm">
                   Máxima Autoridad
                 </FormLabel>
-                <FormControl>
-                  <FormDropdownSelect
-                    value={autoridadRawValue || ""}
-                    onValueChange={handleAutoridadChange}
-                    disabled={readOnly}
-                    triggerClassName="h-10"
-                    options={autoridades.map((opt) => ({
-                      value: opt.value,
-                      label: opt.label,
-                      className: opt.esDelegado ? "pl-6 text-slate-500 italic" : undefined,
-                    }))}
-                  />
-                </FormControl>
-                <FormMessage />
+                <div className="mt-auto space-y-1 pt-1.5">
+                  <FormControl>
+                    <FormDropdownSelect
+                      value={autoridadRawValue || ""}
+                      onValueChange={handleAutoridadChange}
+                      disabled={readOnly}
+                      triggerClassName="h-10"
+                      options={autoridades.map((opt) => ({
+                        value: opt.value,
+                        label: opt.label,
+                        className: opt.esDelegado ? "pl-6 text-slate-500 italic" : undefined,
+                      }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />
@@ -250,23 +252,25 @@ export function ActoresConsultaPreciosStep({
             control={form.control}
             name="unidadUsuariaId"
             render={({ field }) => (
-              <FormItem className="min-w-0">
+              <FormItem className="min-w-0 flex h-full flex-col gap-0">
                 <FormLabel className="text-heading-dark font-semibold font-inter text-sm">
                   Unidad Usuaria
                 </FormLabel>
-                <FormControl>
-                  <FormDropdownSelect
-                    value={field.value || ""}
-                    onValueChange={field.onChange}
-                    disabled={readOnly}
-                    triggerClassName="h-10"
-                    options={unidadesUsuarias.map((opt) => ({
-                      value: opt.value,
-                      label: opt.label,
-                    }))}
-                  />
-                </FormControl>
-                <FormMessage />
+                <div className="mt-auto space-y-1 pt-1.5">
+                  <FormControl>
+                    <FormDropdownSelect
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      disabled={readOnly}
+                      triggerClassName="h-10"
+                      options={unidadesUsuarias.map((opt) => ({
+                        value: opt.value,
+                        label: opt.label,
+                      }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />
@@ -275,26 +279,28 @@ export function ActoresConsultaPreciosStep({
             control={form.control}
             name="unidadContratanteId"
             render={({ field }) => (
-              <FormItem className="min-w-0">
+              <FormItem className="min-w-0 flex h-full flex-col gap-0">
                 <FormLabel className="text-heading-dark font-semibold font-inter text-sm">
                   Unidad Contratante
                 </FormLabel>
-                <p className="text-slate-500 italic text-xs mt-0 mb-1.5 font-inter">
+                <p className="text-slate-500 italic text-xs mt-0.5 font-inter">
                   En Consulta de Precios, esta unidad invita, recibe y evalúa inicialmente.
                 </p>
-                <FormControl>
-                  <FormDropdownSelect
-                    value={field.value || ""}
-                    onValueChange={field.onChange}
-                    disabled={readOnly}
-                    triggerClassName="h-10"
-                    options={unidadesContratantes.map((opt) => ({
-                      value: opt.value,
-                      label: opt.label,
-                    }))}
-                  />
-                </FormControl>
-                <FormMessage />
+                <div className="mt-auto space-y-1 pt-1.5">
+                  <FormControl>
+                    <FormDropdownSelect
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      disabled={readOnly}
+                      triggerClassName="h-10"
+                      options={unidadesContratantes.map((opt) => ({
+                        value: opt.value,
+                        label: opt.label,
+                      }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />
@@ -303,8 +309,8 @@ export function ActoresConsultaPreciosStep({
             control={form.control}
             name="comisionId"
             render={({ field }) => (
-              <FormItem className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap min-h-[20px]">
+              <FormItem className="min-w-0 flex h-full flex-col gap-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <FormLabel className="text-heading-dark font-semibold font-inter text-sm">
                     Comisión de Contrataciones
                   </FormLabel>
@@ -319,30 +325,32 @@ export function ActoresConsultaPreciosStep({
                     </span>
                   )}
                 </div>
-                <p className="text-slate-500 italic text-xs mt-0 mb-1.5 font-inter">
+                <p className="text-slate-500 italic text-xs mt-0.5 font-inter">
                   Artículos 16, numeral 10 y 111 del Reglamento de la LCP.
                 </p>
-                {requiereComision ? (
-                  <FormControl>
-                    <FormDropdownSelect
-                      value={field.value || ""}
-                      onValueChange={field.onChange}
-                      disabled={readOnly}
-                      triggerClassName="h-10 border-navy/50"
-                      options={comisiones.map((opt) => ({
-                        value: opt.value,
-                        label: opt.label,
-                      }))}
-                    />
-                  </FormControl>
-                ) : (
-                  <div className="w-full min-w-0 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 h-10 flex items-center">
-                    <p className="text-sm text-slate-400 font-inter truncate">
-                      Campo no aplicable para este monto
-                    </p>
-                  </div>
-                )}
-                <FormMessage />
+                <div className="mt-auto space-y-1 pt-1.5">
+                  {requiereComision ? (
+                    <FormControl>
+                      <FormDropdownSelect
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        disabled={readOnly}
+                        triggerClassName="h-10 border-navy/50"
+                        options={comisiones.map((opt) => ({
+                          value: opt.value,
+                          label: opt.label,
+                        }))}
+                      />
+                    </FormControl>
+                  ) : (
+                    <div className="w-full min-w-0 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 h-10 flex items-center">
+                      <p className="text-sm text-slate-400 font-inter truncate">
+                        Campo no aplicable para este monto
+                      </p>
+                    </div>
+                  )}
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />
@@ -351,50 +359,52 @@ export function ActoresConsultaPreciosStep({
             control={form.control}
             name="fecEnvioInvitacionCp"
             render={({ field }) => (
-              <FormItem className="min-w-0 md:col-span-2 md:max-w-[calc(50%-1rem)]">
+              <FormItem className="min-w-0 md:col-span-2 md:max-w-[calc(50%-1rem)] flex h-full flex-col gap-0">
                 <FormLabel className="text-heading-dark font-semibold font-inter text-sm">
                   Fecha prevista para el envío de las Invitaciones a presentar oferta
                 </FormLabel>
-                <p className="text-slate-500 italic text-xs mt-0 mb-1.5 font-inter">
+                <p className="text-slate-500 italic text-xs mt-0.5 font-inter">
                   Artículo 113 del Reglamento de la Ley de Contrataciones Públicas.
                 </p>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={readOnly}
-                        className={cn(
-                          "w-full h-10 justify-between text-left font-normal border-slate-300 rounded-md px-3",
-                          !field.value ? "text-slate-400" : "text-heading-dark"
-                        )}
-                      >
-                        {field.value
-                          ? format(new Date(field.value + "T00:00:00"), "dd/MM/yyyy")
-                          : "Seleccione una fecha"}
-                        <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <BusinessDayCalendar
-                      mode="single"
-                      captionLayout="dropdown"
-                      fromYear={feriadosRange.fromYear}
-                      toYear={feriadosRange.toYear}
-                      selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
-                      onSelect={(date) => {
-                        if (date) field.onChange(format(date, "yyyy-MM-dd"));
-                      }}
-                      nonWorkingDays={nonWorkingDays}
-                      feriadoDescriptions={feriadoDescriptions}
-                      locale={es}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
+                <div className="mt-auto space-y-1 pt-1.5">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={readOnly}
+                          className={cn(
+                            "w-full h-10 justify-between text-left font-normal border-slate-300 rounded-md px-3",
+                            !field.value ? "text-slate-400" : "text-heading-dark"
+                          )}
+                        >
+                          {field.value
+                            ? format(new Date(field.value + "T00:00:00"), "dd/MM/yyyy")
+                            : "Seleccione una fecha"}
+                          <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <BusinessDayCalendar
+                        mode="single"
+                        captionLayout="dropdown"
+                        fromYear={feriadosRange.fromYear}
+                        toYear={feriadosRange.toYear}
+                        selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
+                        onSelect={(date) => {
+                          if (date) field.onChange(format(date, "yyyy-MM-dd"));
+                        }}
+                        nonWorkingDays={nonWorkingDays}
+                        feriadoDescriptions={feriadoDescriptions}
+                        locale={es}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />

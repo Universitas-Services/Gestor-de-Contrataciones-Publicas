@@ -236,7 +236,7 @@ export function CrearExpedienteWizard({
           tipoContratacion: formData.tipoContratacion,
           montoEstimadoBs: formData.montoEstimadoBs,
           montoEstimadoDolar: analisisData?.montoDolares ?? undefined,
-          valorUcauBase: analisisData?.valorUcau ?? undefined,
+          valorUcauBase: analisisData?.montoUCAU ?? undefined,
           modalidadSeleccion: "LICITACION_PUBLICA",
         });
         goToStep(3);
@@ -244,7 +244,7 @@ export function CrearExpedienteWizard({
         // Modo creación: POST para crear el borrador
         const result = await crearExpedienteBorrador(
           formData,
-          analisisData?.valorUcau ?? undefined,
+          analisisData?.montoUCAU ?? undefined,
           analisisData?.montoDolares ?? undefined
         );
 
@@ -283,7 +283,7 @@ export function CrearExpedienteWizard({
         tipoContratacion: fd.tipoContratacion,
         montoEstimadoBs: fd.montoEstimadoBs,
         montoEstimadoDolar: analisisData?.montoDolares ?? undefined,
-        valorUcauBase: analisisData?.valorUcau ?? undefined,
+        valorUcauBase: analisisData?.montoUCAU ?? undefined,
         modalidadSeleccion: "LICITACION_PUBLICA",
         autoridadId: actores.autoridadId,
         comisionId: actores.comisionId,

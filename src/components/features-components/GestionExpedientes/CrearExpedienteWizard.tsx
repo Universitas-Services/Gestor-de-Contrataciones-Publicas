@@ -60,10 +60,30 @@ import {
 } from "@/lib/modalidades/cronogramaConsultaPrecios";
 import { cronogramaCpToEvents, LEGEND_ITEMS_CP } from "@/lib/utils/cronogramaEventsCp";
 import { calcularFechasSugeridasMe } from "@/lib/modalidades/cronogramaModalidadesExcluidas";
+import {
+  apiToCronogramaCc,
+  apiToCronogramaCd,
+  apiToCronogramaCp,
+  apiToCronogramaMe,
+  cronogramaCcToPut,
+  cronogramaCdToPut,
+  cronogramaCpToPut,
+  cronogramaMeToPut,
+} from "@/lib/modalidades/mapCronogramaApi";
+import { requiereComisionPorUmbral } from "@/lib/modalidades/requiereComisionPorUmbral";
+import { requiereComisionConsultaPrecios } from "@/lib/modalidades/requiereComisionConsultaPrecios";
 import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
 import {
+  crearBorradorConcursoCerrado,
+  crearBorradorConsultaPrecios,
+  crearBorradorContratacionDirecta,
+  crearBorradorModalidadExcluida,
   crearExpedienteBorrador,
   editarExpediente,
+  generarCronogramaConcursoCerrado,
+  generarCronogramaConsultaPrecios,
+  generarCronogramaContratacionDirecta,
+  generarCronogramaModalidadExcluida,
   guardarCronograma,
   obtenerExpediente,
 } from "@/services/expedienteService";
@@ -308,7 +328,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
         tipoContratacion: formData.tipoContratacion,
         montoEstimadoBs: formData.montoEstimadoBs,
         montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
-        valorUcauBase: dictamenPaso1.valorUcau,
+        valorUcauBase: dictamenPaso1.valorUcauBase,
         modalidadSeleccion: "LICITACION_PUBLICA",
       });
       return expedienteId;
@@ -316,7 +336,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
 
     const result = await crearExpedienteBorrador(
       formData,
-      dictamenPaso1.valorUcau,
+      dictamenPaso1.valorUcauBase,
       dictamenPaso1.montoEstimadoDolar
     );
 
@@ -355,10 +375,43 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
     goToStep(3);
   };
 
-  const handlePaso2ConcursoCerradoComplete = (data: DetallesConcursoCerradoFormValues) => {
+  const handlePaso2ConcursoCerradoComplete = async (data: DetallesConcursoCerradoFormValues) => {
     if (readOnly) return;
+    if (!dictamenPaso1) {
+      toast.error("Faltan datos del análisis de modalidad.");
+      return;
+    }
     setDetallesConcursoCerrado(data);
-    goToStep(3);
+    setIsLoading(true);
+    try {
+      if (!expedienteId) {
+        const result = await crearBorradorConcursoCerrado({
+          descripcionObjeto: data.descObjetoContratacionCc,
+          codigoNomenclatura: data.codNomenclaturaProcesoCc,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+        });
+        if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
+        setExpedienteId(result.id);
+      } else {
+        await editarExpediente(expedienteId, {
+          descripcionObjeto: data.descObjetoContratacionCc,
+          codigoNomenclatura: data.codNomenclaturaProcesoCc,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+        });
+      }
+      toast.success("Borrador de Concurso Cerrado creado exitosamente");
+      goToStep(3);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al crear el borrador");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePaso2ConsultaPreciosComplete = (data: DetallesConsultaPreciosFormValues) => {
@@ -367,74 +420,290 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
     goToStep(3);
   };
 
-  const handlePaso2ModalidadesExcluidasComplete = (
+  const handlePaso2ModalidadesExcluidasComplete = async (
     data: DetallesModalidadesExcluidasFormValues
   ) => {
     if (readOnly) return;
+    if (!dictamenPaso1) {
+      toast.error("Faltan datos del análisis de modalidad.");
+      return;
+    }
     setDetallesModalidadesExcluidas(data);
-    goToStep(3);
+    setIsLoading(true);
+    try {
+      if (!expedienteId) {
+        const result = await crearBorradorModalidadExcluida({
+          descripcionObjeto: data.descObjetoContratacionMe,
+          codigoNomenclatura: data.codNomenclaturaProcesoMe,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+        });
+        if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
+        setExpedienteId(result.id);
+      } else {
+        await editarExpediente(expedienteId, {
+          descripcionObjeto: data.descObjetoContratacionMe,
+          codigoNomenclatura: data.codNomenclaturaProcesoMe,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+        });
+      }
+      toast.success("Borrador de Modalidad Excluida creado exitosamente");
+      goToStep(3);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al crear el borrador");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handlePaso3ContratacionDirectaComplete = (data: ActoresContratacionDirectaFormValues) => {
+  const handlePaso3ContratacionDirectaComplete = async (
+    data: ActoresContratacionDirectaFormValues
+  ) => {
     if (readOnly) return;
+    if (!dictamenPaso1 || !detallesContratacionDirecta) {
+      toast.error("Faltan datos del procedimiento de Contratación Directa.");
+      return;
+    }
     setActoresContratacionDirecta(data);
+    setIsLoading(true);
 
-    const fechas = calcularFechasSugeridasCd(data.fecEnvioInvitacionCd, nonWorkingDays);
-    setCronogramaCd(fechas);
-    setCalendarEvents(cronogramaCdToEvents(fechas));
+    try {
+      let id = expedienteId;
+      if (!id) {
+        const result = await crearBorradorContratacionDirecta({
+          descripcionObjeto: detallesContratacionDirecta.descObjetoContratacionCd,
+          codigoNomenclatura: detallesContratacionDirecta.codNomenclaturaProcesoCd,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+          numeralCausalProcedenciaCd: detallesContratacionDirecta.numeralCausalProcedenciaCd,
+          causalProcedenciaCd: detallesContratacionDirecta.causalProcedenciaCd,
+          unidadContratanteId: data.unidadContratanteId,
+        });
+        if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
+        id = result.id;
+        setExpedienteId(id);
+      }
 
-    const fechaInicio = new Date(`${data.fecEnvioInvitacionCd}T00:00:00`);
-    setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
+      const patch: Parameters<typeof editarExpediente>[1] = {
+        autoridadId: data.autoridadId,
+        unidadUsuariaId: data.unidadUsuariaId,
+        autoridadFirmaComoDelegado: data.autoridadFirmaComoDelegado,
+      };
+      if (
+        requiereComisionPorUmbral(dictamenPaso1.tipoContratacion, dictamenPaso1.valorUcauBase) &&
+        data.comisionId
+      ) {
+        patch.comisionId = data.comisionId;
+      }
+      await editarExpediente(id, patch);
 
-    goToStep(4);
+      let fechas = calcularFechasSugeridasCd(data.fecEnvioInvitacionCd, nonWorkingDays);
+      try {
+        const api = await generarCronogramaContratacionDirecta({
+          fechaEnvioInvitacion: data.fecEnvioInvitacionCd,
+        });
+        fechas = apiToCronogramaCd(api);
+      } catch {
+        toast.warning("No se pudo obtener el cronograma del servidor; se usó el cálculo local.");
+      }
+
+      setCronogramaCd(fechas);
+      setCalendarEvents(cronogramaCdToEvents(fechas));
+      const fechaInicio = new Date(`${data.fecEnvioInvitacionCd}T00:00:00`);
+      setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
+      goToStep(4);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar actores");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handlePaso3ConcursoCerradoComplete = (data: ActoresConcursoCerradoFormValues) => {
+  const handlePaso3ConcursoCerradoComplete = async (data: ActoresConcursoCerradoFormValues) => {
     if (readOnly) return;
-    if (!dictamenPaso1) return;
+    if (!dictamenPaso1 || !detallesConcursoCerrado) {
+      toast.error("Faltan datos del procedimiento de Concurso Cerrado.");
+      return;
+    }
     setActoresConcursoCerrado(data);
+    setIsLoading(true);
 
-    const fechas = calcularFechasSugeridasCc(
-      data.fecEnvioInvitacionCc,
-      dictamenPaso1.tipoContratacion,
-      nonWorkingDays
-    );
-    setCronogramaCc(fechas);
-    setCalendarEvents(cronogramaCcToEvents(fechas));
+    try {
+      let id = expedienteId;
+      if (!id) {
+        const result = await crearBorradorConcursoCerrado({
+          descripcionObjeto: detallesConcursoCerrado.descObjetoContratacionCc,
+          codigoNomenclatura: detallesConcursoCerrado.codNomenclaturaProcesoCc,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+        });
+        if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
+        id = result.id;
+        setExpedienteId(id);
+      }
 
-    const fechaInicio = new Date(`${data.fecEnvioInvitacionCc}T00:00:00`);
-    setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
+      await editarExpediente(id, {
+        autoridadId: data.autoridadId,
+        comisionId: data.comisionId,
+        unidadUsuariaId: data.unidadUsuariaId,
+        autoridadFirmaComoDelegado: data.autoridadFirmaComoDelegado,
+      });
 
-    goToStep(4);
+      let fechas = calcularFechasSugeridasCc(
+        data.fecEnvioInvitacionCc,
+        dictamenPaso1.tipoContratacion,
+        nonWorkingDays
+      );
+      try {
+        const api = await generarCronogramaConcursoCerrado({
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          fechaEnvioInvitacion: data.fecEnvioInvitacionCc,
+        });
+        fechas = apiToCronogramaCc(api);
+      } catch {
+        toast.warning("No se pudo obtener el cronograma del servidor; se usó el cálculo local.");
+      }
+
+      setCronogramaCc(fechas);
+      setCalendarEvents(cronogramaCcToEvents(fechas));
+      const fechaInicio = new Date(`${data.fecEnvioInvitacionCc}T00:00:00`);
+      setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
+      goToStep(4);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar actores");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handlePaso3ConsultaPreciosComplete = (data: ActoresConsultaPreciosFormValues) => {
+  const handlePaso3ConsultaPreciosComplete = async (data: ActoresConsultaPreciosFormValues) => {
     if (readOnly) return;
-    if (!dictamenPaso1) return;
+    if (!dictamenPaso1 || !detallesConsultaPrecios) {
+      toast.error("Faltan datos del procedimiento de Consulta de Precios.");
+      return;
+    }
     setActoresConsultaPrecios(data);
+    setIsLoading(true);
 
-    const fechas = calcularFechasSugeridasCp(
-      data.fecEnvioInvitacionCp,
-      dictamenPaso1.tipoContratacion,
-      nonWorkingDays
-    );
-    setCronogramaCp(fechas);
-    setCalendarEvents(cronogramaCpToEvents(fechas));
+    try {
+      let id = expedienteId;
+      if (!id) {
+        const result = await crearBorradorConsultaPrecios({
+          descripcionObjeto: detallesConsultaPrecios.descObjetoContratacionCp,
+          codigoNomenclatura: detallesConsultaPrecios.codNomenclaturaProcesoCp,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+          unidadContratanteId: data.unidadContratanteId,
+        });
+        if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
+        id = result.id;
+        setExpedienteId(id);
+      }
 
-    const fechaInicio = new Date(`${data.fecEnvioInvitacionCp}T00:00:00`);
-    setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
+      const patch: Parameters<typeof editarExpediente>[1] = {
+        autoridadId: data.autoridadId,
+        unidadUsuariaId: data.unidadUsuariaId,
+        autoridadFirmaComoDelegado: data.autoridadFirmaComoDelegado,
+      };
+      if (
+        requiereComisionConsultaPrecios(
+          dictamenPaso1.tipoContratacion,
+          dictamenPaso1.valorUcauBase
+        ) &&
+        data.comisionId
+      ) {
+        patch.comisionId = data.comisionId;
+      }
+      await editarExpediente(id, patch);
 
-    goToStep(4);
+      let fechas = calcularFechasSugeridasCp(
+        data.fecEnvioInvitacionCp,
+        dictamenPaso1.tipoContratacion,
+        nonWorkingDays
+      );
+      try {
+        const api = await generarCronogramaConsultaPrecios({
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          fechaEnvioInvitacion: data.fecEnvioInvitacionCp,
+        });
+        fechas = apiToCronogramaCp(api);
+      } catch {
+        toast.warning("No se pudo obtener el cronograma del servidor; se usó el cálculo local.");
+      }
+
+      setCronogramaCp(fechas);
+      setCalendarEvents(cronogramaCpToEvents(fechas));
+      const fechaInicio = new Date(`${data.fecEnvioInvitacionCp}T00:00:00`);
+      setCalendarInitialMonth(new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1));
+      goToStep(4);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar actores");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handlePaso3ModalidadesExcluidasComplete = (data: ActoresModalidadesExcluidasFormValues) => {
+  const handlePaso3ModalidadesExcluidasComplete = async (
+    data: ActoresModalidadesExcluidasFormValues
+  ) => {
     if (readOnly) return;
+    if (!dictamenPaso1 || !detallesModalidadesExcluidas) {
+      toast.error("Faltan datos del procedimiento de Modalidades Excluidas.");
+      return;
+    }
     setActoresModalidadesExcluidas(data);
+    setIsLoading(true);
 
-    const fechas = calcularFechasSugeridasMe(data.fecInicioProcedimientoMe, nonWorkingDays);
-    setCronogramaMe(fechas);
+    try {
+      let id = expedienteId;
+      if (!id) {
+        const result = await crearBorradorModalidadExcluida({
+          descripcionObjeto: detallesModalidadesExcluidas.descObjetoContratacionMe,
+          codigoNomenclatura: detallesModalidadesExcluidas.codNomenclaturaProcesoMe,
+          tipoContratacion: dictamenPaso1.tipoContratacion,
+          montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
+          montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
+          valorUcauBase: dictamenPaso1.valorUcauBase,
+        });
+        if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
+        id = result.id;
+        setExpedienteId(id);
+      }
 
-    goToStep(4);
+      await editarExpediente(id, {
+        autoridadId: data.autoridadId,
+        unidadUsuariaId: data.unidadUsuariaId,
+        autoridadFirmaComoDelegado: data.autoridadFirmaComoDelegado,
+      });
+
+      let fechas = calcularFechasSugeridasMe(data.fecInicioProcedimientoMe, nonWorkingDays);
+      try {
+        const api = await generarCronogramaModalidadExcluida({
+          fechaInicioProcedimiento: data.fecInicioProcedimientoMe,
+        });
+        fechas = apiToCronogramaMe(api);
+      } catch {
+        toast.warning("No se pudo obtener el cronograma del servidor; se usó el cálculo local.");
+      }
+
+      setCronogramaMe(fechas);
+      goToStep(4);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar actores");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePaso3Complete = async (data: ConfiguracionActoresFormValues) => {
@@ -464,7 +733,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
         tipoContratacion: dictamenPaso1.tipoContratacion,
         montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
         montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
-        valorUcauBase: dictamenPaso1.valorUcau,
+        valorUcauBase: dictamenPaso1.valorUcauBase,
         modalidadSeleccion: "LICITACION_PUBLICA",
         autoridadId: data.autoridadId,
         comisionId: data.comisionId,
@@ -614,89 +883,104 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
     }
   };
 
-  const handleFinishCd = () => {
+  const handleFinishCd = async () => {
     if (readOnly) return;
-    if (!detallesContratacionDirecta || !cronogramaCd) {
+    if (!expedienteId || !dictamenPaso1 || !detallesContratacionDirecta || !cronogramaCd) {
       toast.error("Faltan datos del procedimiento de Contratación Directa.");
       return;
     }
 
     setIsLoading(true);
-    const cod = detallesContratacionDirecta.codNomenclaturaProcesoCd;
-    const numeral = detallesContratacionDirecta.numeralCausalProcedenciaCd;
-
-    toast.success("¡Expediente de Contratación Directa creado!", {
-      description: `La Ficha Técnica para el procedimiento ${cod} ha sido generada bajo la causal del numeral ${numeral}. Los plazos y actores han sido registrados.`,
-      duration: 2500,
-    });
-
-    window.setTimeout(() => {
+    try {
+      await guardarCronograma(
+        expedienteId,
+        cronogramaCdToPut(cronogramaCd, dictamenPaso1.tipoContratacion, nonWorkingDays)
+      );
+      const cod = detallesContratacionDirecta.codNomenclaturaProcesoCd;
+      toast.success("¡Expediente de Contratación Directa creado!", {
+        description: `La Ficha Técnica para el procedimiento ${cod} ha sido generada. Los plazos y actores han sido registrados.`,
+      });
+      router.push(`/gestion-expedientes/${expedienteId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
+    } finally {
       setIsLoading(false);
-      router.push("/gestion-expedientes");
-    }, 2000);
+    }
   };
 
-  const handleFinishCc = () => {
+  const handleFinishCc = async () => {
     if (readOnly) return;
-    if (!detallesConcursoCerrado || !cronogramaCc) {
+    if (!expedienteId || !dictamenPaso1 || !detallesConcursoCerrado || !cronogramaCc) {
       toast.error("Faltan datos del procedimiento de Concurso Cerrado.");
       return;
     }
 
     setIsLoading(true);
-    const cod = detallesConcursoCerrado.codNomenclaturaProcesoCc;
-
-    toast.success("¡Expediente creado exitosamente!", {
-      description: `La Ficha técnica para el procedimiento ${cod} ha sido generada. Los plazos legales y actores han sido registrados.`,
-      duration: 2500,
-    });
-
-    window.setTimeout(() => {
+    try {
+      await guardarCronograma(
+        expedienteId,
+        cronogramaCcToPut(cronogramaCc, dictamenPaso1.tipoContratacion, nonWorkingDays)
+      );
+      const cod = detallesConcursoCerrado.codNomenclaturaProcesoCc;
+      toast.success("¡Expediente creado exitosamente!", {
+        description: `La Ficha técnica para el procedimiento ${cod} ha sido generada. Los plazos legales y actores han sido registrados.`,
+      });
+      router.push(`/gestion-expedientes/${expedienteId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
+    } finally {
       setIsLoading(false);
-      router.push("/gestion-expedientes");
-    }, 2000);
+    }
   };
 
-  const handleFinishCp = () => {
+  const handleFinishCp = async () => {
     if (readOnly) return;
-    if (!detallesConsultaPrecios || !cronogramaCp) {
+    if (!expedienteId || !dictamenPaso1 || !detallesConsultaPrecios || !cronogramaCp) {
       toast.error("Faltan datos del procedimiento de Consulta de Precios.");
       return;
     }
 
     setIsLoading(true);
-    const cod = detallesConsultaPrecios.codNomenclaturaProcesoCp;
-
-    toast.success("¡Expediente creado exitosamente!", {
-      description: `La Ficha técnica para el procedimiento ${cod} ha sido generada. Los plazos legales y actores han sido registrados.`,
-      duration: 2500,
-    });
-
-    window.setTimeout(() => {
+    try {
+      await guardarCronograma(
+        expedienteId,
+        cronogramaCpToPut(cronogramaCp, dictamenPaso1.tipoContratacion, nonWorkingDays)
+      );
+      const cod = detallesConsultaPrecios.codNomenclaturaProcesoCp;
+      toast.success("¡Expediente creado exitosamente!", {
+        description: `La Ficha técnica para el procedimiento ${cod} ha sido generada. Los plazos legales y actores han sido registrados.`,
+      });
+      router.push(`/gestion-expedientes/${expedienteId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
+    } finally {
       setIsLoading(false);
-      router.push("/gestion-expedientes");
-    }, 2000);
+    }
   };
 
-  const handleFinishMe = () => {
+  const handleFinishMe = async () => {
     if (readOnly) return;
-    if (!detallesModalidadesExcluidas || !cronogramaMe) {
+    if (!expedienteId || !dictamenPaso1 || !detallesModalidadesExcluidas || !cronogramaMe) {
       toast.error("Faltan datos del procedimiento de Modalidades Excluidas.");
       return;
     }
 
     setIsLoading(true);
-    const cod = detallesModalidadesExcluidas.codNomenclaturaProcesoMe;
-
-    toast.success("¡Expediente creado exitosamente!", {
-      description: `La Ficha técnica para el procedimiento ${cod} ha sido generada. Los plazos legales y actores han sido registrados.`,
-      duration: 2500,
-    });
-
-    window.setTimeout(() => {
+    try {
+      await guardarCronograma(
+        expedienteId,
+        cronogramaMeToPut(cronogramaMe, dictamenPaso1.tipoContratacion, nonWorkingDays)
+      );
+      const cod = detallesModalidadesExcluidas.codNomenclaturaProcesoMe;
+      toast.success("¡Expediente creado exitosamente!", {
+        description: `La Ficha técnica para el procedimiento ${cod} ha sido generada. Los plazos legales y actores han sido registrados.`,
+      });
+      router.push(`/gestion-expedientes/${expedienteId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
+    } finally {
       setIsLoading(false);
-      router.push("/gestion-expedientes");
-    }, 2000);
+    }
   };
 
   return (
@@ -741,7 +1025,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
               initialValues={detallesConcursoCerrado}
               onBack={() => goToStep(1)}
               onNext={handlePaso2ConcursoCerradoComplete}
-              readOnly={readOnly}
+              readOnly={readOnly || isLoading}
             />
           ) : isConsultaPrecios ? (
             <DetallesConsultaPreciosStep
@@ -755,7 +1039,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
               initialValues={detallesModalidadesExcluidas}
               onBack={() => goToStep(1)}
               onNext={handlePaso2ModalidadesExcluidasComplete}
-              readOnly={readOnly}
+              readOnly={readOnly || isLoading}
             />
           ) : (
             <PasoStubStep
@@ -780,14 +1064,14 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
               initialValues={actoresContratacionDirecta}
               onBack={() => goToStep(2)}
               onNext={handlePaso3ContratacionDirectaComplete}
-              readOnly={readOnly}
+              readOnly={readOnly || isLoading}
             />
           ) : isConcursoCerrado ? (
             <ActoresConcursoCerradoStep
               initialValues={actoresConcursoCerrado}
               onBack={() => goToStep(2)}
               onNext={handlePaso3ConcursoCerradoComplete}
-              readOnly={readOnly}
+              readOnly={readOnly || isLoading}
             />
           ) : isConsultaPrecios && dictamenPaso1 ? (
             <ActoresConsultaPreciosStep
@@ -796,14 +1080,14 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
               initialValues={actoresConsultaPrecios}
               onBack={() => goToStep(2)}
               onNext={handlePaso3ConsultaPreciosComplete}
-              readOnly={readOnly}
+              readOnly={readOnly || isLoading}
             />
           ) : isModalidadesExcluidas ? (
             <ActoresModalidadesExcluidasStep
               initialValues={actoresModalidadesExcluidas}
               onBack={() => goToStep(2)}
               onNext={handlePaso3ModalidadesExcluidasComplete}
-              readOnly={readOnly}
+              readOnly={readOnly || isLoading}
             />
           ) : (
             <PasoStubStep

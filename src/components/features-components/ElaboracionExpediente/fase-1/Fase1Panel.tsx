@@ -13,12 +13,13 @@ import {
   IoReceiptOutline,
 } from "react-icons/io5";
 import { IoMdWarning } from "react-icons/io";
-import { Settings2 } from "lucide-react";
+import { Settings2, Megaphone, Scale, ClipboardList, Clock } from "lucide-react";
 
 import type {
   ProductoItemFormInputValues,
   ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
+import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import {
   actualizarPresupuestoItem,
   crearPresupuestoItem,
@@ -63,6 +64,8 @@ interface Fase1PanelProps {
   expedienteId: string;
   fase1Creada?: boolean;
   readOnly?: boolean;
+  /** Reservado: labels dinámicos por tipo (opcional). */
+  tipoContratacion?: TipoContratacionBackend;
 }
 
 interface Fase1DocumentoConfig {
@@ -144,111 +147,229 @@ function toProductoItemFormInputValues(
   };
 }
 
-function EmptyText({
-  children,
-  minHeightClassName = "min-h-[2.5rem]",
-}: {
-  children: ReactNode;
-  minHeightClassName?: string;
-}) {
+function EmptyText({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const text = typeof children === "string" ? children.trim() : children;
+  const isEmpty = text == null || text === "";
   return (
-    <p className={`line-clamp-3 text-[12px] leading-5 text-slate-500 ${minHeightClassName}`}>
+    <p className={`text-sm leading-relaxed text-heading-dark font-inter ${className}`}>
+      {isEmpty ? "—" : text}
+    </p>
+  );
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-inter">
       {children}
     </p>
   );
 }
 
-function Fase1TechnicalCardSkeleton() {
+function Fase1CardHeader({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <div className="space-y-6">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <section key={`technical-skeleton-${index}`} className="space-y-2">
-          <Skeleton className="h-6 w-56" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-[96%]" />
-            <Skeleton className="h-4 w-[88%]" />
+    <CardHeader className="space-y-3 pb-4">
+      <CardTitle className="flex items-center gap-2 text-[16px] font-bold text-color-titulos font-inter">
+        {icon}
+        {title}
+      </CardTitle>
+      <div className="h-px w-full bg-slate-100" />
+    </CardHeader>
+  );
+}
+
+function formatBsAmount(value: number | string | undefined | null): string {
+  const num = typeof value === "number" ? value : parseFloat(String(value ?? "").replace(",", "."));
+  if (!Number.isFinite(num)) return "—";
+  return num.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function Fase1CardsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="border border-slate-200 shadow-sm">
+            <CardContent className="space-y-4 p-6">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[90%]" />
+              <Skeleton className="h-4 w-[70%]" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Card key={i} className="border border-slate-200 shadow-sm">
+            <CardContent className="space-y-4 p-6">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[80%]" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DefinicionTecnicaCard({ fase }: { fase: FasePreparatoriaDetalleResponse }) {
+  return (
+    <Card className="border border-slate-200 shadow-sm h-full">
+      <Fase1CardHeader
+        icon={<Settings2 className="h-4 w-4 text-slate-400" />}
+        title="1. Definición técnica"
+      />
+      <CardContent className="space-y-5">
+        <section className="space-y-1.5">
+          <FieldLabel>Autorización de inicio</FieldLabel>
+          <EmptyText>{fase.datosActoAutorizacionInicio}</EmptyText>
+        </section>
+        <section className="space-y-1.5">
+          <FieldLabel>Características técnicas</FieldLabel>
+          <EmptyText className="whitespace-pre-wrap">{fase.detallesTecnicosCalidad}</EmptyText>
+        </section>
+        <section className="space-y-1.5">
+          <FieldLabel>Responsabilidad social</FieldLabel>
+          <Badge
+            variant="outline"
+            className={
+              fase.origenCrsRegistro
+                ? "border-slate-200 bg-slate-100 px-3 py-1 text-slate-700 font-medium"
+                : "border-slate-200 bg-white px-3 py-1 text-slate-500"
+            }
+          >
+            {fase.origenCrsRegistro ? "Sí aplica (Registro Institucional)" : "No aplica"}
+          </Badge>
+        </section>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LogisticaLlamadoCard({ fase }: { fase: FasePreparatoriaDetalleResponse }) {
+  const tieneCosto = fase.pliegoGratuito === false;
+
+  return (
+    <Card className="border border-slate-200 shadow-sm h-full">
+      <Fase1CardHeader
+        icon={<Megaphone className="h-4 w-4 text-slate-400" />}
+        title="2. Logística del llamado"
+      />
+      <CardContent className="space-y-5">
+        <section className="space-y-1.5">
+          <FieldLabel>Recepción y apertura</FieldLabel>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-slate-400 shrink-0" />
+            <EmptyText>{fase.horaActoRecepAper}</EmptyText>
           </div>
         </section>
-      ))}
+        <section className="space-y-1.5">
+          <FieldLabel>Disponibilidad del pliego</FieldLabel>
+          <EmptyText>{fase.direccionRetiroPliego}</EmptyText>
+          {fase.horarioRetiroPliego ? (
+            <p className="text-sm text-slate-600 font-inter">({fase.horarioRetiroPliego})</p>
+          ) : null}
+        </section>
+        {tieneCosto ? (
+          <div className="rounded-lg border border-sky-100 bg-sky-50/80 px-4 py-3 space-y-1">
+            <p className="text-sm font-bold uppercase text-navy font-inter">
+              Costo pliego: Bs. {formatBsAmount(fase.costoPliegoBs)}
+            </p>
+            <p className="text-sm text-navy/90 font-inter">
+              {[fase.bancoPagoPliego, fase.cuentaPagoPliego].filter(Boolean).join(" | ") || "—"}
+            </p>
+            <p className="text-sm text-navy/90 font-inter">
+              Titular: {fase.titularPagoPliego?.trim() || "—"}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-sky-100 bg-sky-50/80 px-4 py-3">
+            <p className="text-sm font-bold uppercase text-navy font-inter">
+              Costo del pliego: Gratis
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
-      <section className="flex flex-col gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-64" />
-          <Skeleton className="h-4 w-72" />
+function ParametrosLegalesCard({ fase }: { fase: FasePreparatoriaDetalleResponse }) {
+  return (
+    <Card className="border border-slate-200 shadow-sm h-full">
+      <Fase1CardHeader
+        icon={<Scale className="h-4 w-4 text-slate-400" />}
+        title="3. Parámetros legales"
+      />
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-600 font-inter">Validez de la oferta</p>
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-heading-dark">
+            {fase.diasValidezOferta != null ? `${fase.diasValidezOferta} Días` : "—"}
+          </span>
         </div>
-        <Skeleton className="h-8 w-20 rounded-full" />
-      </section>
-    </div>
-  );
-}
-
-function Fase1NoIniciadaNotice() {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-100 px-5 py-6">
-      <p className="text-[15px] font-semibold text-heading-dark">
-        Debes llenar el formulario de la Fase 1.
-      </p>
-      <p className="mt-2 text-[12px] leading-5 text-slate-600">
-        Completa la fase preparatoria para visualizar la definicion tecnica y financiera del
-        expediente.
-      </p>
-    </div>
-  );
-}
-
-function ResponsabilidadSocialBadge({ value }: { value: boolean }) {
-  return (
-    <Badge
-      variant="outline"
-      className={
-        value
-          ? "border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700"
-          : "border-slate-200 bg-white px-3 py-1 text-slate-500"
-      }
-    >
-      {value ? "Si" : "No"}
-    </Badge>
-  );
-}
-
-function Fase1TechnicalContent({
-  fasePreparatoria,
-}: {
-  fasePreparatoria: FasePreparatoriaDetalleResponse;
-}) {
-  return (
-    <div className="space-y-6">
-      <section className="space-y-2">
-        <h3 className="text-[15px] font-semibold text-heading-dark">Caracteristicas tecnicas</h3>
-        <EmptyText>{fasePreparatoria.detallesTecnicosCalidad}</EmptyText>
-      </section>
-
-      <section className="space-y-2">
-        <h3 className="text-[15px] font-semibold text-heading-dark">Cantidades y alcance</h3>
-        <EmptyText>{fasePreparatoria.alcanceCantidadesObra}</EmptyText>
-      </section>
-
-      <section className="space-y-2">
-        <h3 className="text-[15px] font-semibold text-heading-dark">
-          Ventajas economicas/tecnicas
-        </h3>
-        <EmptyText>{fasePreparatoria.justificacionVentajas}</EmptyText>
-      </section>
-
-      <section className="flex flex-col gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-[13px] font-semibold text-heading-dark">
-            Proyecto de Responsabilidad Social
-          </h3>
-          <p className="text-[12px] leading-5 text-slate-500">
-            Origen en el registro institucional de necesidades sociales del ente.
-          </p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-600 font-inter">Garantía mantenimiento</p>
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-heading-dark">
+            {fase.diasVigenciaGarantiaExtension != null
+              ? `${fase.diasVigenciaGarantiaExtension} Días ext.`
+              : "—"}
+          </span>
         </div>
+        <section className="space-y-1.5 pt-1">
+          <FieldLabel>Autoridad para aclaratorias</FieldLabel>
+          <EmptyText>{fase.autoridadAclaratorias}</EmptyText>
+        </section>
+      </CardContent>
+    </Card>
+  );
+}
 
-        <ResponsabilidadSocialBadge value={fasePreparatoria.origenCrsRegistro} />
-      </section>
-    </div>
+function ObservacionesFinalesCard({ fase }: { fase: FasePreparatoriaDetalleResponse }) {
+  return (
+    <Card className="border border-slate-200 shadow-sm h-full">
+      <Fase1CardHeader
+        icon={<ClipboardList className="h-4 w-4 text-slate-400" />}
+        title="4. Observaciones finales"
+      />
+      <CardContent className="space-y-5">
+        <section className="space-y-2">
+          <FieldLabel>Ejecución plurianual</FieldLabel>
+          {fase.condicionPlurianual ? (
+            <div className="flex items-start gap-2 rounded-md border-l-4 border-amber-400 bg-amber-50 px-3 py-2.5">
+              <IoMdWarning className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-900 font-inter leading-snug">
+                Recuerde reflejar esta condición en el cronograma o en las condiciones del
+                procedimiento.
+              </p>
+            </div>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-amber-200 bg-amber-50 px-3 py-1 text-amber-800 font-semibold"
+            >
+              No aplica
+            </Badge>
+          )}
+        </section>
+        <section className="space-y-2">
+          <FieldLabel>Agrupación / Contrato marco</FieldLabel>
+          {fase.viabilidadContratoMarco ? (
+            <blockquote className="border-l-2 border-slate-200 pl-3 text-sm italic text-slate-600 font-inter leading-relaxed">
+              {fase.justificacionContratoMarco?.trim() || "—"}
+            </blockquote>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-amber-200 bg-amber-50 px-3 py-1 text-amber-800 font-semibold"
+            >
+              No aplica
+            </Badge>
+          )}
+        </section>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -402,6 +523,143 @@ export function Fase1Panel({
     ? `/elaboracion-expediente/${expedienteId}/fase-1?fase1Id=${fasePreparatoria.id}`
     : `/elaboracion-expediente/${expedienteId}/fase-1`;
   const canUseDocumentActions = Boolean(fasePreparatoria) || documentos.some((doc) => doc.generado);
+
+  const documentosCard = (
+    <Card className="flex flex-col border border-slate-200 shadow-sm h-full">
+      <Fase1CardHeader
+        icon={<IoDocumentTextOutline className="h-4 w-4 text-slate-400" />}
+        title="Documentos Generados"
+      />
+      <CardContent className="mt-0 flex flex-1 flex-col">
+        <div className="space-y-5">
+          {documentos.map((doc) => {
+            const desactualizado = doc.estaDesactualizado && doc.generado;
+            const icon = getDocumentoIcon(doc.tipo);
+
+            return (
+              <div
+                key={doc.tipo}
+                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
+              >
+                <div className="flex flex-1 items-center gap-3 min-w-0">
+                  {desactualizado ? (
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="relative flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-xl"
+                            style={{
+                              backgroundColor: "var(--doc-warning-bg)",
+                              border: "1px solid var(--doc-warning-border)",
+                            }}
+                          >
+                            <span className="doc-icon-normal absolute inset-0 flex items-center justify-center">
+                              {icon === "clipboard" ? (
+                                <FaRegClipboard className="h-[18px] w-[18px] text-slate-600" />
+                              ) : (
+                                <IoReceiptOutline className="h-5 w-5 text-slate-600" />
+                              )}
+                            </span>
+                            <span className="doc-icon-warning absolute inset-0 flex items-center justify-center">
+                              <IoMdWarning
+                                className="h-5 w-5"
+                                style={{ color: "var(--doc-warning)" }}
+                              />
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[200px] text-center text-xs">
+                          Se detectaron cambios en la información. Haz clic para regenerar el
+                          documento.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-sky-50 border border-sky-100">
+                      {icon === "clipboard" ? (
+                        <FaRegClipboard className="h-[18px] w-[18px] text-navy" />
+                      ) : (
+                        <IoReceiptOutline className="h-5 w-5 text-navy" />
+                      )}
+                    </div>
+                  )}
+
+                  <p className="truncate text-sm font-semibold leading-tight text-color-titulos font-inter">
+                    {doc.label}
+                  </p>
+                </div>
+
+                <div className="flex flex-shrink-0 items-center gap-3">
+                  {procesandoDoc[doc.tipo] ? (
+                    <div className="flex h-5 w-5 items-center justify-center">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-navy border-t-transparent" />
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        className="text-slate-500 transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                        disabled={!doc.generado || !canUseDocumentActions}
+                        onClick={() => handlePreviewDocumento(doc)}
+                        aria-label={`Vista previa ${doc.label}`}
+                      >
+                        <IoEyeOutline className="h-5 w-5" />
+                      </button>
+
+                      <button
+                        className="text-slate-500 transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                        disabled={
+                          !doc.generado || !canUseDocumentActions || isDownloading[doc.tipo]
+                        }
+                        onClick={() => handleDownloadDocumento(doc)}
+                        aria-label={`Descargar ${doc.label}`}
+                      >
+                        {isDownloading[doc.tipo] ? (
+                          <div className="flex h-5 w-5 items-center justify-center">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-navy border-t-transparent" />
+                          </div>
+                        ) : (
+                          <IoDownloadOutline className="h-5 w-5" />
+                        )}
+                      </button>
+
+                      {!doc.generado ? (
+                        <button
+                          className="text-slate-500 transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                          disabled={!canUseDocumentActions || readOnly}
+                          onClick={() => handleGenerarDocumento(doc.tipo)}
+                          aria-label={`Generar ${doc.label}`}
+                        >
+                          <IoNewspaperOutline className="h-5 w-5" />
+                        </button>
+                      ) : desactualizado ? (
+                        <button
+                          className="text-red-400 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                          onClick={() => handleRegenerarDocumento(doc)}
+                          title="Regenerar documento"
+                          disabled={readOnly}
+                          aria-label={`Regenerar ${doc.label}`}
+                        >
+                          <BsArrowClockwise className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          className="cursor-not-allowed text-slate-400 opacity-30"
+                          disabled
+                          aria-label="Documento actualizado"
+                        >
+                          <BsArrowClockwise className="h-4 w-4" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   const handleCreateItemClick = () => {
     if (readOnly) return;
@@ -557,167 +815,90 @@ export function Fase1Panel({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.9fr)]">
-        <Card className="border border-slate-200 shadow-sm">
-          <CardHeader className="space-y-0 pb-4">
-            <CardTitle className="flex items-center gap-2 text-[17px] font-bold text-color-titulos">
-              <Settings2 className="h-5 w-5 text-navy" />
-              Definicion tecnica y financiera
-            </CardTitle>
-          </CardHeader>
+      {loadingFasePreparatoria ? (
+        <Fase1CardsSkeleton />
+      ) : (
+        <>
+          {fase1NoIniciada && !fasePreparatoria && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <p className="text-sm font-semibold text-heading-dark font-inter">
+                Debes llenar el formulario de la Fase 1.
+              </p>
+              <p className="mt-1 text-xs text-slate-500 font-inter">
+                Completa la fase preparatoria para visualizar la definición técnica, logística,
+                parámetros legales y observaciones del expediente.
+              </p>
+            </div>
+          )}
 
-          <CardContent>
-            {loadingFasePreparatoria ? (
-              <Fase1TechnicalCardSkeleton />
-            ) : fase1NoIniciada ? (
-              <Fase1NoIniciadaNotice />
-            ) : fasePreparatoria ? (
-              <Fase1TechnicalContent fasePreparatoria={fasePreparatoria} />
+          {!fase1NoIniciada && !fasePreparatoria && (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-5 py-4">
+              <p className="text-sm font-medium text-red-700">
+                No se pudo interpretar la información de la Fase 1 para este expediente.
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {fasePreparatoria ? (
+              <DefinicionTecnicaCard fase={fasePreparatoria} />
             ) : (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-5 py-6">
-                <p className="text-sm font-medium text-red-700">
-                  No se pudo interpretar la informacion de la Fase 1 para este expediente.
-                </p>
-              </div>
+              <Card className="border border-slate-200 shadow-sm h-full">
+                <Fase1CardHeader
+                  icon={<Settings2 className="h-4 w-4 text-slate-400" />}
+                  title="1. Definición técnica"
+                />
+                <CardContent>
+                  <p className="text-sm text-slate-400 italic font-inter">Sin datos cargados.</p>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+            {fasePreparatoria ? (
+              <LogisticaLlamadoCard fase={fasePreparatoria} />
+            ) : (
+              <Card className="border border-slate-200 shadow-sm h-full">
+                <Fase1CardHeader
+                  icon={<Megaphone className="h-4 w-4 text-slate-400" />}
+                  title="2. Logística del llamado"
+                />
+                <CardContent>
+                  <p className="text-sm text-slate-400 italic font-inter">Sin datos cargados.</p>
+                </CardContent>
+              </Card>
+            )}
+            {documentosCard}
+          </div>
 
-        <Card className="flex flex-col border border-border pt-6 shadow-sm">
-          <CardHeader className="px-6 pb-6 pt-0">
-            <div className="flex items-center gap-4">
-              <IoDocumentTextOutline className="h-6 w-6 text-color-titulos" />
-              <CardTitle className="text-[17px] font-bold text-color-titulos">
-                Documentos del Procedimiento
-              </CardTitle>
-            </div>
-          </CardHeader>
-
-          <CardContent className="mt-2 flex flex-1 flex-col px-6 pb-6">
-            <div className="space-y-8">
-              {documentos.map((doc) => {
-                const desactualizado = doc.estaDesactualizado && doc.generado;
-                const icon = getDocumentoIcon(doc.tipo);
-
-                return (
-                  <div key={doc.tipo} className="flex items-center justify-between gap-2">
-                    <div className="flex flex-1 items-center gap-4">
-                      {desactualizado ? (
-                        <TooltipProvider delayDuration={100}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div
-                                className="relative flex h-[46px] w-[46px] flex-shrink-0 cursor-pointer items-center justify-center rounded-xl"
-                                style={{
-                                  backgroundColor: "var(--doc-warning-bg)",
-                                  border: "1px solid var(--doc-warning-border)",
-                                }}
-                              >
-                                <span className="doc-icon-normal absolute inset-0 flex items-center justify-center">
-                                  {icon === "clipboard" ? (
-                                    <FaRegClipboard className="h-[20px] w-[20px] text-slate-600" />
-                                  ) : (
-                                    <IoReceiptOutline className="h-[22px] w-[22px] text-slate-600" />
-                                  )}
-                                </span>
-                                <span className="doc-icon-warning absolute inset-0 flex items-center justify-center">
-                                  <IoMdWarning
-                                    className="h-[22px] w-[22px]"
-                                    style={{ color: "var(--doc-warning)" }}
-                                  />
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              side="right"
-                              className="max-w-[200px] text-center text-xs"
-                            >
-                              Se detectaron cambios en la informacion. Haz clic para regenerar el
-                              documento.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <div className="flex h-[46px] w-[46px] flex-shrink-0 items-center justify-center rounded-xl bg-slate-200">
-                          {icon === "clipboard" ? (
-                            <FaRegClipboard className="h-[20px] w-[20px] text-slate-700" />
-                          ) : (
-                            <IoReceiptOutline className="h-[22px] w-[22px] text-slate-700" />
-                          )}
-                        </div>
-                      )}
-
-                      <p className="max-w-[130px] text-[14px] font-bold leading-tight text-color-titulos">
-                        {doc.label}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-shrink-0 items-center gap-4">
-                      {procesandoDoc[doc.tipo] ? (
-                        <div className="flex h-[22px] w-[22px] items-center justify-center">
-                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
-                            disabled={!doc.generado || !canUseDocumentActions}
-                            onClick={() => handlePreviewDocumento(doc)}
-                          >
-                            <IoEyeOutline className="h-[26px] w-[26px]" />
-                          </button>
-
-                          <button
-                            className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
-                            disabled={
-                              !doc.generado || !canUseDocumentActions || isDownloading[doc.tipo]
-                            }
-                            onClick={() => handleDownloadDocumento(doc)}
-                          >
-                            {isDownloading[doc.tipo] ? (
-                              <div className="flex h-[24px] w-[24px] items-center justify-center">
-                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
-                              </div>
-                            ) : (
-                              <IoDownloadOutline className="h-[24px] w-[24px]" />
-                            )}
-                          </button>
-
-                          {!doc.generado ? (
-                            <button
-                              className="text-[#334155] transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
-                              disabled={!canUseDocumentActions || readOnly}
-                              onClick={() => handleGenerarDocumento(doc.tipo)}
-                            >
-                              <IoNewspaperOutline className="h-[24px] w-[24px]" />
-                            </button>
-                          ) : desactualizado ? (
-                            <button
-                              className="text-red-400 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
-                              onClick={() => handleRegenerarDocumento(doc)}
-                              title="Regenerar documento"
-                              disabled={readOnly}
-                            >
-                              <BsArrowClockwise className="h-[20px] w-[20px]" />
-                            </button>
-                          ) : (
-                            <button
-                              className="cursor-not-allowed text-[#334155] opacity-30"
-                              disabled
-                            >
-                              <BsArrowClockwise className="h-[20px] w-[20px]" />
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {fasePreparatoria ? (
+              <ParametrosLegalesCard fase={fasePreparatoria} />
+            ) : (
+              <Card className="border border-slate-200 shadow-sm h-full">
+                <Fase1CardHeader
+                  icon={<Scale className="h-4 w-4 text-slate-400" />}
+                  title="3. Parámetros legales"
+                />
+                <CardContent>
+                  <p className="text-sm text-slate-400 italic font-inter">Sin datos cargados.</p>
+                </CardContent>
+              </Card>
+            )}
+            {fasePreparatoria ? (
+              <ObservacionesFinalesCard fase={fasePreparatoria} />
+            ) : (
+              <Card className="border border-slate-200 shadow-sm h-full">
+                <Fase1CardHeader
+                  icon={<ClipboardList className="h-4 w-4 text-slate-400" />}
+                  title="4. Observaciones finales"
+                />
+                <CardContent>
+                  <p className="text-sm text-slate-400 italic font-inter">Sin datos cargados.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </>
+      )}
 
       <PresupuestoItemsTable
         items={items}

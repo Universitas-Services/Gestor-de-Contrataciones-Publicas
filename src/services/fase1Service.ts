@@ -199,7 +199,20 @@ export const obtenerFasePreparatoria = async (
     return null;
   }
 
-  return json as FasePreparatoriaDetalleResponse;
+  const payload = json as {
+    data?: FasePreparatoriaDetalleResponse | null;
+    fasePreparatoria?: FasePreparatoriaDetalleResponse | null;
+  };
+
+  if (payload.data) return payload.data;
+  if (payload.fasePreparatoria) return payload.fasePreparatoria;
+
+  // Respuesta plana (sin envelope)
+  if ("id" in (json as object) || "datosActoAutorizacionInicio" in (json as object)) {
+    return json as FasePreparatoriaDetalleResponse;
+  }
+
+  return null;
 };
 
 export const guardarFasePreparatoria = async (

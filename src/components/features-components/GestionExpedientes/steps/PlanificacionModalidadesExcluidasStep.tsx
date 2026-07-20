@@ -62,6 +62,8 @@ export interface PlanificacionModalidadesExcluidasStepProps {
   onFinish: () => void;
   isLoading?: boolean;
   readOnly?: boolean;
+  /** Oculta botones Anterior / Validar (vista de detalle). */
+  hideButtons?: boolean;
 }
 
 export function PlanificacionModalidadesExcluidasStep({
@@ -71,6 +73,7 @@ export function PlanificacionModalidadesExcluidasStep({
   onFinish,
   isLoading = false,
   readOnly = false,
+  hideButtons = false,
 }: PlanificacionModalidadesExcluidasStepProps) {
   const [openKey, setOpenKey] = useState<string | null>(null);
 
@@ -192,32 +195,34 @@ export function PlanificacionModalidadesExcluidasStep({
         })}
       </div>
 
-      <div className="flex justify-between pt-4 border-t border-slate-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          disabled={isLoading}
-          className="h-11 px-6"
-        >
-          Anterior
-        </Button>
-        <Button
-          type="button"
-          onClick={onFinish}
-          disabled={readOnly || isLoading}
-          className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creando...
-            </>
-          ) : (
-            "Validar y crear expediente"
-          )}
-        </Button>
-      </div>
+      {!hideButtons && (
+        <div className="flex justify-between pt-4 border-t border-slate-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            disabled={isLoading}
+            className="h-11 px-6"
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            onClick={onFinish}
+            disabled={readOnly || isLoading}
+            className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              "Validar y crear expediente"
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

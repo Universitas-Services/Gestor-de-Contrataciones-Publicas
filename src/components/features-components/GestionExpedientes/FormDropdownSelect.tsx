@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export interface FormDropdownOption {
@@ -99,21 +100,31 @@ export function FormDropdownSelect({
             </DropdownMenuItem>
           ) : (
             options.map((opt) => (
-              <DropdownMenuItem
-                key={opt.value}
-                disabled={opt.disabled}
-                className={cn(
-                  "font-inter cursor-pointer",
-                  opt.value === value && "bg-accent",
-                  opt.className
-                )}
-                onClick={() => {
-                  if (!opt.disabled) onValueChange(opt.value);
-                }}
-              >
-                <span className="flex-1 truncate">{opt.label}</span>
-                {opt.value === value && <Check className="h-4 w-4 shrink-0 text-navy" />}
-              </DropdownMenuItem>
+              <Tooltip key={opt.value} delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem
+                    disabled={opt.disabled}
+                    className={cn(
+                      "font-inter cursor-pointer",
+                      opt.value === value && "bg-accent",
+                      opt.className
+                    )}
+                    onClick={() => {
+                      if (!opt.disabled) onValueChange(opt.value);
+                    }}
+                  >
+                    <span className="flex-1 truncate">{opt.label}</span>
+                    {opt.value === value && <Check className="h-4 w-4 shrink-0 text-navy" />}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  sideOffset={6}
+                  className="max-w-sm text-left text-balance z-[100]"
+                >
+                  {opt.label}
+                </TooltipContent>
+              </Tooltip>
             ))
           )}
         </DropdownMenuContent>
