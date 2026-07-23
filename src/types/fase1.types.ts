@@ -81,7 +81,7 @@ export interface CrearOActualizarFase1Payload {
   origenCrsRegistro: boolean;
   diasValidezOferta: number;
   autoridadAclaratorias: string;
-  normativaLegal: string;
+  normativaLegal: string[];
   diasVigenciaGarantiaExtension: number;
   objetivosEspecificos1: string;
   objetivosEspecificos2: string;
@@ -96,7 +96,8 @@ export interface CrearOActualizarFase1Payload {
   horaActoRecepAper: string;
   condicionPlurianual: boolean;
   viabilidadContratoMarco: boolean;
-  justificacionContratoMarco?: string;
+  /** Nombre que exige el DTO del backend (Swagger). */
+  justificacion_contrato_marco_au_au?: string;
 }
 
 export interface FasePreparatoriaDetalleResponse {
@@ -110,7 +111,8 @@ export interface FasePreparatoriaDetalleResponse {
   origenCrsRegistro: boolean;
   diasValidezOferta: number;
   autoridadAclaratorias: string;
-  normativaLegal: string;
+  /** Backend migra a arreglo; se acepta string legacy al hidratar. */
+  normativaLegal: string | string[] | null;
   diasVigenciaGarantiaExtension: number;
   objetivosEspecificos1: string;
   objetivosEspecificos2: string;
@@ -128,6 +130,7 @@ export interface FasePreparatoriaDetalleResponse {
   condicionPlurianual: boolean;
   viabilidadContratoMarco: boolean;
   justificacionContratoMarco?: string | null;
+  justificacion_contrato_marco_au_au?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -152,4 +155,5 @@ export interface Fase1FieldCopy {
   label: string;
   description: string;
   placeholder?: string;
+  verifyLink?: string;
 }

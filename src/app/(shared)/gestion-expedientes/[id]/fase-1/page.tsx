@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { Fase1Form } from "@/components/features-components/ElaboracionExpediente/fase-1/Fase1Form";
 import { getCurrentUser } from "@/lib/auth/auth";
+import { isConcursoAbiertoActoUnico } from "@/lib/modalidades/modalidadDisplay";
 import { isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import { obtenerEnte } from "@/services/enteService";
@@ -13,7 +14,7 @@ interface Props {
   searchParams?: Promise<{ fase1Id?: string | string[] }>;
 }
 
-export default async function Fase1Page({ params, searchParams }: Props) {
+export default async function GestionFase1Page({ params, searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -23,18 +24,24 @@ export default async function Fase1Page({ params, searchParams }: Props) {
     : ({ fase1Id: undefined } as { fase1Id?: string | string[] });
 
   let tipoContratacion: TipoContratacionBackend = "BIENES";
+  let expediente;
 
   try {
-    const expediente = await obtenerExpediente(id);
-    if (
-      expediente.modalidad?.tipoContratacion === "BIENES" ||
-      expediente.modalidad?.tipoContratacion === "SERVICIOS" ||
-      expediente.modalidad?.tipoContratacion === "OBRAS"
-    ) {
-      tipoContratacion = expediente.modalidad.tipoContratacion;
-    }
+    expediente = await obtenerExpediente(id);
   } catch {
     notFound();
+  }
+
+  if (!isConcursoAbiertoActoUnico(expediente.modalidad?.modalidadSeleccion)) {
+    redirect(`/gestion-expedientes/${id}?tab=fase-1`);
+  }
+
+  if (
+    expediente.modalidad?.tipoContratacion === "BIENES" ||
+    expediente.modalidad?.tipoContratacion === "SERVICIOS" ||
+    expediente.modalidad?.tipoContratacion === "OBRAS"
+  ) {
+    tipoContratacion = expediente.modalidad.tipoContratacion;
   }
 
   let direccionEnteDefault = "";
@@ -67,7 +74,7 @@ export default async function Fase1Page({ params, searchParams }: Props) {
         isEditMode={initialFasePreparatoria !== null}
         initialFase1IdFromQuery={queryFase1Id}
         readOnly={isReadOnlyRole(user.role)}
-        basePath="/elaboracion-expediente"
+        basePath="/gestion-expedientes"
       />
     </div>
   );

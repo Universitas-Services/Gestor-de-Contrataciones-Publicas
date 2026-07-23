@@ -45,6 +45,7 @@ const compactChoiceBaseClass =
 const compactMessageClass = "text-[11px]";
 
 export function Paso1DefinicionStep({ form, tipoContratacion }: Paso1DefinicionStepProps) {
+  const currentYear = new Date().getFullYear();
   const detallesTecnicosCalidadCopy = getFase1DynamicFieldCopy(
     "detallesTecnicosCalidad",
     tipoContratacion
@@ -106,6 +107,9 @@ export function Paso1DefinicionStep({ form, tipoContratacion }: Paso1DefinicionS
                 <PopoverContent align="start" className="w-auto p-0">
                   <Calendar
                     mode="single"
+                    captionLayout="dropdown"
+                    fromYear={currentYear - 1}
+                    toYear={currentYear + 5}
                     selected={field.value ? new Date(`${field.value}T12:00:00`) : undefined}
                     onSelect={(date) => {
                       if (date) field.onChange(format(date, "yyyy-MM-dd"));

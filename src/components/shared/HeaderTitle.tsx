@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { resolveHeaderTitle } from "@/lib/header-title";
+import { useHeaderTitleOverride } from "./HeaderTitleContext";
 import type { UserRole } from "@/types/role.types";
 
 interface HeaderTitleProps {
@@ -12,7 +13,8 @@ interface HeaderTitleProps {
 
 export function HeaderTitle({ userRole }: HeaderTitleProps) {
   const pathname = usePathname();
-  const title = resolveHeaderTitle(pathname, userRole);
+  const { overrideTitle } = useHeaderTitleOverride();
+  const title = overrideTitle ?? resolveHeaderTitle(pathname, userRole);
   const titleRef = useRef<HTMLParagraphElement | null>(null);
   const [isWrapped, setIsWrapped] = useState(false);
 

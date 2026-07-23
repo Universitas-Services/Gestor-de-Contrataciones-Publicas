@@ -36,6 +36,27 @@ describe("resolveHeaderTitle", () => {
     ).toBe("Evaluacion del expediente");
   });
 
+  it("resuelve detalle de gestion-expedientes sin mostrar el id", () => {
+    expect(
+      resolveHeaderTitle("/gestion-expedientes/120b0153-0abc-4def-8abc-1234567890ab", "ejecutor")
+    ).toBe("Detalle del expediente");
+  });
+
+  it("resuelve editar ficha en gestion-expedientes", () => {
+    expect(
+      resolveHeaderTitle(
+        "/gestion-expedientes/120b0153-0abc-4def-8abc-1234567890ab/editar",
+        "ejecutor"
+      )
+    ).toBe("Editar expediente");
+  });
+
+  it("resuelve detalle de elaboracion-expediente sin mostrar el id", () => {
+    expect(
+      resolveHeaderTitle("/elaboracion-expediente/120b0153-0abc-4def-8abc-1234567890ab", "ejecutor")
+    ).toBe("Detalle del expediente");
+  });
+
   it("cae al ultimo segmento formateado cuando no existe una regla", () => {
     expect(resolveHeaderTitle("/ruta-interna/no-mapeada", "ejecutor")).toBe("No Mapeada");
   });

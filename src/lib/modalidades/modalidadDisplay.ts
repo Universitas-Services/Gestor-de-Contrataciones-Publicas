@@ -31,6 +31,11 @@ export function isConcursoAbierto(code?: string | null): boolean {
   );
 }
 
+/** CA con Acto Único / Apertura Única (flujo Fase 1 actual). */
+export function isConcursoAbiertoActoUnico(code?: string | null): boolean {
+  return code === "LICITACION_PUBLICA" || code === "LICITACION_PUBLICA_ACTO_UNICO";
+}
+
 export function isConcursoCerrado(code?: string | null): boolean {
   return code === "CONCURSO_CERRADO";
 }

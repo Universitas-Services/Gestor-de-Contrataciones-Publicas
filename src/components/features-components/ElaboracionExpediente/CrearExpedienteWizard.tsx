@@ -103,6 +103,8 @@ export interface CrearExpedienteWizardProps {
   /** Activa el modo edición (omite el paso 4 de cronograma) */
   modoEdicion?: boolean;
   readOnly?: boolean;
+  /** Ruta canónica del módulo (default: elaboracion, legacy). */
+  basePath?: string;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
@@ -112,6 +114,7 @@ export function CrearExpedienteWizard({
   datosIniciales,
   modoEdicion = false,
   readOnly = false,
+  basePath = "/elaboracion-expediente",
 }: CrearExpedienteWizardProps = {}) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -295,7 +298,7 @@ export function CrearExpedienteWizard({
       // ── Modo edición: volver al detalle sin pasar al cronograma ──
       if (modoEdicion) {
         toast.success("Expediente actualizado correctamente.");
-        router.push(`/elaboracion-expediente/${expedienteId}`);
+        router.push(`${basePath}/${expedienteId}`);
         return;
       }
 
@@ -347,8 +350,7 @@ export function CrearExpedienteWizard({
     try {
       await guardarCronograma(expedienteId, cronogramaData);
       toast.success("¡Cronograma guardado! Expediente creado exitosamente.");
-      // Redirigir al detalle del expediente recién creado
-      router.push(`/elaboracion-expediente/${expedienteId}`);
+      router.push(`${basePath}/${expedienteId}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
     } finally {

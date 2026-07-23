@@ -17,7 +17,7 @@ function buildValidDefaults(): Fase1FormInputValues {
     origenCrsRegistro: true,
     diasValidezOferta: "30",
     autoridadAclaratorias: "Autoridad competente",
-    normativaLegal: "Normativa aplicable",
+    normativaLegal: ["Normativa aplicable"],
     diasVigenciaGarantiaExtension: "15",
     objetivosEspecificos1: "Objetivo 1",
     objetivosEspecificos2: "Objetivo 2",

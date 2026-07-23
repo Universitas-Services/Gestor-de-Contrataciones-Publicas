@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { Fragment } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Home } from "lucide-react";
 import {
   Breadcrumb,
@@ -11,10 +12,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Fragment } from "react";
 
-/** Subrutas bajo /elaboracion-expediente/[id] que muestran una tercera miga */
+/** Subrutas bajo /{modulo}/[id] que muestran una tercera miga */
 const EXPEDIENTE_ID_SUB_ROUTES = new Set(["contrato", "informe", "fase-1", "editar"]);
+const EXPEDIENTE_ROOT_SEGMENTS = new Set(["elaboracion-expediente", "gestion-expedientes"]);
 
 const EXPEDIENTE_SUB_ROUTE_LABELS: Record<string, string> = {
   contrato: "Elaboración del contrato",
@@ -23,13 +24,29 @@ const EXPEDIENTE_SUB_ROUTE_LABELS: Record<string, string> = {
   editar: "Editar expediente",
 };
 
+/** Prefijos de rol: no son páginas; el inicio real es su dashboard */
+const ROLE_ROOT_DASHBOARDS: Record<string, string> = {
+  admin_ente: "/admin_ente/dashboard",
+  supervisor: "/supervisor/dashboard",
+  visualizador: "/visualizador/dashboard",
+  ejecutor: "/ejecutor/dashboard",
+};
+
 const ROUTE_SEGMENT_LABELS: Record<string, string> = {
   "elaboracion-expediente": "Elaboración de expediente",
   "gestion-expedientes": "Panel expediente",
+  admin_ente: "Admin Ente",
+  supervisor: "Supervisor",
+  visualizador: "Visualizador",
+  ejecutor: "Ejecutor",
+  dashboard: "Dashboard",
+  "gestion-datos": "Gestión de datos",
+  configuracion: "Configuración",
+  "calendario-ente": "Calendario del ente",
 };
 
 function trimExpedienteSegments(segments: string[]): string[] {
-  if (segments[0] !== "elaboracion-expediente" || segments.length <= 2) {
+  if (!EXPEDIENTE_ROOT_SEGMENTS.has(segments[0] ?? "") || segments.length <= 2) {
     return segments;
   }
 
@@ -42,75 +59,97 @@ function trimExpedienteSegments(segments: string[]): string[] {
 }
 
 /**
- * Componente de Breadcrumbs que genera automáticamente la navegación desde la URL
- * Utiliza los componentes de shadcn/ui para mejor accesibilidad y estilo
- *
- * Ejemplo: /ente/dashboard → Inicio > Ente > Dashboard
+ * En dashboards de rol (p. ej. /admin_ente/dashboard) el segmento de rol
+ * es redundante con Home y además /admin_ente no existe como página.
+ */
+function normalizeRoleDashboardSegments(segments: string[]): string[] {
+  const [roleRoot, second] = segments;
+
+  if (roleRoot && ROLE_ROOT_DASHBOARDS[roleRoot] && second === "dashboard") {
+    return ["dashboard"];
+  }
+
+  return segments;
+}
+
+function formatSegment(segment: string, index: number, segments: string[]): string {
+  if (ROUTE_SEGMENT_LABELS[segment]) {
+    return ROUTE_SEGMENT_LABELS[segment];
+  }
+
+  if (EXPEDIENTE_SUB_ROUTE_LABELS[segment]) {
+    return EXPEDIENTE_SUB_ROUTE_LABELS[segment];
+  }
+
+  if (segment === "nuevo" && index > 0 && segments[index - 1] === "gestion-expedientes") {
+    return "Nuevo Expediente";
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
+    if (index > 0 && segments[index - 1] === "usuarios") {
+      return "Editar usuario";
+    }
+    if (index > 0 && segments[index - 1] === "elaboracion-expediente") {
+      return "Detalle de expediente";
+    }
+    if (index > 0 && segments[index - 1] === "gestion-expedientes") {
+      return "Detalle de expediente";
+    }
+    return "Perfil del proveedor";
+  }
+
+  return segment
+    .split(/[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function resolveSegmentHref(segments: string[], index: number): string {
+  const segment = segments[index];
+  const roleDashboard = ROLE_ROOT_DASHBOARDS[segment];
+
+  // Prefijo de rol → dashboard del rol (evita 404 en /admin_ente, etc.)
+  if (roleDashboard && index === 0) {
+    return roleDashboard;
+  }
+
+  let href = "/" + segments.slice(0, index + 1).join("/");
+
+  const expedienteId = segments[1];
+  const subRoute = segments[2];
+  if (
+    segments[0] === "elaboracion-expediente" &&
+    subRoute === "contrato" &&
+    index === 1 &&
+    expedienteId
+  ) {
+    href = `/elaboracion-expediente/${expedienteId}?tab=fase-4`;
+  }
+
+  return href;
+}
+
+/**
+ * Componente de Breadcrumbs que genera automáticamente la navegación desde la URL.
  */
 export function Breadcrumbs() {
   const pathname = usePathname();
 
-  // Dividir el pathname en segmentos
   let segments = pathname.split("/").filter((segment) => segment !== "");
-
   segments = trimExpedienteSegments(segments);
+  segments = normalizeRoleDashboardSegments(segments);
 
-  // Si estamos en la raíz, no mostrar breadcrumbs
   if (segments.length === 0) {
     return null;
   }
 
-  // Función para formatear nombres de ruta
-  const formatSegment = (segment: string, index: number, segments: string[]): string => {
-    if (ROUTE_SEGMENT_LABELS[segment]) {
-      return ROUTE_SEGMENT_LABELS[segment];
-    }
-
-    if (EXPEDIENTE_SUB_ROUTE_LABELS[segment]) {
-      return EXPEDIENTE_SUB_ROUTE_LABELS[segment];
-    }
-
-    if (segment === "nuevo" && index > 0 && segments[index - 1] === "gestion-expedientes") {
-      return "Nuevo Expediente";
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(segment) || (segment.length > 20 && /^[0-9a-f-]+$/i.test(segment))) {
-      if (index > 0 && segments[index - 1] === "usuarios") {
-        return "Editar usuario";
-      }
-      if (index > 0 && segments[index - 1] === "elaboracion-expediente") {
-        return "Detalle de expediente";
-      }
-      return "Perfil del proveedor";
-    }
-
-    return segment
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
-
-  // Construir breadcrumbs
   const breadcrumbs = segments.map((segment, index) => {
-    let href = "/" + segments.slice(0, index + 1).join("/");
-    const label = formatSegment(segment, index, segments);
     const isLast = index === segments.length - 1;
 
-    const expedienteId = segments[1];
-    const subRoute = segments[2];
-    if (
-      segments[0] === "elaboracion-expediente" &&
-      subRoute === "contrato" &&
-      index === 1 &&
-      expedienteId
-    ) {
-      href = `/elaboracion-expediente/${expedienteId}?tab=fase-4`;
-    }
-
     return {
-      href,
-      label,
+      href: resolveSegmentHref(segments, index),
+      label: formatSegment(segment, index, segments),
       isLast,
     };
   });
@@ -118,7 +157,6 @@ export function Breadcrumbs() {
   return (
     <Breadcrumb className="mb-6 -mt-4">
       <BreadcrumbList>
-        {/* Inicio */}
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
             <Link href="/">
@@ -127,12 +165,10 @@ export function Breadcrumbs() {
           </BreadcrumbLink>
         </BreadcrumbItem>
 
-        {/* Separador */}
         <BreadcrumbSeparator />
 
-        {/* Segmentos de la ruta */}
         {breadcrumbs.map((breadcrumb) => (
-          <Fragment key={breadcrumb.href}>
+          <Fragment key={`${breadcrumb.href}-${breadcrumb.label}`}>
             <BreadcrumbItem>
               {breadcrumb.isLast ? (
                 <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>

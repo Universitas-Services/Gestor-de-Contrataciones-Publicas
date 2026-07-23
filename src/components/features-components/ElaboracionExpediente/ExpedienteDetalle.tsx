@@ -26,6 +26,8 @@ import { Fase1Panel } from "./fase-1/Fase1Panel";
 import { Fase2Panel } from "./fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
 import { Fase4Panel } from "./fase4/Fase4Panel";
+import { EditarFichaModal } from "@/components/features-components/GestionExpedientes/EditarFichaModal";
+import { useHeaderTitleOverride } from "@/components/shared/HeaderTitleContext";
 
 import type {
   ExpedienteResponse,
@@ -47,6 +49,7 @@ import {
   getModalidadDisplayLabel,
   isConsultaPrecios,
   isContratacionDirecta,
+  isConcursoAbiertoActoUnico,
   isConcursoCerrado,
   isModalidadExcluida,
   muestraBloqueCausal,
@@ -110,14 +113,6 @@ const TIPO_MIEMBRO: Record<string, string> = {
   MIEMBRO_PRINCIPAL: "Principal",
   MIEMBRO_SUPLENTE: "Suplente",
   PRESIDENTE: "Presidente",
-};
-
-const ESTADO_STYLES: Record<string, { label: string; className: string }> = {
-  BORRADOR: { label: "Borrador", className: "bg-amber-100 text-amber-700 border-amber-200" },
-  ACTIVO: { label: "Activo", className: "bg-green-100 text-green-700 border-green-200" },
-  PUBLICADO: { label: "Publicado", className: "bg-blue-100 text-blue-700 border-blue-200" },
-  FINALIZADO: { label: "Finalizado", className: "bg-slate-100 text-slate-600 border-slate-200" },
-  ANULADO: { label: "Anulado", className: "bg-red-100 text-red-700 border-red-200" },
 };
 
 const FASES = [
@@ -253,15 +248,26 @@ export function ExpedienteDetalle({
   data,
   initialTab = "fase-0",
   readOnly = false,
-  basePath = "/elaboracion-expediente",
+  basePath = "/gestion-expedientes",
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { setOverrideTitle } = useHeaderTitleOverride();
   const [activeTab, setActiveTab] = useState<Fase1TabValue>(() =>
     resolveTabFromParam(searchParams.get("tab"), initialTab)
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [editarFichaOpen, setEditarFichaOpen] = useState(false);
+
+  useEffect(() => {
+    const nomenclatura = data.codigoNomenclatura?.trim();
+    setOverrideTitle(nomenclatura || "Detalle del expediente");
+
+    return () => {
+      setOverrideTitle(null);
+    };
+  }, [data.codigoNomenclatura, setOverrideTitle]);
 
   useEffect(() => {
     setActiveTab(resolveTabFromParam(searchParams.get("tab"), initialTab));
@@ -311,6 +317,7 @@ export function ExpedienteDetalle({
   const modalidadCode = data.modalidad?.modalidadSeleccion ?? "";
   const modalidadLabel = getModalidadDisplayLabel(modalidadCode);
   const fechaAnclaLabel = getFechaAnclaLabel(modalidadCode);
+  const isCaActoUnico = isConcursoAbiertoActoUnico(modalidadCode);
   const isMe = isModalidadExcluida(modalidadCode);
   const comisionOmitida =
     isMe ||
@@ -352,8 +359,10 @@ export function ExpedienteDetalle({
     muestraUnidadContratante(modalidadCode) &&
     Boolean(data.unidadContratante || data.unidadContratanteId);
 
-  const ucFromData = resolveUcFromApi(
-    data.unidadContratante as unknown as Record<string, unknown> | undefined
+  const ucFromData = useMemo(
+    () =>
+      resolveUcFromApi(data.unidadContratante as unknown as Record<string, unknown> | undefined),
+    [data.unidadContratante]
   );
   const [ucResolved, setUcResolved] = useState<UnidadContratanteData | null>(ucFromData);
   const ucId = data.unidadContratanteId ?? ucFromData?.id;
@@ -383,13 +392,7 @@ export function ExpedienteDetalle({
     return () => {
       cancelled = true;
     };
-  }, [
-    showUc,
-    ucId,
-    ucFromData?.id,
-    ucFromData?.nombreUnidadContratante,
-    ucFromData?.nombreResponsableUnidadContratante,
-  ]);
+  }, [showUc, ucId, ucFromData]);
 
   const ucNombre =
     ucResolved?.nombreResponsableUnidadContratante || ucResolved?.nombreUnidadContratante || null;
@@ -769,7 +772,7 @@ export function ExpedienteDetalle({
                     </Button>
                   )}
                   <Button
-                    onClick={() => router.push(`${basePath}/${data.id}/editar`)}
+                    onClick={() => setEditarFichaOpen(true)}
                     className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
                   >
                     <Pencil className="w-4 h-4" />
@@ -815,15 +818,33 @@ export function ExpedienteDetalle({
             </TabsContent>
 
             <TabsContent value="fase-1" className="mt-6">
-              <Fase1Panel
-                expedienteId={data.id}
-                fase1Creada={Boolean(data["fasePreparatoria"])}
-                readOnly={readOnly}
-                tipoContratacion={
-                  (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
-                  undefined
-                }
-              />
+              {isCaActoUnico ? (
+                <Fase1Panel
+                  expedienteId={data.id}
+                  fase1Creada={Boolean(data["fasePreparatoria"])}
+                  readOnly={readOnly}
+                  basePath={basePath}
+                  tipoContratacion={
+                    (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
+                    undefined
+                  }
+                />
+              ) : (
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardContent className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+                    <Info className="h-8 w-8 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-700">
+                      Fase preparatoria disponible solo para Concurso Abierto, Acto Único Apertura
+                      Única
+                    </p>
+                    <p className="max-w-md text-sm text-slate-500">
+                      Este flujo de carga de datos de la fase preparatoria aplica únicamente a esa
+                      modalidad. La modalidad actual es{" "}
+                      <span className="font-medium text-slate-600">{modalidadLabel}</span>.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
@@ -847,6 +868,14 @@ export function ExpedienteDetalle({
           </Tabs>
         </div>
       </div>
+
+      {!readOnly && (
+        <EditarFichaModal
+          open={editarFichaOpen}
+          onOpenChange={setEditarFichaOpen}
+          expediente={data}
+        />
+      )}
     </div>
   );
 }

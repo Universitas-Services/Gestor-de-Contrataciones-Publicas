@@ -16,7 +16,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export interface UnidadContratantePayload {
   nombreUnidadContratante: string;
   nombreResponsableUnidad: string;
+  nombreResponsableUnidadContratante: string;
   cargoResponsable: string;
+  cedulaResponsableUnidadContratante: string;
+  datosDesignacionUnidadContratante: string;
 }
 
 export interface UnidadContratanteResponse {
@@ -67,7 +70,10 @@ export const listarUnidadesContratantes = async (): Promise<UnidadContratanteRec
       enteId: "",
       nombreUnidadContratante: a.nombre ?? `Unidad contratante ${a.id}`,
       nombreResponsableUnidad: "",
+      nombreResponsableUnidadContratante: "",
       cargoResponsable: "",
+      cedulaResponsableUnidadContratante: "",
+      datosDesignacionUnidadContratante: "",
       createdAt: "",
       updatedAt: "",
       version: 0,

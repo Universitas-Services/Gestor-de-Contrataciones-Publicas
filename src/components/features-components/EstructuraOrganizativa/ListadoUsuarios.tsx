@@ -548,10 +548,26 @@ export function ListadoUsuarios({ readOnly = false }: { readOnly?: boolean }) {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-color-boton-2 font-bold text-[11px] block">
+                            Cédula del Responsable de la Unidad Usuaria
+                          </Label>
+                          <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
+                            {selectedUserDetails.cedulaResponsableUnidadUsuaria || "-"}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
                             Cargo del Responsable de la Unidad Usuaria
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
                             {selectedUserDetails.cargoResponsableUnidadUsuaria || "-"}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
+                            Datos de designación del Responsable
+                          </Label>
+                          <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
+                            {selectedUserDetails.datosDesignacionUnidadUsuaria || "-"}
                           </div>
                         </div>
                       </div>
@@ -576,7 +592,17 @@ export function ListadoUsuarios({ readOnly = false }: { readOnly?: boolean }) {
                             Nombre y apellido del Responsable de la Unidad Contratante.
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
-                            {selectedUserDetails.nombreResponsableUnidad || "-"}
+                            {selectedUserDetails.nombreResponsableUnidad ||
+                              selectedUserDetails.nombreResponsableUnidadContratante ||
+                              "-"}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
+                            Cédula del Responsable de la Unidad Contratante
+                          </Label>
+                          <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
+                            {selectedUserDetails.cedulaResponsableUnidadContratante || "-"}
                           </div>
                         </div>
                         <div className="space-y-1">
@@ -585,6 +611,14 @@ export function ListadoUsuarios({ readOnly = false }: { readOnly?: boolean }) {
                           </Label>
                           <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
                             {selectedUserDetails.cargoResponsable || "-"}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-color-boton-2 font-bold text-[11px] block">
+                            Datos de designación del Responsable
+                          </Label>
+                          <div className="border border-slate-300 bg-white text-[11px] italic font-medium text-slate-500 px-3 py-1.5 rounded-md w-full min-h-[32px] break-words whitespace-normal leading-tight">
+                            {selectedUserDetails.datosDesignacionUnidadContratante || "-"}
                           </div>
                         </div>
                       </div>

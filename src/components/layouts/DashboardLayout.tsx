@@ -2,6 +2,7 @@
 
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./Sidebar/AppSidebar";
+import { HeaderTitleProvider } from "@/components/shared/HeaderTitleContext";
 import type { UserRole } from "@/types/role.types";
 
 interface DashboardLayoutProps {
@@ -16,7 +17,9 @@ export function DashboardLayout({ role, userName, userEmail, children }: Dashboa
     <div data-role={role}>
       <SidebarProvider>
         <AppSidebar role={role} />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset>
+          <HeaderTitleProvider>{children}</HeaderTitleProvider>
+        </SidebarInset>
       </SidebarProvider>
     </div>
   );

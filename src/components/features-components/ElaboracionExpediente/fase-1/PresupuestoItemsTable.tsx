@@ -59,16 +59,23 @@ function buildColumns({
   readOnly,
   onEdit,
   onDelete,
-}: Pick<
-  PresupuestoItemsTableProps,
-  "readOnly" | "onEdit" | "onDelete"
->): ColumnDef<PresupuestoItemRecord>[] {
+  rowNumberOffset,
+}: Pick<PresupuestoItemsTableProps, "readOnly" | "onEdit" | "onDelete"> & {
+  rowNumberOffset: number;
+}): ColumnDef<PresupuestoItemRecord>[] {
   return [
+    {
+      id: "numero",
+      header: "Nº",
+      cell: ({ row }) => (
+        <span className="font-semibold text-slate-600">{rowNumberOffset + row.index + 1}</span>
+      ),
+    },
     {
       accessorKey: "descripcionItem",
       header: "Descripción del ítem",
       cell: ({ row }) => (
-        <span className="block min-w-[160px] whitespace-normal text-[12px] leading-5 font-medium text-slate-700">
+        <span className="block min-w-[160px] whitespace-normal text-center text-[12px] leading-5 font-medium text-slate-700">
           {row.original.descripcionItem}
         </span>
       ),
@@ -96,18 +103,14 @@ function buildColumns({
     {
       accessorKey: "totalItems",
       header: "Total Items",
-      cell: ({ row }) => formatBs(row.original.totalItems),
+      cell: ({ row }) => <span className="font-semibold">{formatBs(row.original.totalItems)}</span>,
     },
     {
       id: "acciones",
-      header: () => <span className="block text-center">Acciones</span>,
+      header: "Acciones",
       cell: ({ row }) => {
         if (readOnly) {
-          return (
-            <span className="block text-center text-xs font-semibold text-slate-400">
-              Solo lectura
-            </span>
-          );
+          return <span className="text-xs font-semibold text-slate-400">Solo lectura</span>;
         }
 
         const isEditDisabled = !onEdit;
@@ -143,26 +146,29 @@ function buildColumns({
 }
 
 const COLUMN_HEADER_CLASSNAMES: Record<string, string> = {
-  descripcionItem: "w-[20%] min-w-[160px]",
-  codigoPartida: "w-[16%] min-w-[128px]",
-  unidadMedida: "w-[14%] min-w-[110px]",
-  cantidadRequerida: "w-[11%] min-w-[82px]",
-  precioUnitarioEstimado: "w-[16%] min-w-[118px]",
-  totalItems: "w-[13%] min-w-[96px]",
-  acciones: "w-[10%] min-w-[84px]",
+  numero: "w-[6%] min-w-[48px] text-center",
+  descripcionItem: "w-[19%] min-w-[160px] text-center",
+  codigoPartida: "w-[15%] min-w-[128px] text-center",
+  unidadMedida: "w-[13%] min-w-[110px] text-center",
+  cantidadRequerida: "w-[10%] min-w-[82px] text-center",
+  precioUnitarioEstimado: "w-[15%] min-w-[118px] text-center",
+  totalItems: "w-[12%] min-w-[96px] text-center",
+  acciones: "w-[10%] min-w-[84px] text-center",
 };
 
 const COLUMN_CELL_CLASSNAMES: Record<string, string> = {
-  descripcionItem: "min-w-[160px]",
-  codigoPartida: "min-w-[128px]",
-  unidadMedida: "min-w-[110px]",
-  cantidadRequerida: "min-w-[82px]",
-  precioUnitarioEstimado: "min-w-[118px]",
-  totalItems: "min-w-[96px]",
-  acciones: "min-w-[84px]",
+  numero: "min-w-[48px] text-center",
+  descripcionItem: "min-w-[160px] text-center",
+  codigoPartida: "min-w-[128px] text-center",
+  unidadMedida: "min-w-[110px] text-center",
+  cantidadRequerida: "min-w-[82px] text-center",
+  precioUnitarioEstimado: "min-w-[118px] text-center",
+  totalItems: "min-w-[96px] text-center",
+  acciones: "min-w-[84px] text-center",
 };
 
 const SKELETON_CELL_WIDTHS = [
+  "w-[28px]",
   "w-[85%]",
   "w-[70%]",
   "w-[60%]",
@@ -215,8 +221,8 @@ export function PresupuestoItemsTable({
   const totalPresupuesto = isServerMode ? (serverTotals?.montoTotal ?? 0) : subtotal + iva;
 
   const columns = React.useMemo(
-    () => buildColumns({ readOnly, onEdit, onDelete }),
-    [readOnly, onEdit, onDelete]
+    () => buildColumns({ readOnly, onEdit, onDelete, rowNumberOffset: startIndex }),
+    [readOnly, onEdit, onDelete, startIndex]
   );
   const fillerRowCount =
     !loading && paginatedItems.length > 0 ? Math.max(0, pageSize - paginatedItems.length) : 0;
@@ -304,7 +310,7 @@ export function PresupuestoItemsTable({
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={`px-3 py-3 align-top text-[12px] leading-5 text-slate-700 first:pl-5 last:pr-5 ${COLUMN_CELL_CLASSNAMES[cell.column.id] ?? ""}`}
+                        className={`px-3 py-3 align-middle text-center text-[12px] leading-5 text-slate-700 first:pl-5 last:pr-5 ${COLUMN_CELL_CLASSNAMES[cell.column.id] ?? ""}`}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -327,7 +333,7 @@ export function PresupuestoItemsTable({
               </>
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7} className="h-[281px] px-6 py-10 text-center align-middle">
+                <TableCell colSpan={8} className="h-[281px] px-6 py-10 text-center align-middle">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-slate-600">{emptyTitle}</p>
                     <p className="text-sm text-slate-500">{emptyDescription}</p>
@@ -340,7 +346,7 @@ export function PresupuestoItemsTable({
           <TableFooter className="bg-white">
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="border-r-0 px-6 py-4 text-right text-sm text-slate-500"
               >
                 Sub totales
@@ -354,7 +360,7 @@ export function PresupuestoItemsTable({
             </TableRow>
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="border-r-0 px-6 py-4 text-right text-sm text-slate-500"
               >
                 IVA
@@ -368,7 +374,7 @@ export function PresupuestoItemsTable({
             </TableRow>
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="border-r-0 px-6 py-4 text-right text-sm text-slate-500"
               >
                 Total Presupuesto

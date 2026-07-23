@@ -17,6 +17,8 @@ export interface UnidadUsuariaPayload {
   nombreUnidadUsuaria: string;
   nombreResponsableUnidadUsuaria: string;
   cargoResponsableUnidadUsuaria: string;
+  cedulaResponsableUnidadUsuaria: string;
+  datosDesignacionUnidadUsuaria: string;
 }
 
 export interface UnidadUsuariaResponse {

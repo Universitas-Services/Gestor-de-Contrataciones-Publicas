@@ -192,23 +192,35 @@ function resolveFromKnownLabels(pathname: string) {
 }
 
 function resolveExpedienteTitle(pathname: string) {
-  if (!pathname.startsWith("/elaboracion-expediente/")) {
-    return null;
+  if (pathname.startsWith("/elaboracion-expediente/")) {
+    if (pathname.includes("/evaluacion/")) {
+      return "Evaluacion del expediente";
+    }
+
+    if (pathname.endsWith("/informe")) {
+      return "Informe del expediente";
+    }
+
+    if (pathname.endsWith("/editar")) {
+      return "Editar expediente";
+    }
+
+    return "Detalle del expediente";
   }
 
-  if (pathname.includes("/evaluacion/")) {
-    return "Evaluacion del expediente";
+  if (pathname.startsWith("/gestion-expedientes/")) {
+    if (pathname.endsWith("/nuevo") || pathname === "/gestion-expedientes/nuevo") {
+      return null;
+    }
+
+    if (pathname.endsWith("/editar")) {
+      return "Editar expediente";
+    }
+
+    return "Detalle del expediente";
   }
 
-  if (pathname.endsWith("/informe")) {
-    return "Informe del expediente";
-  }
-
-  if (pathname.endsWith("/editar")) {
-    return "Editar expediente";
-  }
-
-  return "Elaboracion de expediente";
+  return null;
 }
 
 export function resolveHeaderTitle(pathname: string, role: UserRole): string {

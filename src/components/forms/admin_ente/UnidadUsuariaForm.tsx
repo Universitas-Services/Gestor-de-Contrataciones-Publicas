@@ -27,6 +27,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function UnidadUsuariaForm({ readOnly = false }: { readOnly?: boolean }) {
   const router = useRouter();
@@ -39,7 +46,9 @@ export function UnidadUsuariaForm({ readOnly = false }: { readOnly?: boolean }) 
     defaultValues: {
       nombreUnidadUsuaria: "",
       nombreResponsableUnidadUsuaria: "",
+      cedulaResponsableUnidadUsuaria: "",
       cargoResponsableUnidadUsuaria: "",
+      datosDesignacionUnidadUsuaria: "",
     },
     mode: "onChange",
   });
@@ -53,7 +62,9 @@ export function UnidadUsuariaForm({ readOnly = false }: { readOnly?: boolean }) 
             form.reset({
               nombreUnidadUsuaria: data.nombreUnidadUsuaria || "",
               nombreResponsableUnidadUsuaria: data.nombreResponsableUnidadUsuaria || "",
+              cedulaResponsableUnidadUsuaria: data.cedulaResponsableUnidadUsuaria || "",
               cargoResponsableUnidadUsuaria: data.cargoResponsableUnidadUsuaria || "",
+              datosDesignacionUnidadUsuaria: data.datosDesignacionUnidadUsuaria || "",
             });
           }
         })
@@ -173,14 +184,97 @@ export function UnidadUsuariaForm({ readOnly = false }: { readOnly?: boolean }) 
               <div className="mb-6">
                 <FormField
                   control={form.control}
+                  name="cedulaResponsableUnidadUsuaria"
+                  render={({ field }) => {
+                    const parts = field.value ? field.value.split("-") : ["V", ""];
+                    const tipo = parts[0] || "V";
+                    const numero = parts[1] || "";
+                    return (
+                      <FormItem>
+                        <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                          Indique cédula de identidad del responsable de la Unidad Usuaria.
+                        </FormLabel>
+                        <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                          Ejemplo: V-00000000
+                        </p>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={tipo || undefined}
+                              onValueChange={(val) => field.onChange(`${val}-${numero}`)}
+                              disabled={isLoading}
+                            >
+                              <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 font-inter">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="V">V</SelectItem>
+                                <SelectItem value="E">E</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              value={numero}
+                              disabled={isLoading}
+                              onChange={(e) => {
+                                const newNum = e.target.value.replace(/\D/g, "");
+                                if (newNum) {
+                                  field.onChange(`${tipo}-${newNum}`);
+                                } else {
+                                  field.onChange("");
+                                }
+                              }}
+                              maxLength={8}
+                              placeholder="00000000"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-[150px]"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
                   name="cargoResponsableUnidadUsuaria"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[slate-700] font-bold font-inter text-base">
-                        Indique el cargo del Responsable de la Unidad Usuaria.
+                        Indique el cargo del responsable de la Unidad Usuaria.
                       </FormLabel>
                       <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                         Ejemplo: Gerente, Coordinador, Supervisor
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="datosDesignacionUnidadUsuaria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique datos de la Resolución, Decreto, Acta o Acuerdo de designación del
+                        responsable de la Unidad Usuaria.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Resolución N° 000/00 de fecha 00-00-0000 publicado en Gaceta N°
+                        0000 de fecha 00-00-0000
                       </p>
                       <FormControl>
                         <Input

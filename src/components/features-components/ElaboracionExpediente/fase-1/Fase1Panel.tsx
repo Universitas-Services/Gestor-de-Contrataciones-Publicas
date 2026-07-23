@@ -58,7 +58,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 import { PresupuestoItemsTable } from "./PresupuestoItemsTable";
-import { ProductoItemSheet } from "./ProductoItemSheet";
+import { ProductoItemModal } from "./ProductoItemModal";
 
 interface Fase1PanelProps {
   expedienteId: string;
@@ -66,6 +66,8 @@ interface Fase1PanelProps {
   readOnly?: boolean;
   /** Reservado: labels dinámicos por tipo (opcional). */
   tipoContratacion?: TipoContratacionBackend;
+  /** Ruta canónica del módulo de expedientes (default: gestion). */
+  basePath?: string;
 }
 
 interface Fase1DocumentoConfig {
@@ -357,7 +359,9 @@ function ObservacionesFinalesCard({ fase }: { fase: FasePreparatoriaDetalleRespo
           <FieldLabel>Agrupación / Contrato marco</FieldLabel>
           {fase.viabilidadContratoMarco ? (
             <blockquote className="border-l-2 border-slate-200 pl-3 text-sm italic text-slate-600 font-inter leading-relaxed">
-              {fase.justificacionContratoMarco?.trim() || "—"}
+              {(
+                fase.justificacionContratoMarco ?? fase.justificacion_contrato_marco_au_au
+              )?.trim() || "—"}
             </blockquote>
           ) : (
             <Badge
@@ -377,6 +381,7 @@ export function Fase1Panel({
   expedienteId,
   fase1Creada = false,
   readOnly = false,
+  basePath = "/gestion-expedientes",
 }: Fase1PanelProps) {
   const [items, setItems] = useState<PresupuestoItemRecord[]>([]);
   const [meta, setMeta] = useState<PresupuestoItemsMeta>(DEFAULT_META);
@@ -520,8 +525,8 @@ export function Fase1Panel({
     ? "Todavia no hay productos registrados para este expediente."
     : "La tabla de presupuesto se habilitara cuando se complete el formulario de la Fase 1.";
   const fase1Href = fasePreparatoria?.id
-    ? `/elaboracion-expediente/${expedienteId}/fase-1?fase1Id=${fasePreparatoria.id}`
-    : `/elaboracion-expediente/${expedienteId}/fase-1`;
+    ? `${basePath}/${expedienteId}/fase-1?fase1Id=${fasePreparatoria.id}`
+    : `${basePath}/${expedienteId}/fase-1`;
   const canUseDocumentActions = Boolean(fasePreparatoria) || documentos.some((doc) => doc.generado);
 
   const documentosCard = (
@@ -920,13 +925,13 @@ export function Fase1Panel({
         onDelete={readOnly ? undefined : handleDeleteItemClick}
       />
 
-      <ProductoItemSheet
+      <ProductoItemModal
         open={isSheetOpen}
         onOpenChange={handleSheetOpenChange}
         onSubmit={handleSubmitItem}
         mode={sheetMode}
         initialValues={toProductoItemFormInputValues(selectedItem)}
-        submitLabel={sheetMode === "edit" ? "Guardar" : "Guardar Item"}
+        submitLabel={sheetMode === "edit" ? "Guardar" : "Guardar Ítem"}
         isSubmitting={isSavingItem}
       />
 

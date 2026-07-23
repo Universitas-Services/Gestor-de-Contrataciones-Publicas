@@ -49,6 +49,7 @@ export default async function ExpedienteDetallePage({ params, searchParams }: Pr
           data={expediente}
           initialTab={initialTab}
           readOnly={isReadOnlyRole(user.role)}
+          basePath="/elaboracion-expediente"
         />
       </Suspense>
     </div>
