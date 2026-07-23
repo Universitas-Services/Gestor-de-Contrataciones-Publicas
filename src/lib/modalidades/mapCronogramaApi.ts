@@ -21,7 +21,9 @@ function parseDate(iso: string): Date {
 }
 
 function maxIso(a: string, b: string): string {
-  return parseDate(a) >= parseDate(b) ? dateOnly(a) : dateOnly(b);
+  const aDate = dateOnly(a, b);
+  const bDate = dateOnly(b, a);
+  return parseDate(aDate) >= parseDate(bDate) ? aDate : bDate;
 }
 
 /**
