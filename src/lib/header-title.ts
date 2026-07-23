@@ -43,6 +43,12 @@ const HEADER_TITLE_RULES: HeaderTitleRule[] = [
   { type: "exact", path: "/registro-proveedores/nuevo", title: "Nuevo proveedor" },
   { type: "exact", path: "/elaboracion-expediente", title: "Elaboracion de expediente" },
   { type: "exact", path: "/elaboracion-expediente/nuevo", title: "Nuevo expediente" },
+  { type: "exact", path: "/gestion-expedientes", title: "Gestión de expedientes" },
+  {
+    type: "exact",
+    path: "/gestion-expedientes/nuevo",
+    title: "Elaboración de expedientes de contratación pública",
+  },
   {
     type: "exact",
     path: "/admin_ente/configuracion/maxima-autoridad",
@@ -65,6 +71,18 @@ const HEADER_TITLE_RULES: HeaderTitleRule[] = [
     type: "exact",
     path: "/admin_ente/configuracion/comision-contrataciones",
     title: "Comision de contrataciones",
+    role: "admin_ente",
+  },
+  {
+    type: "exact",
+    path: ROLE_ROUTES.admin_ente.configuracion,
+    title: "Configuracion",
+    role: "admin_ente",
+  },
+  {
+    type: "exact",
+    path: ROLE_ROUTES.admin_ente.calendarioEnte,
+    title: "Calendario del ente",
     role: "admin_ente",
   },
   { type: "exact", path: "/consultor-ia", title: "Consultor IA" },
@@ -174,23 +192,35 @@ function resolveFromKnownLabels(pathname: string) {
 }
 
 function resolveExpedienteTitle(pathname: string) {
-  if (!pathname.startsWith("/elaboracion-expediente/")) {
-    return null;
+  if (pathname.startsWith("/elaboracion-expediente/")) {
+    if (pathname.includes("/evaluacion/")) {
+      return "Evaluacion del expediente";
+    }
+
+    if (pathname.endsWith("/informe")) {
+      return "Informe del expediente";
+    }
+
+    if (pathname.endsWith("/editar")) {
+      return "Editar expediente";
+    }
+
+    return "Detalle del expediente";
   }
 
-  if (pathname.includes("/evaluacion/")) {
-    return "Evaluacion del expediente";
+  if (pathname.startsWith("/gestion-expedientes/")) {
+    if (pathname.endsWith("/nuevo") || pathname === "/gestion-expedientes/nuevo") {
+      return null;
+    }
+
+    if (pathname.endsWith("/editar")) {
+      return "Editar expediente";
+    }
+
+    return "Detalle del expediente";
   }
 
-  if (pathname.endsWith("/informe")) {
-    return "Informe del expediente";
-  }
-
-  if (pathname.endsWith("/editar")) {
-    return "Editar expediente";
-  }
-
-  return "Elaboracion de expediente";
+  return null;
 }
 
 export function resolveHeaderTitle(pathname: string, role: UserRole): string {

@@ -90,7 +90,15 @@ export const fase1FormSchema = z
     origenCrsRegistro: z.boolean().optional(),
     diasValidezOferta: requiredInteger("Los dias de validez de la oferta son requeridos"),
     autoridadAclaratorias: requiredText("La autoridad encargada de aclaratorias es requerida"),
-    normativaLegal: requiredText("La normativa legal es requerida", MAX_TEXT_500),
+    normativaLegal: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1, "La normativa no puede estar vacia")
+          .max(MAX_TEXT_500, `Maximo ${MAX_TEXT_500} caracteres`)
+      )
+      .default([]),
     diasVigenciaGarantiaExtension: requiredInteger(
       "Los dias de vigencia de la garantia son requeridos"
     ),

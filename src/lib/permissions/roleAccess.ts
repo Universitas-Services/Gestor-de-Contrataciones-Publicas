@@ -2,7 +2,11 @@ import { ROLES, type UserRole } from "@/types/role.types";
 
 const ENTE_MODULE_ROLES: UserRole[] = [ROLES.ENTE, ROLES.EJECUTOR, ROLES.VISUALIZADOR];
 const MUTATION_ROLES: UserRole[] = [ROLES.ENTE, ROLES.EJECUTOR];
-const ADMIN_ENTE_SHARED_PREFIXES = ["/admin_ente/configuracion", "/admin_ente/completar-ente"];
+const ADMIN_ENTE_SHARED_PREFIXES = [
+  "/admin_ente/configuracion",
+  "/admin_ente/calendario-ente",
+  "/admin_ente/completar-ente",
+];
 
 export function canAccessEnteModules(role: UserRole): boolean {
   return ENTE_MODULE_ROLES.includes(role);

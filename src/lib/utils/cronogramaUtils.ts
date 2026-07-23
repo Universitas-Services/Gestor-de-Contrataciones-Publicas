@@ -1,65 +1,32 @@
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import {
+  addWorkingDays,
+  countWorkingDays,
+  ensureWorkingDay,
+  formatIsoDate,
+  isNonWorkingDay,
+  isWeekend,
+  parseIsoDate,
+} from "@/lib/utils/diasNoLaborablesUtils";
+
+export { formatIsoDate, isWeekend, parseIsoDate };
 
 /**
- * Suma N días hábiles (lunes–viernes) a una fecha base.
- * No incluye feriados (MVP).
+ * Suma N días hábiles (lunes–viernes, excluyendo feriados del ente si se proveen).
  */
-export function addBusinessDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  let added = 0;
-  const direction = days >= 0 ? 1 : -1;
-  const absDays = Math.abs(days);
-
-  while (added < absDays) {
-    result.setDate(result.getDate() + direction);
-    const dow = result.getDay();
-    if (dow !== 0 && dow !== 6) added++;
-  }
-  return result;
+export function addBusinessDays(date: Date, days: number, feriados?: Set<string>): Date {
+  return addWorkingDays(date, days, feriados);
 }
 
 /**
  * Cuenta los días hábiles entre dos fechas (inclusive de startDate).
  */
-export function countBusinessDays(from: Date, to: Date): number {
-  let count = 0;
-  const cur = new Date(from);
-  while (cur <= to) {
-    if (!isWeekend(cur)) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+export function countBusinessDays(from: Date, to: Date, feriados?: Set<string>): number {
+  return countWorkingDays(from, to, feriados);
 }
 
-export function isWeekend(date: Date): boolean {
-  const dow = date.getDay();
-  return dow === 0 || dow === 6;
-}
-
-export function ensureBusinessDay(date: Date): Date {
-  const res = new Date(date);
-  while (isWeekend(res)) {
-    res.setDate(res.getDate() + 1);
-  }
-  return res;
-}
-
-/**
- * Convierte yyyy-MM-dd a Date (sin corrección de zona horaria).
- */
-export function parseIsoDate(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
-/**
- * Formatea una Date a "yyyy-MM-dd".
- */
-export function formatIsoDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+export function ensureBusinessDay(date: Date, feriados?: Set<string>): Date {
+  return ensureWorkingDay(date, feriados);
 }
 
 // ─── Plazos mínimos para el Acto de Recepción (Art. 67.1 LCP) ───────
@@ -95,44 +62,45 @@ export interface FechasSugeridas {
 
 /**
  * Calcula las fechas sugeridas del cronograma a partir del llamado y el tipo.
- * Toda la lógica es en días hábiles (lunes–viernes, sin feriados).
+ * Toda la lógica es en días hábiles (lunes–viernes, excluyendo feriados del ente).
  */
 export function calcularFechasSugeridas(
   fechaLlamadoIso: string,
-  tipo: TipoContratacionBackend
+  tipo: TipoContratacionBackend,
+  feriados?: Set<string>
 ): FechasSugeridas {
   const llamado = parseIsoDate(fechaLlamadoIso);
 
   // Acto de recepción: PLAZO_MIN días hábiles desde el llamado
-  const actoRecepcion = addBusinessDays(llamado, PLAZO_MIN_ACTO_RECEPCION[tipo]);
+  const actoRecepcion = addBusinessDays(llamado, PLAZO_MIN_ACTO_RECEPCION[tipo], feriados);
 
   // Disponibilidad del pliego: Art. 65 DLCP → mismo día del llamado hasta 1 día antes del acto
   const inicioDisponibilidad = new Date(llamado);
-  const finDisponibilidad = addBusinessDays(actoRecepcion, -1);
+  const finDisponibilidad = addBusinessDays(actoRecepcion, -1, feriados);
 
   // Solicitud aclaratorias: mínimo 3 días hábiles desde inicio disponibilidad
-  const solicitudAclaratorias = addBusinessDays(inicioDisponibilidad, 3);
+  const solicitudAclaratorias = addBusinessDays(inicioDisponibilidad, 3, feriados);
 
   // Modificaciones al pliego: 1 día hábil después de solicitud (Límite máximo: Acto-2)
-  const modificacionPliego = addBusinessDays(solicitudAclaratorias, 1);
+  const modificacionPliego = addBusinessDays(solicitudAclaratorias, 1, feriados);
 
   // Respuesta aclaratorias: 1 día hábil después de modificaciones (Límite máximo: Acto-1)
-  const respuestaAclaratorias = addBusinessDays(modificacionPliego, 1);
+  const respuestaAclaratorias = addBusinessDays(modificacionPliego, 1, feriados);
 
   // Evaluación: 3 días hábiles desde el acto
-  const limiteEvaluacion = addBusinessDays(actoRecepcion, 3);
+  const limiteEvaluacion = addBusinessDays(actoRecepcion, 3, feriados);
 
   // Adjudicación: PLAZO_MAX días desde acto (sugerido al máximo)
-  const limiteAdjudicacion = addBusinessDays(actoRecepcion, PLAZO_MAX_ADJUDICACION[tipo]);
+  const limiteAdjudicacion = addBusinessDays(actoRecepcion, PLAZO_MAX_ADJUDICACION[tipo], feriados);
 
   // Notificación: +2 días hábiles tras adjudicación
-  const limiteNotificacion = addBusinessDays(limiteAdjudicacion, 2);
+  const limiteNotificacion = addBusinessDays(limiteAdjudicacion, 2, feriados);
 
   // Garantías: máximo 5 días hábiles post-notificación
-  const limiteGarantias = addBusinessDays(limiteNotificacion, 5);
+  const limiteGarantias = addBusinessDays(limiteNotificacion, 5, feriados);
 
   // Firma del contrato: máximo 8 días hábiles post-notificación
-  const limiteFirmaContrato = addBusinessDays(limiteNotificacion, 8);
+  const limiteFirmaContrato = addBusinessDays(limiteNotificacion, 8, feriados);
 
   return {
     fechaLlamadoParticipar: fechaLlamadoIso,
@@ -162,7 +130,8 @@ export interface ValidationResult {
 
 export function validarCronograma(
   fechas: FechasSugeridas,
-  tipo: TipoContratacionBackend
+  tipo: TipoContratacionBackend,
+  feriados?: Set<string>
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -179,18 +148,18 @@ export function validarCronograma(
   const firma = parseIsoDate(fechas.fechaLimiteFirmaContrato);
 
   // ─── Val. 1: Plazo mínimo del Acto de Recepción ─────────────────
-  const diasHabilesHastaActo = countBusinessDays(llamado, actoRecepcion) - 1;
+  const diasHabilesHastaActo = countBusinessDays(llamado, actoRecepcion, feriados) - 1;
   const minActo = PLAZO_MIN_ACTO_RECEPCION[tipo];
   if (diasHabilesHastaActo < minActo) {
     const tipoLabel = { BIENES: "Bienes", SERVICIOS: "Servicios", OBRAS: "Obras" }[tipo];
     errors.push(
       `¡Atención! La fecha del Acto de Recepción no puede ser inferior a ${minActo} días hábiles desde el llamado para contratos de ${tipoLabel}. ` +
-        `La fecha mínima permitida es el ${formatIsoDate(addBusinessDays(llamado, minActo))}, según el Art. 67.1 de la LCP.`
+        `La fecha mínima permitida es el ${formatIsoDate(addBusinessDays(llamado, minActo, feriados))}, según el Art. 67.1 de la LCP.`
     );
   }
 
   // ─── Val. 2: Plazo máximo de Adjudicación ────────────────────────
-  const diasHabilesHastaAdj = countBusinessDays(actoRecepcion, adjudicacion) - 1;
+  const diasHabilesHastaAdj = countBusinessDays(actoRecepcion, adjudicacion, feriados) - 1;
   const maxAdj = PLAZO_MAX_ADJUDICACION[tipo];
   if (diasHabilesHastaAdj > maxAdj) {
     const tipoLabel = { BIENES: "Bienes", SERVICIOS: "Servicios", OBRAS: "Obras" }[tipo];
@@ -293,7 +262,8 @@ export function moverFechaCronograma(
   cronogramaActual: Record<string, unknown>,
   eventId: string,
   diffInDays: number,
-  tipoContratacion: TipoContratacionBackend
+  tipoContratacion: TipoContratacionBackend,
+  feriados?: Set<string>
 ): MoverFechaResult {
   if (!cronogramaActual || diffInDays === 0) {
     return { success: false, errorMsg: "No hay cambios a aplicar." };
@@ -319,10 +289,9 @@ export function moverFechaCronograma(
     return date.toISOString().split("T")[0];
   };
 
-  const checkWeekend = (dateStr: string): boolean => {
+  const checkNonWorkingDay = (dateStr: string): boolean => {
     const date = new Date(`${dateStr.split("T")[0]}T00:00:00`);
-    const dow = date.getDay();
-    return dow === 0 || dow === 6;
+    return isNonWorkingDay(date, feriados);
   };
 
   // Clonar original
@@ -350,14 +319,14 @@ export function moverFechaCronograma(
     };
   }
 
-  if (checkWeekend(newVal)) {
-    return { success: false, errorMsg: "La fecha no puede caer en fin de semana." };
+  if (checkNonWorkingDay(newVal)) {
+    return { success: false, errorMsg: "La fecha no puede caer en un día no laborable." };
   }
 
   // 4. TODO: Validaciones futuras más restrictivas
   if (eventId === "fechaSolicitudAclaratorias") {
     const newDate = new Date(`${newVal.split("T")[0]}T00:00:00`);
-    const diffHabiles = countBusinessDays(llamadoDate, newDate) - 1;
+    const diffHabiles = countBusinessDays(llamadoDate, newDate, feriados) - 1;
     if (diffHabiles < 3) {
       return {
         success: false,
@@ -372,7 +341,7 @@ export function moverFechaCronograma(
     if (actoStr) {
       const actoDate = new Date(`${actoStr.split("T")[0]}T00:00:00`);
       const newDateMod = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(newDateMod, actoDate) - 1;
+      const diffHabiles = countBusinessDays(newDateMod, actoDate, feriados) - 1;
       if (diffHabiles < 2) {
         return {
           success: false,
@@ -388,7 +357,7 @@ export function moverFechaCronograma(
     if (actoStr) {
       const actoDate = new Date(`${actoStr.split("T")[0]}T00:00:00`);
       const newDateResp = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(newDateResp, actoDate) - 1;
+      const diffHabiles = countBusinessDays(newDateResp, actoDate, feriados) - 1;
       if (diffHabiles < 1) {
         return {
           success: false,
@@ -402,7 +371,7 @@ export function moverFechaCronograma(
   if (eventId === "fechaActoRecepcionAperturaSobres") {
     const minDays = PLAZO_MIN_ACTO_RECEPCION[tipoContratacion];
     const newDateActo = new Date(`${newVal.split("T")[0]}T00:00:00`);
-    const diffHabiles = countBusinessDays(llamadoDate, newDateActo) - 1;
+    const diffHabiles = countBusinessDays(llamadoDate, newDateActo, feriados) - 1;
 
     if (diffHabiles < minDays) {
       const labels: Record<string, string> = {
@@ -411,7 +380,7 @@ export function moverFechaCronograma(
         OBRAS: "Obras",
       };
       const tipoLabel = labels[tipoContratacion] || tipoContratacion;
-      const minLegalDate = addBusinessDays(llamadoDate, minDays);
+      const minLegalDate = addBusinessDays(llamadoDate, minDays, feriados);
       return {
         success: false,
         errorMsg: `¡Atención! La fecha del Acto de Recepción no puede ser inferior a ${minDays} días hábiles desde la publicación del llamado para contratos de ${tipoLabel}. La fecha mínima permitida es el ${formatIsoDate(minLegalDate)}, según el Art. 67.1 de la LCP.`,
@@ -420,7 +389,7 @@ export function moverFechaCronograma(
 
     // LÍMITE MÁXIMO: 15 días hábiles después del mínimo legal
     const minLegalDate = addBusinessDays(llamadoDate, minDays);
-    const maxLegalDate = addBusinessDays(minLegalDate, 15);
+    const maxLegalDate = addBusinessDays(minLegalDate, 15, feriados);
     if (newDateActo > maxLegalDate) {
       return {
         success: false,
@@ -434,7 +403,7 @@ export function moverFechaCronograma(
     if (actoStr) {
       const actoDate = new Date(`${actoStr.split("T")[0]}T00:00:00`);
       const newDateEval = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(actoDate, newDateEval) - 1;
+      const diffHabiles = countBusinessDays(actoDate, newDateEval, feriados) - 1;
 
       const minEval = tipoContratacion === "BIENES" ? 5 : tipoContratacion === "SERVICIOS" ? 7 : 10;
 
@@ -458,7 +427,7 @@ export function moverFechaCronograma(
     if (actoStr) {
       const actoDate = new Date(`${actoStr.split("T")[0]}T00:00:00`);
       const newDateAdj = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(actoDate, newDateAdj) - 1;
+      const diffHabiles = countBusinessDays(actoDate, newDateAdj, feriados) - 1;
 
       const maxAdj = PLAZO_MAX_ADJUDICACION[tipoContratacion];
 
@@ -483,7 +452,7 @@ export function moverFechaCronograma(
     if (adjStr) {
       const adjDate = new Date(`${adjStr.split("T")[0]}T00:00:00`);
       const newDateNotif = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(adjDate, newDateNotif) - 1;
+      const diffHabiles = countBusinessDays(adjDate, newDateNotif, feriados) - 1;
       if (diffHabiles < 2) {
         return {
           success: false,
@@ -499,7 +468,7 @@ export function moverFechaCronograma(
     if (notifStr) {
       const notifDate = new Date(`${notifStr.split("T")[0]}T00:00:00`);
       const newDateGarantia = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(notifDate, newDateGarantia) - 1;
+      const diffHabiles = countBusinessDays(notifDate, newDateGarantia, feriados) - 1;
       if (diffHabiles > 5) {
         return {
           success: false,
@@ -521,7 +490,7 @@ export function moverFechaCronograma(
     if (notifStr) {
       const notifDate = new Date(`${notifStr.split("T")[0]}T00:00:00`);
       const newDateFirma = new Date(`${newVal.split("T")[0]}T00:00:00`);
-      const diffHabiles = countBusinessDays(notifDate, newDateFirma) - 1;
+      const diffHabiles = countBusinessDays(notifDate, newDateFirma, feriados) - 1;
       if (diffHabiles > 8) {
         return {
           success: false,
@@ -548,8 +517,8 @@ export function moverFechaCronograma(
     if (val) {
       let pushDate = new Date(`${addDaysSimple(val, days)}T00:00:00`);
       // Si cae en fin de semana, empujar al Lunes
-      if (isWeekend(pushDate)) {
-        pushDate = ensureBusinessDay(pushDate);
+      if (isNonWorkingDay(pushDate, feriados)) {
+        pushDate = ensureBusinessDay(pushDate, feriados);
       }
       newCronograma[key] = formatIsoDate(pushDate) + "T00:00:00.000Z";
     }
@@ -558,7 +527,7 @@ export function moverFechaCronograma(
   if (eventId === "fechaActoRecepcionAperturaSobres") {
     // 1. Ajustar Fin de Pliego automático (Siempre 1 día hábil antes del Acto)
     const actoDate = new Date(`${newVal.split("T")[0]}T00:00:00`);
-    const finPliegoDate = addBusinessDays(actoDate, -1);
+    const finPliegoDate = addBusinessDays(actoDate, -1, feriados);
     newCronograma["fechaFinDisponibilidadPliego"] = formatIsoDate(finPliegoDate) + "T00:00:00.000Z";
 
     // 2. Desplazar hacia adelante todas las fechas posteriores

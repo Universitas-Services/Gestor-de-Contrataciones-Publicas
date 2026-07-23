@@ -100,14 +100,12 @@ export function Paso5ObservacionesStep({ form }: Paso5ObservacionesStepProps) {
         />
 
         {condicionPlurianual === true && (
-          <div className="max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-              <p className="text-[12px] font-semibold leading-relaxed">
-                Recuerde reflejar esta condición en el cronograma o en las condiciones del
-                procedimiento.
-              </p>
-            </div>
+          <div className="mt-1 flex max-w-3xl items-center gap-2 border-l-4 border-yellow-400 bg-yellow-50 p-3 text-yellow-800">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600" />
+            <p className="text-[12px] font-medium leading-relaxed sm:text-[13px]">
+              Recuerde reflejar esta condición en el cronograma o en las condiciones del
+              procedimiento.
+            </p>
           </div>
         )}
 

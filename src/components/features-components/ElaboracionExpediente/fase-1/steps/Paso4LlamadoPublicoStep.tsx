@@ -2,11 +2,7 @@
 
 import { Controller, type UseFormReturn } from "react-hook-form";
 
-import {
-  FASE1_FIELD_COPY,
-  FASE1_HORA_OPTIONS,
-  FASE1_SECTION_DESCRIPTIONS,
-} from "@/lib/constants/fase1";
+import { FASE1_FIELD_COPY, FASE1_SECTION_DESCRIPTIONS } from "@/lib/constants/fase1";
 import { cn } from "@/lib/utils";
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
 import { BankAccountInput } from "@/components/bank-account-input";
@@ -20,14 +16,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Fase1SectionHeader } from "../Fase1SectionHeader";
+import { HorarioRetiroPliegoFields } from "../HorarioRetiroPliegoFields";
+import { HoraActoRecepFields } from "../HoraActoRecepFields";
 
 interface Paso4LlamadoPublicoStepProps {
   form: UseFormReturn<Fase1FormInputValues>;
@@ -41,8 +32,6 @@ const compactChoiceBaseClass =
   "h-8 min-w-[68px] rounded-md border px-3 text-[11px] font-bold transition-colors";
 const compactSectionTitleClass = "text-[17px] font-bold text-color-titulos";
 const compactSectionDescriptionClass = "text-[12px] text-muted-foreground italic leading-relaxed";
-const compactSelectTriggerClass =
-  "h-[32px] w-full rounded-md border-slate-300 bg-white text-[11px] font-medium text-slate-600 shadow-none focus-visible:ring-[2px]";
 const compactMessageClass = "text-[11px]";
 
 export function Paso4LlamadoPublicoStep({ form }: Paso4LlamadoPublicoStepProps) {
@@ -142,7 +131,7 @@ export function Paso4LlamadoPublicoStep({ form }: Paso4LlamadoPublicoStepProps) 
           control={form.control}
           name="horarioRetiroPliego"
           render={({ field }) => (
-            <FormItem className="max-w-2xl">
+            <FormItem className="max-w-4xl">
               <p className={compactLabelClass}>{FASE1_FIELD_COPY.horarioRetiroPliego.label}</p>
               <FormDescription className={compactDescriptionClass}>
                 {FASE1_FIELD_COPY.horarioRetiroPliego.description}
@@ -151,7 +140,11 @@ export function Paso4LlamadoPublicoStep({ form }: Paso4LlamadoPublicoStepProps) 
                 {FASE1_FIELD_COPY.horarioRetiroPliego.placeholder}
               </p>
               <FormControl>
-                <Input {...field} className={compactInputClass} />
+                <HorarioRetiroPliegoFields
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
               </FormControl>
               <FormMessage className={compactMessageClass} />
             </FormItem>
@@ -314,25 +307,18 @@ export function Paso4LlamadoPublicoStep({ form }: Paso4LlamadoPublicoStepProps) 
           control={form.control}
           name="horaActoRecepAper"
           render={({ field }) => (
-            <FormItem className="max-w-sm">
+            <FormItem className="max-w-md">
               <p className={compactLabelClass}>{FASE1_FIELD_COPY.horaActoRecepAper.label}</p>
               <FormDescription className={compactDescriptionClass}>
                 {FASE1_FIELD_COPY.horaActoRecepAper.description}
               </FormDescription>
-              <Select onValueChange={field.onChange} value={field.value || undefined}>
-                <FormControl>
-                  <SelectTrigger className={compactSelectTriggerClass}>
-                    <SelectValue placeholder={FASE1_FIELD_COPY.horaActoRecepAper.placeholder} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {FASE1_HORA_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <HoraActoRecepFields
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              </FormControl>
               <FormMessage className={compactMessageClass} />
             </FormItem>
           )}

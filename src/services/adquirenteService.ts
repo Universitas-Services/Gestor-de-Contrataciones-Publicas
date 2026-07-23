@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerToken } from "@/lib/auth/session";
-import { revalidatePath } from "next/cache";
+import { revalidateExpedienteList } from "@/lib/utils/expedienteRevalidate";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -40,7 +40,7 @@ export const registrarAdquirente = async (payload: RegistrarAdquirentePayload): 
     );
   }
 
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
   return response.json();
 };
 
@@ -118,7 +118,7 @@ export const editarAdquirente = async (
     );
   }
 
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
   return response.json();
 };
 
@@ -144,5 +144,5 @@ export const eliminarAdquirente = async (id: string): Promise<void> => {
     );
   }
 
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
 };

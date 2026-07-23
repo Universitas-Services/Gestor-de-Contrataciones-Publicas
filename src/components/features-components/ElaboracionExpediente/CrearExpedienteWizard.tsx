@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,12 +27,11 @@ import {
 } from "@/services/expedienteService";
 import type { ExpedienteResponse } from "@/services/expedienteService";
 import { UniversitasAPI } from "@universitas/sdk-global";
-import {
-  isFechaEditable,
-  moverFechaCronograma,
-  calcularFechasSugeridas,
-} from "@/lib/utils/cronogramaUtils";
+import { moverFechaCronograma, calcularFechasSugeridas } from "@/lib/utils/cronogramaUtils";
+import { cronogramaToEvents } from "@/lib/utils/cronogramaEvents";
 import type { IEvent } from "./calendar/types";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import { getYearRangeForCronograma } from "@/lib/utils/diasNoLaborablesUtils";
 
 // ─── Step meta ───────────────────────────────────────────────────────
 
@@ -81,83 +80,6 @@ const TIPO_DISPLAY: Record<string, string> = {
   SERVICIOS: "Servicios",
 };
 
-// ─── CSS var suffix por campo del cronograma ─────────────────────────
-const EVENT_COLOR_VARS: Record<string, string> = {
-  fechaLlamadoParticipar: "cal-llamado",
-  fechaInicioDisponibilidadPliego: "cal-disponibilidad",
-  fechaFinDisponibilidadPliego: "cal-disponibilidad",
-  fechaSolicitudAclaratorias: "cal-solicitud-aclaratorias",
-  fechaRespuestaAclaratorias: "cal-respuesta-aclaratorias",
-  fechaModificacionPliego: "cal-modificaciones",
-  fechaActoRecepcionAperturaSobres: "cal-recepcion",
-  fechaLimiteEvaluacion: "cal-evaluacion",
-  fechaLimiteAdjudicacion: "cal-adjudicacion",
-  fechaLimiteNotificacion: "cal-notificacion",
-  fechaLimiteGarantias: "cal-garantias",
-  fechaLimiteFirmaContrato: "cal-firma",
-};
-
-const EVENT_TITLES: Record<string, string> = {
-  fechaLlamadoParticipar: "Llamado a Participar",
-  fechaInicioDisponibilidadPliego: "Disponibilidad del Pliego",
-  fechaFinDisponibilidadPliego: "Fin Disponibilidad del Pliego",
-  fechaSolicitudAclaratorias: "Límite para Solicitud de Aclaratorias",
-  fechaRespuestaAclaratorias: "Límite para Respuesta de Aclaratorias",
-  fechaModificacionPliego: "Límite para Modificaciones al Pliego",
-  fechaActoRecepcionAperturaSobres: "Acto de Recepción de Ofertas",
-  fechaLimiteEvaluacion: "Límite para Evaluación",
-  fechaLimiteAdjudicacion: "Límite para Adjudicación",
-  fechaLimiteNotificacion: "Límite para Notificación",
-  fechaLimiteGarantias: "Límite para Consignar Garantías",
-  fechaLimiteFirmaContrato: "Límite para la Firma del Contrato",
-};
-
-// ─── Los campos de pliego se fusionan en un único evento de rango ────
-const PLIEGO_INICIO = "fechaInicioDisponibilidadPliego";
-const PLIEGO_FIN = "fechaFinDisponibilidadPliego";
-
-function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
-  const events: IEvent[] = [];
-
-  // Pliego: evento de rango inicio→fin
-  const pInicio = cronograma[PLIEGO_INICIO];
-  const pFin = cronograma[PLIEGO_FIN];
-  if (pInicio && pFin) {
-    events.push({
-      id: "rango-pliego",
-      title: "Disponibilidad del Pliego",
-      startDate: (pInicio as string).split("T")[0],
-      endDate: (pFin as string).split("T")[0],
-      colorVar: "cal-disponibilidad",
-      readonly: true,
-    });
-  }
-
-  // Resto de campos (excluir pliego)
-  const SKIP = new Set([PLIEGO_INICIO, PLIEGO_FIN]);
-  Object.entries(cronograma)
-    .filter(
-      ([key, value]) =>
-        !SKIP.has(key) &&
-        key.startsWith("fecha") &&
-        typeof value === "string" &&
-        (value as string).length > 0
-    )
-    .forEach(([key, value]) => {
-      const dateStr = (value as string).split("T")[0];
-      events.push({
-        id: key,
-        title: EVENT_TITLES[key] || key,
-        startDate: dateStr,
-        endDate: dateStr,
-        colorVar: EVENT_COLOR_VARS[key] || "cal-llamado",
-        readonly: !isFechaEditable(key),
-      });
-    });
-
-  return events;
-}
-
 // ─── Lazy Universitas SDK client ─────────────────────────────────────────────
 // El SDK solo se instancia cuando se invoca por primera vez (en runtime),
 // no durante la importación del módulo (build-time). Evita el crash en Vercel.
@@ -181,6 +103,8 @@ export interface CrearExpedienteWizardProps {
   /** Activa el modo edición (omite el paso 4 de cronograma) */
   modoEdicion?: boolean;
   readOnly?: boolean;
+  /** Ruta canónica del módulo (default: elaboracion, legacy). */
+  basePath?: string;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
@@ -190,6 +114,7 @@ export function CrearExpedienteWizard({
   datosIniciales,
   modoEdicion = false,
   readOnly = false,
+  basePath = "/elaboracion-expediente",
 }: CrearExpedienteWizardProps = {}) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -207,6 +132,22 @@ export function CrearExpedienteWizard({
   const [cronogramaData, setCronogramaData] = useState<CronogramaFormValues | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<IEvent[]>([]);
   const [calendarInitialMonth, setCalendarInitialMonth] = useState<Date>(new Date(2026, 2, 1));
+
+  const cronogramaRange = useMemo(() => {
+    if (!cronogramaData) {
+      const year = new Date().getFullYear();
+      return { desde: `${year}-01-01`, hasta: `${year + 1}-12-31` };
+    }
+    const fechas = Object.entries(cronogramaData)
+      .filter(([key, value]) => key.startsWith("fecha") && typeof value === "string")
+      .map(([, value]) => value as string);
+    return getYearRangeForCronograma(fechas);
+  }, [cronogramaData]);
+
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
+    cronogramaRange.desde,
+    cronogramaRange.hasta
+  );
 
   // ─── Form Paso 1 (se mantiene vivo durante todo el wizard) ──────
   const datosBasicosForm = useForm<DatosBasicosFormValues>({
@@ -298,7 +239,7 @@ export function CrearExpedienteWizard({
           tipoContratacion: formData.tipoContratacion,
           montoEstimadoBs: formData.montoEstimadoBs,
           montoEstimadoDolar: analisisData?.montoDolares ?? undefined,
-          valorUcauBase: analisisData?.valorUcau ?? undefined,
+          valorUcauBase: analisisData?.montoUCAU ?? undefined,
           modalidadSeleccion: "LICITACION_PUBLICA",
         });
         goToStep(3);
@@ -306,7 +247,7 @@ export function CrearExpedienteWizard({
         // Modo creación: POST para crear el borrador
         const result = await crearExpedienteBorrador(
           formData,
-          analisisData?.valorUcau ?? undefined,
+          analisisData?.montoUCAU ?? undefined,
           analisisData?.montoDolares ?? undefined
         );
 
@@ -345,7 +286,7 @@ export function CrearExpedienteWizard({
         tipoContratacion: fd.tipoContratacion,
         montoEstimadoBs: fd.montoEstimadoBs,
         montoEstimadoDolar: analisisData?.montoDolares ?? undefined,
-        valorUcauBase: analisisData?.valorUcau ?? undefined,
+        valorUcauBase: analisisData?.montoUCAU ?? undefined,
         modalidadSeleccion: "LICITACION_PUBLICA",
         autoridadId: actores.autoridadId,
         comisionId: actores.comisionId,
@@ -357,7 +298,7 @@ export function CrearExpedienteWizard({
       // ── Modo edición: volver al detalle sin pasar al cronograma ──
       if (modoEdicion) {
         toast.success("Expediente actualizado correctamente.");
-        router.push(`/elaboracion-expediente/${expedienteId}`);
+        router.push(`${basePath}/${expedienteId}`);
         return;
       }
 
@@ -372,7 +313,8 @@ export function CrearExpedienteWizard({
       // Parche: sobrescribir con cascada lógica del frontend
       const fechasLogicasFront = calcularFechasSugeridas(
         actores.fechaLlamadoParticipar,
-        fd.tipoContratacion
+        fd.tipoContratacion,
+        nonWorkingDays
       );
       cronogramaGenerado = { ...cronogramaGenerado, ...fechasLogicasFront };
 
@@ -408,8 +350,7 @@ export function CrearExpedienteWizard({
     try {
       await guardarCronograma(expedienteId, cronogramaData);
       toast.success("¡Cronograma guardado! Expediente creado exitosamente.");
-      // Redirigir al detalle del expediente recién creado
-      router.push(`/elaboracion-expediente/${expedienteId}`);
+      router.push(`${basePath}/${expedienteId}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar el cronograma");
     } finally {
@@ -423,7 +364,7 @@ export function CrearExpedienteWizard({
     if (!cronogramaData || diffInDays === 0) return;
 
     const tipo = datosBasicosForm.getValues("tipoContratacion");
-    const result = moverFechaCronograma(cronogramaData, eventId, diffInDays, tipo);
+    const result = moverFechaCronograma(cronogramaData, eventId, diffInDays, tipo, nonWorkingDays);
 
     if (!result.success) {
       if (result.errorMsg) toast.error(result.errorMsg);
@@ -491,6 +432,8 @@ export function CrearExpedienteWizard({
             onFinish={handleFinish}
             onEventDrop={handleEventDrop}
             isLoading={isLoading}
+            nonWorkingDays={nonWorkingDays}
+            feriadoDescriptions={feriadoDescriptions}
           />
         )}
       </CardContent>

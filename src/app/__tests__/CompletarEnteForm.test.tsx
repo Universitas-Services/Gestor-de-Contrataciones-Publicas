@@ -76,13 +76,16 @@ vi.mock("@/lib/auth/auth", () => ({
   markDatosConfirmadosAction: vi.fn(),
 }));
 
+vi.mock("@/lib/territorio", () => ({
+  getCiudadesPorEstado: vi.fn().mockResolvedValue([{ id: 1, nombre: "Barquisimeto" }]),
+}));
+
 vi.mock("@universitas/sdk-global", () => {
   return {
     UniversitasAPI: class {
       territorio = {
         getEstados: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Lara" }] }),
         getMunicipios: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Iribarren" }] }),
-        getCiudades: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Barquisimeto" }] }),
         getParroquias: vi.fn().mockResolvedValue({ data: [{ id: 1, nombre: "Catedral" }] }),
       };
     },

@@ -1,34 +1,46 @@
 import type { IEvent } from "./types";
+import {
+  formatIsoDate,
+  isNonWorkingDay,
+  isWeekend,
+  parseIsoDate,
+} from "@/lib/utils/diasNoLaborablesUtils";
 
-/** Parse a "YYYY-MM-DD" string as local midnight (no timezone shift) */
-export function parseDate(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d, 0, 0, 0, 0);
+export { parseIsoDate as parseDate };
+
+function isNonWorkingDayDate(d: Date, nonWorkingDays?: Set<string>): boolean {
+  return isNonWorkingDay(d, nonWorkingDays);
 }
 
-function isWeekendDate(d: Date): boolean {
-  const dow = d.getDay();
-  return dow === 0 || dow === 6;
+function isWeekendOnly(d: Date, nonWorkingDays?: Set<string>): boolean {
+  return isWeekend(d) && !isFeriadoOnly(d, nonWorkingDays);
+}
+
+function isFeriadoOnly(d: Date, nonWorkingDays?: Set<string>): boolean {
+  if (!nonWorkingDays || nonWorkingDays.size === 0) return false;
+  return nonWorkingDays.has(formatIsoDate(d)) && !isWeekend(d);
 }
 
 /**
  * Get all events that overlap a given calendar day.
- * Multi-day events are NOT returned for weekend days (Sat/Sun).
+ * Multi-day events are NOT returned for non-working days.
  */
-export function getEventsForDay(events: IEvent[], day: Date): IEvent[] {
+export function getEventsForDay(
+  events: IEvent[],
+  day: Date,
+  nonWorkingDays?: Set<string>
+): IEvent[] {
   const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
   const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 999);
 
   return events.filter((ev) => {
-    const evStart = parseDate(ev.startDate);
-    const evEnd = parseDate(ev.endDate);
+    const evStart = parseIsoDate(ev.startDate);
+    const evEnd = parseIsoDate(ev.endDate);
 
-    // Check overlap
     if (!(evStart <= dayEnd && evEnd >= dayStart)) return false;
 
-    // For multi-day events: skip rendering on weekends
     const isMultiDay = ev.startDate !== ev.endDate;
-    if (isMultiDay && isWeekendDate(day)) return false;
+    if (isMultiDay && isNonWorkingDayDate(day, nonWorkingDays)) return false;
 
     return true;
   });
@@ -36,7 +48,7 @@ export function getEventsForDay(events: IEvent[], day: Date): IEvent[] {
 
 /** True if this day is the START date of the event */
 export function isEventStart(event: IEvent, day: Date): boolean {
-  const evStart = parseDate(event.startDate);
+  const evStart = parseIsoDate(event.startDate);
   return (
     evStart.getFullYear() === day.getFullYear() &&
     evStart.getMonth() === day.getMonth() &&
@@ -46,7 +58,7 @@ export function isEventStart(event: IEvent, day: Date): boolean {
 
 /** True if this day is the END date of the event */
 export function isEventEnd(event: IEvent, day: Date): boolean {
-  const evEnd = parseDate(event.endDate);
+  const evEnd = parseIsoDate(event.endDate);
   return (
     evEnd.getFullYear() === day.getFullYear() &&
     evEnd.getMonth() === day.getMonth() &&
@@ -54,26 +66,64 @@ export function isEventEnd(event: IEvent, day: Date): boolean {
   );
 }
 
-/**
- * For a multi-day event on a given day, is the PREVIOUS day a weekend (or before the event)?
- * If yes → this cell is "resuming" the bar after Sat/Sun → show left start styling, but no text.
- */
-export function isResumingAfterWeekend(event: IEvent, day: Date): boolean {
-  if (isEventStart(event, day)) return false; // actual start already handled
+export function isResumingAfterNonWorkingDay(
+  event: IEvent,
+  day: Date,
+  nonWorkingDays?: Set<string>
+): boolean {
+  if (isEventStart(event, day)) return false;
   const prev = new Date(day);
   prev.setDate(prev.getDate() - 1);
-  return isWeekendDate(prev);
+  return isNonWorkingDayDate(prev, nonWorkingDays);
 }
 
-/**
- * For a multi-day event on a given day, is the NEXT day a weekend or after the event?
- * If yes → this cell is the last visible bar segment before the weekend break.
- */
-export function isPausingBeforeWeekend(event: IEvent, day: Date): boolean {
-  if (isEventEnd(event, day)) return false; // actual end already handled
+/** @deprecated Use isResumingAfterNonWorkingDay */
+export function isResumingAfterWeekend(
+  event: IEvent,
+  day: Date,
+  nonWorkingDays?: Set<string>
+): boolean {
+  return isResumingAfterNonWorkingDay(event, day, nonWorkingDays);
+}
+
+export function isPausingBeforeNonWorkingDay(
+  event: IEvent,
+  day: Date,
+  nonWorkingDays?: Set<string>
+): boolean {
+  if (isEventEnd(event, day)) return false;
   const next = new Date(day);
   next.setDate(next.getDate() + 1);
-  return isWeekendDate(next);
+  return isNonWorkingDayDate(next, nonWorkingDays);
+}
+
+/** @deprecated Use isPausingBeforeNonWorkingDay */
+export function isPausingBeforeWeekend(
+  event: IEvent,
+  day: Date,
+  nonWorkingDays?: Set<string>
+): boolean {
+  return isPausingBeforeNonWorkingDay(event, day, nonWorkingDays);
+}
+
+export function getDayNonWorkingInfo(
+  day: Date,
+  nonWorkingDays?: Set<string>,
+  feriadoDescriptions?: Map<string, string>
+): { isNonWorking: boolean; isWeekend: boolean; isFeriado: boolean; tooltip?: string } {
+  const iso = formatIsoDate(day);
+  const weekend = isWeekend(day);
+  const feriado = isFeriadoOnly(day, nonWorkingDays);
+  const nonWorking = isNonWorkingDayDate(day, nonWorkingDays);
+
+  let tooltip: string | undefined;
+  if (feriado) {
+    tooltip = feriadoDescriptions?.get(iso) ?? "Día no laborable del ente";
+  } else if (weekend) {
+    tooltip = "Sábado y domingo no son días hábiles";
+  }
+
+  return { isNonWorking: nonWorking, isWeekend: weekend, isFeriado: feriado, tooltip };
 }
 
 /** "Marzo 2026" */

@@ -151,6 +151,17 @@
   --color-obs-bg: var(--obs-bg);
   --color-cal-llamado: var(--cal-llamado);
 
+  /* Días no laborables / feriados */
+  --color-cal-weekend-bg: var(--cal-weekend-bg);
+  --color-cal-feriado-ente: var(--cal-feriado-ente);
+  --color-cal-feriado-ente-bg: var(--cal-feriado-ente-bg);
+  --color-cronograma-alert-bg: var(--cronograma-alert-bg);
+  --color-cronograma-alert-text: var(--cronograma-alert-text);
+  --color-cronograma-alert-border: var(--cronograma-alert-border);
+  --color-cronograma-alert-icon: var(--cronograma-alert-icon);
+  --color-cal-bulk-selected-bg: var(--cal-bulk-selected-bg);
+  --color-cal-bulk-selected-border: var(--cal-bulk-selected-border);
+
   /* Motivo de Descalificación */
   --color-motivo-bg: var(--motivo-bg);
   --color-motivo-border: var(--motivo-border);
@@ -330,6 +341,16 @@
   --cal-evaluacion: oklch(0.56 0.25 24);
   --cal-firma: oklch(0.66 0.18 144);
   --cal-llamado: oklch(0.55 0.03 250);
+  --cal-weekend-bg: oklch(0.96 0.01 250);
+  --cal-feriado-ente: oklch(0.55 0.18 25);
+  --cal-feriado-ente-bg: oklch(0.92 0.06 25);
+  /* Alertas de cronograma / advertencias — coral suave (sin amarillo) */
+  --cronograma-alert-bg: oklch(0.97 0.025 22);
+  --cronograma-alert-text: oklch(0.48 0.14 25);
+  --cronograma-alert-border: oklch(0.87 0.07 24);
+  --cronograma-alert-icon: oklch(0.55 0.16 25);
+  --cal-bulk-selected-bg: oklch(0.93 0.06 250);
+  --cal-bulk-selected-border: oklch(0.55 0.15 250);
   --icon-people: oklch(0.38 0.05 254);
   --icon-terminados: oklch(0.31 0.08 255);
   --icon-bg-terminados: oklch(0.88 0 0);
@@ -418,4 +439,20 @@
 }
 .pencil-icon-warning {
   animation: pencil-warn 2.4s ease-in-out infinite;
+}
+
+@keyframes tab-alert-blink {
+  0%,
+  100% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--danger) 30%, transparent);
+  }
+}
+
+.animate-tab-alert-blink {
+  animation: tab-alert-blink 1.4s ease-in-out infinite;
 }

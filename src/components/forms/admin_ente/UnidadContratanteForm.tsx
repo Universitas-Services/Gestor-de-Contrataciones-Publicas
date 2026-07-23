@@ -26,6 +26,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean }) {
   const router = useRouter();
@@ -38,7 +45,9 @@ export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean
     defaultValues: {
       nombreUnidadContratante: "",
       nombreResponsableUnidad: "",
+      cedulaResponsableUnidadContratante: "",
       cargoResponsable: "",
+      datosDesignacionUnidadContratante: "",
     },
     mode: "onChange",
   });
@@ -51,8 +60,11 @@ export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean
           if (data) {
             form.reset({
               nombreUnidadContratante: data.nombreUnidadContratante || "",
-              nombreResponsableUnidad: data.nombreResponsableUnidad || "",
+              nombreResponsableUnidad:
+                data.nombreResponsableUnidad || data.nombreResponsableUnidadContratante || "",
+              cedulaResponsableUnidadContratante: data.cedulaResponsableUnidadContratante || "",
               cargoResponsable: data.cargoResponsable || "",
+              datosDesignacionUnidadContratante: data.datosDesignacionUnidadContratante || "",
             });
           }
         })
@@ -70,11 +82,16 @@ export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean
     if (readOnly) return;
     setIsLoading(true);
     try {
+      const payload = {
+        ...values,
+        nombreResponsableUnidadContratante: values.nombreResponsableUnidad,
+      };
+
       if (editId) {
-        await actualizarUnidadContratante(editId, values);
+        await actualizarUnidadContratante(editId, payload);
         toast.success("Unidad Contratante actualizada exitosamente.");
       } else {
-        await registrarUnidadContratante(values);
+        await registrarUnidadContratante(payload);
         toast.success("Unidad Contratante creada exitosamente.");
       }
 
@@ -174,6 +191,61 @@ export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean
               <div className="mb-6">
                 <FormField
                   control={form.control}
+                  name="cedulaResponsableUnidadContratante"
+                  render={({ field }) => {
+                    const parts = field.value ? field.value.split("-") : ["V", ""];
+                    const tipo = parts[0] || "V";
+                    const numero = parts[1] || "";
+                    return (
+                      <FormItem>
+                        <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                          Indique cédula de identidad del Responsable de la Unidad Contratante.
+                        </FormLabel>
+                        <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                          Ejemplo: V-00000000
+                        </p>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={tipo || undefined}
+                              onValueChange={(val) => field.onChange(`${val}-${numero}`)}
+                              disabled={isLoading}
+                            >
+                              <SelectTrigger className="w-[70px] h-11 bg-white border-slate-300 rounded-md focus:ring-1 focus:ring-color-boton-2/30 font-inter">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="V">V</SelectItem>
+                                <SelectItem value="E">E</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              value={numero}
+                              disabled={isLoading}
+                              onChange={(e) => {
+                                const newNum = e.target.value.replace(/\D/g, "");
+                                if (newNum) {
+                                  field.onChange(`${tipo}-${newNum}`);
+                                } else {
+                                  field.onChange("");
+                                }
+                              }}
+                              maxLength={8}
+                              placeholder="00000000"
+                              className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-[150px]"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
                   name="cargoResponsable"
                   render={({ field }) => (
                     <FormItem>
@@ -182,6 +254,34 @@ export function UnidadContratanteForm({ readOnly = false }: { readOnly?: boolean
                       </FormLabel>
                       <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
                         Ejemplo: Administrador
+                      </p>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          disabled={isLoading}
+                          className="h-11 bg-white border-slate-300 rounded-md focus-visible:ring-1 focus-visible:ring-color-boton-2/30 w-full md:w-2/3 lg:w-1/2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mb-6">
+                <FormField
+                  control={form.control}
+                  name="datosDesignacionUnidadContratante"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[slate-700] font-bold font-inter text-base">
+                        Indique datos de la Resolución, Decreto, Acta o Acuerdo de designación del
+                        responsable de la Unidad Contratante.
+                      </FormLabel>
+                      <p className="text-slate-500 italic text-sm mt-0.5 mb-2 font-inter">
+                        Ejemplo: Resolución N° 000/00 de fecha 00-00-0000 publicado en Gaceta N°
+                        0000 de fecha 00-00-0000
                       </p>
                       <FormControl>
                         <Input

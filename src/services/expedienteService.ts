@@ -3,13 +3,16 @@
 import { getServerToken } from "@/lib/auth/session";
 import { parseAdjudicacionApiResponse } from "@/lib/utils/adjudicacionMapper";
 import { parseContratoFormalizadoApiResponse } from "@/lib/utils/contratoMapper";
-import { revalidatePath } from "next/cache";
 import type {
   DatosBasicosFormValues,
   CronogramaFormValues,
   TipoContratacionBackend,
   ModalidadSeleccion,
 } from "@/lib/schemas/expedienteSchema";
+import {
+  revalidateExpedienteDetail,
+  revalidateExpedienteList,
+} from "@/lib/utils/expedienteRevalidate";
 
 /**
  * Servicio para el módulo de Expedientes (Elaboración de Expediente)
@@ -113,6 +116,14 @@ export interface ModalidadData {
   modalidadSeleccion: string;
 }
 
+export interface UnidadContratanteData {
+  id: string;
+  nombreUnidadContratante?: string;
+  nombreResponsableUnidadContratante?: string;
+  cargoResponsableUnidadContratante?: string;
+  activa?: boolean;
+}
+
 export interface ExpedienteResponse {
   id: string;
   descripcionObjeto: string;
@@ -124,8 +135,17 @@ export interface ExpedienteResponse {
   modalidad?: ModalidadData;
   comision?: ComisionData;
   unidadUsuaria?: UnidadUsuariaData;
+  unidadContratante?: UnidadContratanteData;
+  unidadContratanteId?: string;
   autoridad?: AutoridadData;
   cronograma?: CronogramaData;
+  /** Contratación Directa */
+  numeralCausalProcedenciaCd?: string;
+  causalProcedenciaCd?: string;
+  /** Concurso Cerrado / Consulta Precios / ME (si el GET los expone) */
+  causalProcedenciaCc?: string;
+  causalProcedenciaCp?: string;
+  causalProcedenciaMe?: string;
   [key: string]: unknown;
 }
 
@@ -223,6 +243,164 @@ export const crearExpedienteBorrador = async (
   return handleResponse<ExpedienteResponse>(response, "Error al crear el expediente borrador");
 };
 
+/** Campos comunes de borrador multimodal (sin modalidadSeleccion forzada). */
+export interface BorradorMultimodalBase {
+  descripcionObjeto: string;
+  codigoNomenclatura: string;
+  tipoContratacion: TipoContratacionBackend;
+  montoEstimadoBs: number;
+  montoEstimadoDolar: number;
+  valorUcauBase: number;
+}
+
+export type BorradorConcursoCerradoPayload = BorradorMultimodalBase;
+
+export interface BorradorConsultaPreciosPayload extends BorradorMultimodalBase {
+  unidadContratanteId: string;
+}
+
+export interface BorradorContratacionDirectaPayload extends BorradorMultimodalBase {
+  numeralCausalProcedenciaCd: string;
+  causalProcedenciaCd: string;
+  unidadContratanteId: string;
+}
+
+export type BorradorModalidadExcluidaPayload = BorradorMultimodalBase;
+
+async function postBorradorModalidad(
+  path: string,
+  payload: Record<string, unknown>,
+  errorMsg: string
+): Promise<ExpedienteResponse> {
+  const token = await getServerToken();
+  const response = await fetch(`${API_URL}/expedientes/borrador/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<ExpedienteResponse>(response, errorMsg);
+}
+
+/** POST /expedientes/borrador/concurso-cerrado */
+export const crearBorradorConcursoCerrado = async (
+  payload: BorradorConcursoCerradoPayload
+): Promise<ExpedienteResponse> =>
+  postBorradorModalidad(
+    "concurso-cerrado",
+    payload as unknown as Record<string, unknown>,
+    "Error al crear el borrador de Concurso Cerrado"
+  );
+
+/** POST /expedientes/borrador/consulta-precios */
+export const crearBorradorConsultaPrecios = async (
+  payload: BorradorConsultaPreciosPayload
+): Promise<ExpedienteResponse> =>
+  postBorradorModalidad(
+    "consulta-precios",
+    payload as unknown as Record<string, unknown>,
+    "Error al crear el borrador de Consulta de Precios"
+  );
+
+/** POST /expedientes/borrador/contratacion-directa */
+export const crearBorradorContratacionDirecta = async (
+  payload: BorradorContratacionDirectaPayload
+): Promise<ExpedienteResponse> =>
+  postBorradorModalidad(
+    "contratacion-directa",
+    payload as unknown as Record<string, unknown>,
+    "Error al crear el borrador de Contratación Directa"
+  );
+
+/** POST /expedientes/borrador/modalidad-excluida */
+export const crearBorradorModalidadExcluida = async (
+  payload: BorradorModalidadExcluidaPayload
+): Promise<ExpedienteResponse> =>
+  postBorradorModalidad(
+    "modalidad-excluida",
+    payload as unknown as Record<string, unknown>,
+    "Error al crear el borrador de Modalidad Excluida"
+  );
+
+// ─── Generar cronograma (solo propone fechas; no persiste) ────────────
+
+export type CronogramaGeneradoApi = Record<string, string>;
+
+async function postGenerarCronograma(
+  path: string | null,
+  payload: Record<string, unknown>,
+  errorMsg: string
+): Promise<CronogramaGeneradoApi> {
+  const token = await getServerToken();
+  const url = path
+    ? `${API_URL}/expedientes/generar-cronograma/${path}`
+    : `${API_URL}/expedientes/generar-cronograma`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(((json as Record<string, unknown>)?.message as string) ?? errorMsg);
+  }
+
+  const root = json as { data?: CronogramaGeneradoApi } & CronogramaGeneradoApi;
+  if (root.data && typeof root.data === "object") {
+    return root.data;
+  }
+  return root;
+}
+
+/** POST /expedientes/generar-cronograma/concurso-cerrado */
+export const generarCronogramaConcursoCerrado = async (payload: {
+  tipoContratacion: TipoContratacionBackend;
+  fechaEnvioInvitacion: string;
+}): Promise<CronogramaGeneradoApi> =>
+  postGenerarCronograma(
+    "concurso-cerrado",
+    payload,
+    "Error al generar cronograma de Concurso Cerrado"
+  );
+
+/** POST /expedientes/generar-cronograma/consulta-precios */
+export const generarCronogramaConsultaPrecios = async (payload: {
+  tipoContratacion: TipoContratacionBackend;
+  fechaEnvioInvitacion: string;
+}): Promise<CronogramaGeneradoApi> =>
+  postGenerarCronograma(
+    "consulta-precios",
+    payload,
+    "Error al generar cronograma de Consulta de Precios"
+  );
+
+/** POST /expedientes/generar-cronograma/contratacion-directa */
+export const generarCronogramaContratacionDirecta = async (payload: {
+  fechaEnvioInvitacion: string;
+}): Promise<CronogramaGeneradoApi> =>
+  postGenerarCronograma(
+    "contratacion-directa",
+    payload,
+    "Error al generar cronograma de Contratación Directa"
+  );
+
+/** POST /expedientes/generar-cronograma/modalidad-excluida */
+export const generarCronogramaModalidadExcluida = async (payload: {
+  fechaInicioProcedimiento: string;
+}): Promise<CronogramaGeneradoApi> =>
+  postGenerarCronograma(
+    "modalidad-excluida",
+    payload,
+    "Error al generar cronograma de Modalidad Excluida"
+  );
+
 /**
  * PATCH /expedientes/{id}
  * Edición General: se usa en cada transición del wizard después de crear el borrador.
@@ -319,7 +497,7 @@ export const guardarCronograma = async (
     response,
     "Error al guardar el cronograma"
   );
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
   return result;
 };
 
@@ -408,7 +586,7 @@ export const eliminarExpediente = async (id: string): Promise<void> => {
     );
   }
 
-  revalidatePath("/elaboracion-expediente");
+  revalidateExpedienteList();
 };
 
 // ─── Adjudicación (Fase 4) ───────────────────────────────────────────
@@ -490,7 +668,7 @@ export const crearAdjudicacion = async (
     return payload;
   }
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
   return parsed;
 };
 
@@ -525,7 +703,7 @@ export const editarAdjudicacion = async (
   const parsed = parseAdjudicacionApiResponse(json);
   if (!parsed) return payload;
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
+  revalidateExpedienteDetail(expedienteId);
   return parsed;
 };
 
@@ -632,8 +810,8 @@ export const guardarContratoFormalizado = async (
     return { ...payload, expedienteId };
   }
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
-  revalidatePath(`/elaboracion-expediente/${expedienteId}/contrato`);
+  revalidateExpedienteDetail(expedienteId);
+  revalidateExpedienteDetail(expedienteId, "contrato");
   return parsed;
 };
 
@@ -668,7 +846,7 @@ export const editarContratoFormalizado = async (
   const parsed = parseContratoFormalizadoApiResponse(json);
   if (!parsed) return { ...payload, expedienteId };
 
-  revalidatePath(`/elaboracion-expediente/${expedienteId}`);
-  revalidatePath(`/elaboracion-expediente/${expedienteId}/contrato`);
+  revalidateExpedienteDetail(expedienteId);
+  revalidateExpedienteDetail(expedienteId, "contrato");
   return parsed;
 };

@@ -67,6 +67,7 @@ export default async function Fase1Page({ params, searchParams }: Props) {
         isEditMode={initialFasePreparatoria !== null}
         initialFase1IdFromQuery={queryFase1Id}
         readOnly={isReadOnlyRole(user.role)}
+        basePath="/elaboracion-expediente"
       />
     </div>
   );

@@ -1,12 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-} from "@/components/ui/pagination";
 
 interface Fase1WizardFooterProps {
   currentStep: number;
@@ -21,7 +15,6 @@ interface Fase1WizardFooterProps {
 
 export function Fase1WizardFooter({
   currentStep,
-  totalSteps,
   onBack,
   onNext,
   nextLabel,
@@ -29,10 +22,10 @@ export function Fase1WizardFooter({
   backDisabled = false,
   nextDisabled = false,
 }: Fase1WizardFooterProps) {
-  const showBackButton = !backDisabled;
+  const showBackButton = !backDisabled && currentStep > 1;
 
   return (
-    <div className="flex flex-col gap-4 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center">
+    <div className="flex items-center justify-between gap-4">
       <div className="flex justify-start">
         {showBackButton ? (
           <Button
@@ -41,39 +34,14 @@ export function Fase1WizardFooter({
             size="sm"
             onClick={onBack}
             disabled={isLoading}
-            className="cursor-pointer min-w-30 border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+            className="min-w-30 cursor-pointer border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
           >
             Anterior
           </Button>
-        ) : null}
+        ) : (
+          <span />
+        )}
       </div>
-
-      <Pagination className="justify-center">
-        <PaginationContent className="gap-2">
-          {Array.from({ length: totalSteps }, (_, index) => {
-            const step = index + 1;
-            const isActive = step === currentStep;
-
-            return (
-              <PaginationItem key={step}>
-                <PaginationLink
-                  href="#"
-                  isActive={isActive}
-                  className={[
-                    "pointer-events-none rounded-lg border px-3 py-1.5 text-[11px] font-semibold",
-                    isActive
-                      ? "border-navy bg-navy hover:bg-navy"
-                      : "border-slate-200 bg-white text-slate-500",
-                  ].join(" ")}
-                  onClick={(event) => event.preventDefault()}
-                >
-                  {step}
-                </PaginationLink>
-              </PaginationItem>
-            );
-          })}
-        </PaginationContent>
-      </Pagination>
 
       <div className="flex justify-end">
         <Button
@@ -81,7 +49,7 @@ export function Fase1WizardFooter({
           size="sm"
           onClick={onNext}
           disabled={nextDisabled || isLoading}
-          className="cursor-pointer min-w-35 bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
+          className="min-w-35 cursor-pointer bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
         >
           {isLoading ? "Procesando..." : nextLabel}
         </Button>

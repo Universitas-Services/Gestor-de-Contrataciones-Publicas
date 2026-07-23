@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,8 @@ import {
   DollarSign,
   Save,
   Users,
+  Scale,
+  Info,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,26 +26,68 @@ import { Fase1Panel } from "./fase-1/Fase1Panel";
 import { Fase2Panel } from "./fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
 import { Fase4Panel } from "./fase4/Fase4Panel";
+import { EditarFichaModal } from "@/components/features-components/GestionExpedientes/EditarFichaModal";
+import { useHeaderTitleOverride } from "@/components/shared/HeaderTitleContext";
 
-import type { ExpedienteResponse, CronogramaData } from "@/services/expedienteService";
+import type {
+  ExpedienteResponse,
+  CronogramaData,
+  UnidadContratanteData,
+} from "@/services/expedienteService";
 import type { CronogramaFormValues } from "@/lib/schemas/expedienteSchema";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import type { Fase1TabValue } from "@/types/fase1.types";
 import { guardarCronograma } from "@/services/expedienteService";
+import { obtenerUnidadContratante } from "@/services/unidadContratanteService";
 import { isFechaEditable, moverFechaCronograma } from "@/lib/utils/cronogramaUtils";
 import type { IEvent } from "./calendar/types";
 import { PlanificacionStep } from "./steps/PlanificacionStep";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import { getYearRangeForCronograma } from "@/lib/utils/diasNoLaborablesUtils";
+import {
+  getFechaAnclaLabel,
+  getModalidadDisplayLabel,
+  isConsultaPrecios,
+  isContratacionDirecta,
+  isConcursoAbiertoActoUnico,
+  isConcursoCerrado,
+  isModalidadExcluida,
+  muestraBloqueCausal,
+  muestraUnidadContratante,
+} from "@/lib/modalidades/modalidadDisplay";
+import { putToCronogramaMe } from "@/lib/modalidades/mapCronogramaApi";
+import { LEGEND_ITEMS_CD } from "@/lib/utils/cronogramaEventsCd";
+import { LEGEND_ITEMS_CC } from "@/lib/utils/cronogramaEventsCc";
+import { LEGEND_ITEMS_CP } from "@/lib/utils/cronogramaEventsCp";
+import { PlanificacionModalidadesExcluidasStep } from "@/components/features-components/GestionExpedientes/steps/PlanificacionModalidadesExcluidasStep";
+
+function resolveUcFromApi(
+  raw: Record<string, unknown> | null | undefined
+): UnidadContratanteData | null {
+  if (!raw) return null;
+  const id = raw.id != null ? String(raw.id) : "";
+  const nombreUnidad =
+    (raw.nombreUnidadContratante as string | undefined) ||
+    (raw.nombre as string | undefined) ||
+    undefined;
+  const nombreResponsable =
+    (raw.nombreResponsableUnidadContratante as string | undefined) ||
+    (raw.nombreResponsableUnidad as string | undefined) ||
+    undefined;
+  const cargo =
+    (raw.cargoResponsableUnidadContratante as string | undefined) ||
+    (raw.cargoResponsable as string | undefined) ||
+    undefined;
+  if (!nombreUnidad && !nombreResponsable) return id ? { id } : null;
+  return {
+    id,
+    nombreUnidadContratante: nombreUnidad,
+    nombreResponsableUnidadContratante: nombreResponsable,
+    cargoResponsableUnidadContratante: cargo,
+  };
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────
-
-const MODALIDAD_DISPLAY: Record<string, string> = {
-  LICITACION_PUBLICA: "Concurso Abierto, Acto Único Apertura Única",
-  CONCURSO_ABIERTO: "Concurso Abierto",
-  CONCURSO_CERRADO: "Concurso Cerrado",
-  CONSULTA_PRECIOS: "Consulta de Precios",
-  CONTRATACION_DIRECTA: "Contratación Directa",
-  LICITACION_PUBLICA_ACTO_UNICO: "Concurso Abierto, Acto Único / Apertura Única",
-};
 
 const TIPO_DISPLAY: Record<string, string> = {
   BIENES: "Bienes",
@@ -69,14 +113,6 @@ const TIPO_MIEMBRO: Record<string, string> = {
   MIEMBRO_PRINCIPAL: "Principal",
   MIEMBRO_SUPLENTE: "Suplente",
   PRESIDENTE: "Presidente",
-};
-
-const ESTADO_STYLES: Record<string, { label: string; className: string }> = {
-  BORRADOR: { label: "Borrador", className: "bg-amber-100 text-amber-700 border-amber-200" },
-  ACTIVO: { label: "Activo", className: "bg-green-100 text-green-700 border-green-200" },
-  PUBLICADO: { label: "Publicado", className: "bg-blue-100 text-blue-700 border-blue-200" },
-  FINALIZADO: { label: "Finalizado", className: "bg-slate-100 text-slate-600 border-slate-200" },
-  ANULADO: { label: "Anulado", className: "bg-red-100 text-red-700 border-red-200" },
 };
 
 const FASES = [
@@ -204,16 +240,34 @@ interface Props {
   data: ExpedienteResponse;
   initialTab?: Fase1TabValue;
   readOnly?: boolean;
+  /** Base de ruta para tabs / editar. Default: ruta legacy. */
+  basePath?: string;
 }
 
-export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = false }: Props) {
+export function ExpedienteDetalle({
+  data,
+  initialTab = "fase-0",
+  readOnly = false,
+  basePath = "/gestion-expedientes",
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { setOverrideTitle } = useHeaderTitleOverride();
   const [activeTab, setActiveTab] = useState<Fase1TabValue>(() =>
     resolveTabFromParam(searchParams.get("tab"), initialTab)
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [editarFichaOpen, setEditarFichaOpen] = useState(false);
+
+  useEffect(() => {
+    const nomenclatura = data.codigoNomenclatura?.trim();
+    setOverrideTitle(nomenclatura || "Detalle del expediente");
+
+    return () => {
+      setOverrideTitle(null);
+    };
+  }, [data.codigoNomenclatura, setOverrideTitle]);
 
   useEffect(() => {
     setActiveTab(resolveTabFromParam(searchParams.get("tab"), initialTab));
@@ -222,7 +276,7 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
   const handleTabChange = (value: string) => {
     const tab = value as Fase1TabValue;
     setActiveTab(tab);
-    router.replace(`/elaboracion-expediente/${data.id}?tab=${tab}`, { scroll: false });
+    router.replace(`${basePath}/${data.id}?tab=${tab}`, { scroll: false });
   };
 
   // Estado del cronograma (editable)
@@ -241,13 +295,116 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
     cronogramaData ? cronogramaToEvents(cronogramaData as unknown as Record<string, unknown>) : []
   );
 
+  const cronogramaRange = useMemo(() => {
+    if (!cronogramaData) {
+      const year = new Date().getFullYear();
+      return { desde: `${year}-01-01`, hasta: `${year + 1}-12-31` };
+    }
+    const fechas = Object.entries(cronogramaData)
+      .filter(([key, value]) => key.startsWith("fecha") && typeof value === "string")
+      .map(([, value]) => value as string);
+    return getYearRangeForCronograma(fechas);
+  }, [cronogramaData]);
+
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
+    cronogramaRange.desde,
+    cronogramaRange.hasta
+  );
+
   // Datos del expediente
   const tipoRaw = data.modalidad?.tipoContratacion ?? "";
   const tipoLabel = TIPO_DISPLAY[tipoRaw] ?? tipoRaw;
-  const modalidadLabel =
-    MODALIDAD_DISPLAY[data.modalidad?.modalidadSeleccion ?? ""] ??
-    data.modalidad?.modalidadSeleccion ??
-    "—";
+  const modalidadCode = data.modalidad?.modalidadSeleccion ?? "";
+  const modalidadLabel = getModalidadDisplayLabel(modalidadCode);
+  const fechaAnclaLabel = getFechaAnclaLabel(modalidadCode);
+  const isCaActoUnico = isConcursoAbiertoActoUnico(modalidadCode);
+  const isMe = isModalidadExcluida(modalidadCode);
+  const comisionOmitida =
+    isMe ||
+    ((isContratacionDirecta(modalidadCode) || isConsultaPrecios(modalidadCode)) && !data.comision);
+  const showComisionCard =
+    isMe ||
+    isContratacionDirecta(modalidadCode) ||
+    isConsultaPrecios(modalidadCode) ||
+    Boolean(data.comision);
+  const legendItems = isContratacionDirecta(modalidadCode)
+    ? LEGEND_ITEMS_CD
+    : isConcursoCerrado(modalidadCode)
+      ? LEGEND_ITEMS_CC
+      : isConsultaPrecios(modalidadCode)
+        ? LEGEND_ITEMS_CP
+        : undefined;
+
+  const causalTexto = (() => {
+    if (isContratacionDirecta(modalidadCode) && data.causalProcedenciaCd) {
+      const num = data.numeralCausalProcedenciaCd
+        ? `Art. 101, Num. ${data.numeralCausalProcedenciaCd}: `
+        : "";
+      return `${num}${data.causalProcedenciaCd}`;
+    }
+    if (isConcursoCerrado(modalidadCode) && data.causalProcedenciaCc) {
+      return String(data.causalProcedenciaCc);
+    }
+    if (isConsultaPrecios(modalidadCode) && data.causalProcedenciaCp) {
+      return String(data.causalProcedenciaCp);
+    }
+    if (isMe && data.causalProcedenciaMe) {
+      return String(data.causalProcedenciaMe);
+    }
+    return null;
+  })();
+
+  const showCausal = muestraBloqueCausal(modalidadCode) && Boolean(causalTexto);
+  const showUc =
+    muestraUnidadContratante(modalidadCode) &&
+    Boolean(data.unidadContratante || data.unidadContratanteId);
+
+  const ucFromData = useMemo(
+    () =>
+      resolveUcFromApi(data.unidadContratante as unknown as Record<string, unknown> | undefined),
+    [data.unidadContratante]
+  );
+  const [ucResolved, setUcResolved] = useState<UnidadContratanteData | null>(ucFromData);
+  const ucId = data.unidadContratanteId ?? ucFromData?.id;
+
+  useEffect(() => {
+    if (!showUc) {
+      setUcResolved(null);
+      return;
+    }
+    if (ucFromData?.nombreUnidadContratante || ucFromData?.nombreResponsableUnidadContratante) {
+      setUcResolved(ucFromData);
+      return;
+    }
+    if (!ucId) {
+      setUcResolved(ucFromData);
+      return;
+    }
+    let cancelled = false;
+    obtenerUnidadContratante(ucId)
+      .then((raw) => {
+        if (cancelled) return;
+        setUcResolved(resolveUcFromApi(raw as Record<string, unknown>) ?? { id: String(ucId) });
+      })
+      .catch(() => {
+        if (!cancelled) setUcResolved(ucFromData);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showUc, ucId, ucFromData]);
+
+  const ucNombre =
+    ucResolved?.nombreResponsableUnidadContratante || ucResolved?.nombreUnidadContratante || null;
+  const ucSubtitulo =
+    ucResolved?.nombreResponsableUnidadContratante && ucResolved?.nombreUnidadContratante
+      ? ucResolved.nombreUnidadContratante
+      : ucResolved?.cargoResponsableUnidadContratante || "";
+
+  const cronogramaMe = useMemo(
+    () => (isMe ? putToCronogramaMe(cronogramaData) : null),
+    [isMe, cronogramaData]
+  );
   // Mapear los estados de Swagger a los 3 visuales solicitados
   const getEstadoVisual = (estatus: string) => {
     switch (estatus) {
@@ -272,10 +429,8 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
   const estado = getEstadoVisual(data.estatusProceso);
   const shortId = data.id?.slice(0, 8).toUpperCase() ?? "—";
 
-  const ucau =
-    rawCronograma?.fechaLlamadoParticipar && data.modalidad
-      ? parseFloat(data.modalidad.montoEstimadoBs) / parseFloat(data.modalidad.valorUcauBase)
-      : null;
+  const ucauRaw = data.modalidad?.valorUcauBase ? parseFloat(data.modalidad.valorUcauBase) : NaN;
+  const ucau = Number.isFinite(ucauRaw) ? ucauRaw : null;
 
   // Solo miembros principales (PRESIDENTE o MIEMBRO_PRINCIPAL)
   const miembrosPrincipales = (data.comision?.miembros ?? []).filter(
@@ -291,7 +446,8 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
       cronogramaData as unknown as Record<string, unknown>,
       eventId,
       diffInDays,
-      tipo
+      tipo,
+      nonWorkingDays
     );
     if (!result.success) {
       if (result.errorMsg) toast.error(result.errorMsg);
@@ -456,100 +612,167 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                   </CardContent>
                 </Card>
 
-                {/* Máxima Autoridad */}
-                <Card className="border border-slate-200 shadow-sm">
-                  <CardContent className="px-6 py-5">
-                    <p className="text-xs text-slate-400 font-inter italic mb-1">
-                      Máxima Autoridad
-                    </p>
-                    <p className="text-base font-semibold text-heading-dark font-inter">
-                      {data.autoridad?.nombreCompletoAutoridad ?? "—"}
-                    </p>
-                    <p className="text-xs text-slate-500 font-inter mt-0.5">
-                      {data.autoridad?.cargoOficialAutoridad ?? ""}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Responsable Unidad Usuaria */}
-                <Card className="border border-slate-200 shadow-sm">
-                  <CardContent className="px-6 py-5">
-                    <p className="text-xs text-slate-400 font-inter italic mb-1">
-                      Responsable Unidad Usuaria
-                    </p>
-                    <p className="text-base font-semibold text-heading-dark font-inter">
-                      {data.unidadUsuaria?.nombreResponsableUnidadUsuaria ?? "—"}
-                    </p>
-                    <p className="text-xs text-slate-500 font-inter mt-0.5">
-                      {data.unidadUsuaria?.nombreUnidadUsuaria ?? ""}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Fecha del llamado */}
-                <Card className="border border-slate-200 shadow-sm">
-                  <CardContent className="px-6 py-5">
-                    <p className="text-xs text-slate-400 font-inter italic mb-1">
-                      Fecha del llamado
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <CalendarDays className="w-4 h-4 text-navy" />
-                      <p className="text-base font-bold text-heading-dark font-inter">
-                        {rawCronograma?.fechaLlamadoParticipar
-                          ? formatDate(rawCronograma.fechaLlamadoParticipar)
-                          : "—"}
+                {/* Causal legal — CC / CP / CD / ME cuando hay texto */}
+                {showCausal && causalTexto && (
+                  <Card className="col-span-1 lg:col-span-3 border border-slate-200 shadow-sm border-l-4 border-l-navy">
+                    <CardContent className="px-6 py-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Scale className="w-4 h-4 text-navy shrink-0" />
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-inter">
+                          Causal Legal de Procedencia
+                        </p>
+                      </div>
+                      <p className="text-sm text-heading-dark font-inter leading-relaxed">
+                        {causalTexto}
                       </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
 
-                {/* Comisión de Contrataciones — solo miembros principales */}
-                <Card className="col-span-1 lg:col-span-3 border border-slate-200 shadow-sm">
-                  <CardHeader className="pb-2 pt-5 px-6">
-                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter flex items-center gap-2">
-                      <Users className="w-4 h-4" /> Comisión de Contrataciones
-                    </CardTitle>
-                    {data.comision?.denominacionComision && (
-                      <p className="text-xs text-slate-400 font-inter italic mt-1">
-                        {data.comision.denominacionComision}
+                {/* Actores + fecha ancla: 4 en línea cuando hay UC (CD/CP) */}
+                <div
+                  className={`col-span-1 lg:col-span-3 grid grid-cols-1 gap-3 ${
+                    showUc ? "sm:grid-cols-2 lg:grid-cols-4" : "lg:grid-cols-3"
+                  }`}
+                >
+                  <Card className="border border-slate-200 shadow-sm min-w-0">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-xs text-slate-400 font-inter italic mb-1">
+                        Máxima Autoridad
                       </p>
-                    )}
-                  </CardHeader>
-                  <CardContent className="px-6 pb-6">
-                    <div className="flex flex-wrap gap-6">
-                      {miembrosPrincipales.map((m) => (
-                        <div key={m.id} className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 bg-navy text-white text-xs font-bold">
-                            <AvatarFallback className="bg-navy text-white text-xs font-bold">
-                              {getInitials(m.nombreCompletoMiembro)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold text-heading-dark font-inter capitalize">
-                              {m.nombreCompletoMiembro}
-                            </p>
-                            <p className="text-xs text-slate-400 font-inter italic">
-                              {TIPO_AREA[m.areaRepresentacion] ?? m.areaRepresentacion} ·{" "}
-                              {TIPO_MIEMBRO[m.tipoMiembro] ?? m.tipoMiembro}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {miembrosPrincipales.length === 0 && (
-                        <p className="text-sm text-slate-400 italic font-inter">
-                          Sin miembros principales registrados.
+                      <p className="text-sm font-semibold text-heading-dark font-inter truncate">
+                        {data.autoridad?.nombreCompletoAutoridad ?? "—"}
+                      </p>
+                      <p className="text-xs text-slate-500 font-inter mt-0.5 truncate">
+                        {data.autoridad?.cargoOficialAutoridad ?? ""}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-slate-200 shadow-sm min-w-0">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-xs text-slate-400 font-inter italic mb-1">
+                        Responsable Unidad Usuaria
+                      </p>
+                      <p className="text-sm font-semibold text-heading-dark font-inter truncate">
+                        {data.unidadUsuaria?.nombreResponsableUnidadUsuaria ?? "—"}
+                      </p>
+                      <p className="text-xs text-slate-500 font-inter mt-0.5 truncate">
+                        {data.unidadUsuaria?.nombreUnidadUsuaria ?? ""}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {showUc && (
+                    <Card className="border border-slate-200 shadow-sm min-w-0">
+                      <CardContent className="px-4 py-4">
+                        <p className="text-xs text-slate-400 font-inter italic mb-1">
+                          Unidad Contratante
+                        </p>
+                        <p className="text-sm font-semibold text-heading-dark font-inter truncate">
+                          {ucNombre ?? "—"}
+                        </p>
+                        {ucSubtitulo ? (
+                          <p className="text-xs text-slate-500 font-inter mt-0.5 truncate">
+                            {ucSubtitulo}
+                          </p>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Card className="border border-slate-200 shadow-sm min-w-0">
+                    <CardContent className="px-4 py-4">
+                      <p className="text-xs text-slate-400 font-inter italic mb-1">
+                        {fechaAnclaLabel}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 min-w-0">
+                        <CalendarDays className="w-4 h-4 text-navy shrink-0" />
+                        <p className="text-sm font-bold text-heading-dark font-inter truncate">
+                          {rawCronograma?.fechaLlamadoParticipar
+                            ? formatDate(rawCronograma.fechaLlamadoParticipar)
+                            : "—"}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Comisión de Contrataciones — miembros u omitida */}
+                {showComisionCard && (
+                  <Card
+                    className={`col-span-1 lg:col-span-3 border border-slate-200 shadow-sm ${
+                      comisionOmitida ? "bg-slate-50/80" : ""
+                    }`}
+                  >
+                    <CardHeader className="pb-2 pt-5 px-6">
+                      <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter flex items-center gap-2">
+                        <Users className="w-4 h-4" /> Comisión de Contrataciones
+                      </CardTitle>
+                      {!comisionOmitida && data.comision?.denominacionComision && (
+                        <p className="text-xs text-slate-400 font-inter italic mt-1">
+                          {data.comision.denominacionComision}
                         </p>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="px-6 pb-6">
+                      {comisionOmitida ? (
+                        <p className="text-sm text-slate-500 italic font-inter flex items-start gap-2">
+                          <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+                          <span>
+                            Intervención de la Comisión <strong>omitida</strong>.
+                            {isMe
+                              ? " Adjudicación directa por la Máxima Autoridad según mandato de Ley."
+                              : " No requerida por umbral UCAU para esta contratación."}
+                          </span>
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-6">
+                          {miembrosPrincipales.map((m) => (
+                            <div key={m.id} className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9 bg-navy text-white text-xs font-bold">
+                                <AvatarFallback className="bg-navy text-white text-xs font-bold">
+                                  {getInitials(m.nombreCompletoMiembro)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-semibold text-heading-dark font-inter capitalize">
+                                  {m.nombreCompletoMiembro}
+                                </p>
+                                <p className="text-xs text-slate-400 font-inter italic">
+                                  {TIPO_AREA[m.areaRepresentacion] ?? m.areaRepresentacion} ·{" "}
+                                  {TIPO_MIEMBRO[m.tipoMiembro] ?? m.tipoMiembro}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {miembrosPrincipales.length === 0 && (
+                            <p className="text-sm text-slate-400 italic font-inter">
+                              Sin miembros principales registrados.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
-              {/* ── Botones de acción: Editar ficha  ── */}
+              {/* ── Botones de acción: cronograma + editar ficha ── */}
               {!readOnly && (
-                <div className="flex justify-end mt-6 mb-2">
+                <div className="flex justify-end gap-3 mt-6 mb-2">
+                  {cronogramaData && !isMe && (
+                    <Button
+                      onClick={handleGuardarCronograma}
+                      disabled={isSaving || !isDirty}
+                      className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? "Guardando..." : "Guardar cambios del cronograma"}
+                    </Button>
+                  )}
                   <Button
-                    onClick={() => router.push(`/elaboracion-expediente/${data.id}/editar`)}
+                    onClick={() => setEditarFichaOpen(true)}
                     className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm"
                   >
                     <Pencil className="w-4 h-4" />
@@ -558,43 +781,70 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
                 </div>
               )}
 
-              {/* ── Calendario de Actividades ── */}
-              {/* El título y la navegación de meses ya los provee PlanificacionStep internamente. */}
+              {/* ── Calendario o flujo lineal ME ── */}
               <Card className="border border-slate-200 shadow-sm">
                 <CardContent className="px-6 pb-6 pt-4">
-                  <PlanificacionStep
-                    events={calendarEvents}
-                    initialMonth={initialMonth}
-                    onBack={() => {}}
-                    onFinish={() => {}}
-                    onEventDrop={readOnly ? undefined : handleEventDrop}
-                    isLoading={false}
-                    hideButtons
-                  />
+                  {isMe ? (
+                    cronogramaMe ? (
+                      <PlanificacionModalidadesExcluidasStep
+                        cronograma={cronogramaMe}
+                        onCronogramaChange={() => {}}
+                        onBack={() => {}}
+                        onFinish={() => {}}
+                        readOnly
+                        hideButtons
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-400 italic font-inter py-8 text-center">
+                        Sin cronograma de flujo directo registrado.
+                      </p>
+                    )
+                  ) : (
+                    <PlanificacionStep
+                      events={calendarEvents}
+                      initialMonth={initialMonth}
+                      onBack={() => {}}
+                      onFinish={() => {}}
+                      onEventDrop={readOnly ? undefined : handleEventDrop}
+                      isLoading={false}
+                      hideButtons
+                      nonWorkingDays={nonWorkingDays}
+                      feriadoDescriptions={feriadoDescriptions}
+                      legendItems={legendItems}
+                    />
+                  )}
                 </CardContent>
               </Card>
-
-              {/* ── Botón Guardar Cronograma — alineado a la derecha ── */}
-              {cronogramaData && !readOnly && (
-                <div className="flex justify-end mt-6">
-                  <Button
-                    onClick={handleGuardarCronograma}
-                    disabled={isSaving || !isDirty}
-                    className="bg-navy hover:bg-navy-hover text-white font-inter font-semibold text-sm flex items-center gap-2 px-5 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Save className="w-4 h-4" />
-                    {isSaving ? "Guardando..." : "Guardar cambios del cronograma"}
-                  </Button>
-                </div>
-              )}
             </TabsContent>
 
             <TabsContent value="fase-1" className="mt-6">
-              <Fase1Panel
-                expedienteId={data.id}
-                fase1Creada={Boolean(data["fasePreparatoria"])}
-                readOnly={readOnly}
-              />
+              {isCaActoUnico ? (
+                <Fase1Panel
+                  expedienteId={data.id}
+                  fase1Creada={Boolean(data["fasePreparatoria"])}
+                  readOnly={readOnly}
+                  basePath={basePath}
+                  tipoContratacion={
+                    (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
+                    undefined
+                  }
+                />
+              ) : (
+                <Card className="border border-slate-200 shadow-sm">
+                  <CardContent className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+                    <Info className="h-8 w-8 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-700">
+                      Fase preparatoria disponible solo para Concurso Abierto, Acto Único Apertura
+                      Única
+                    </p>
+                    <p className="max-w-md text-sm text-slate-500">
+                      Este flujo de carga de datos de la fase preparatoria aplica únicamente a esa
+                      modalidad. La modalidad actual es{" "}
+                      <span className="font-medium text-slate-600">{modalidadLabel}</span>.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
@@ -618,6 +868,14 @@ export function ExpedienteDetalle({ data, initialTab = "fase-0", readOnly = fals
           </Tabs>
         </div>
       </div>
+
+      {!readOnly && (
+        <EditarFichaModal
+          open={editarFichaOpen}
+          onOpenChange={setEditarFichaOpen}
+          expediente={data}
+        />
+      )}
     </div>
   );
 }

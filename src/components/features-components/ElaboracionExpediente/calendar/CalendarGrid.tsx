@@ -10,10 +10,18 @@ const DAY_HEADERS = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERN
 interface CalendarGridProps {
   currentMonth: Date;
   events: IEvent[];
+  nonWorkingDays?: Set<string>;
+  feriadoDescriptions?: Map<string, string>;
   onEventDrop?: (eventId: string, diffInDays: number) => void;
 }
 
-export function CalendarGrid({ currentMonth, events, onEventDrop }: CalendarGridProps) {
+export function CalendarGrid({
+  currentMonth,
+  events,
+  nonWorkingDays,
+  feriadoDescriptions,
+  onEventDrop,
+}: CalendarGridProps) {
   // Build the full grid: from start of the first week to end of the last week of the month
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -44,6 +52,8 @@ export function CalendarGrid({ currentMonth, events, onEventDrop }: CalendarGrid
             day={day}
             currentMonth={currentMonth}
             events={events}
+            nonWorkingDays={nonWorkingDays}
+            feriadoDescriptions={feriadoDescriptions}
             onEventDrop={onEventDrop}
           />
         ))}
