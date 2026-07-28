@@ -12,6 +12,7 @@ interface Paso2PresupuestoStepProps {
   onAddItem: (data: ProductoItemFormValues) => Promise<void> | void;
   onDeleteItem?: (item: PresupuestoItemRecord) => void;
   isSubmitting?: boolean;
+  enableUnidadMedidaAvanzada?: boolean;
 }
 
 const compactSectionTitleClass = "text-[17px] font-bold text-color-titulos";
@@ -22,6 +23,7 @@ export function Paso2PresupuestoStep({
   onAddItem,
   onDeleteItem,
   isSubmitting = false,
+  enableUnidadMedidaAvanzada = false,
 }: Paso2PresupuestoStepProps) {
   return (
     <div className="space-y-6">
@@ -39,7 +41,11 @@ export function Paso2PresupuestoStep({
           </p>
         </div>
 
-        <ProductoItemInlineForm onSubmit={onAddItem} isSubmitting={isSubmitting} />
+        <ProductoItemInlineForm
+          onSubmit={onAddItem}
+          isSubmitting={isSubmitting}
+          enableUnidadMedidaAvanzada={enableUnidadMedidaAvanzada}
+        />
 
         <PresupuestoItemsTable
           items={items}

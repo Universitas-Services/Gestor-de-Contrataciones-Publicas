@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { BsEye } from "react-icons/bs";
 import {
@@ -52,6 +52,8 @@ import {
   editarOferente,
   eliminarOferente,
   iniciarEvaluacionFase3,
+  listarEvaluacionesFase3,
+  obtenerEvaluacionFase3,
 } from "@/services/oferenteService";
 import { registrarProveedorRapido } from "@/services/proveedores.service";
 import {
@@ -60,12 +62,34 @@ import {
   regenerarDocumento,
   previewDocumento,
   descargarDocumento,
+  previewListaCotejoEvaluacion,
+  descargarListaCotejoEvaluacion,
   type DocumentoStatus,
 } from "@/services/generadorDocumentosService";
 import type { AdquirenteFormValues, OferenteFormValues } from "@/lib/schemas/fase2Schema";
+import {
+  INFORME_RECOMENDACION_DESIERTO_LABEL,
+  INFORME_RECOMENDACION_DESIERTO_TIPO,
+  toCausalDeclaratoriaDesiertoApi,
+  type CausalDeclaratoriaDesierto,
+} from "@/lib/constants/fase2Desierto";
+import {
+  isListaCotejoCompletada,
+  mapToParticipanteEvaluacion,
+  parseEvaluacionesResponse,
+  sortByPrelacion,
+  type ParticipanteEvaluacion,
+} from "@/lib/utils/evaluacionesFase3Utils";
+import {
+  useDeclaratoriaDesierto,
+  type DeclaratoriaDesiertoServerSeed,
+} from "@/hooks/useDeclaratoriaDesierto";
+import { declararExpedienteDesierto } from "@/services/expedienteService";
 import { AdquirenteSheet } from "./AdquirenteSheet";
 import { OferenteSheet } from "./OferenteSheet";
 import { ConfirmarEliminacionDialog } from "./ConfirmarEliminacionDialog";
+import { DeclararProcedimientoDesiertoModal } from "./DeclararProcedimientoDesiertoModal";
+import { OferentesEvaluacionTable } from "./OferentesEvaluacionTable";
 import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 import {
   Dialog,
@@ -75,8 +99,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-// ─── Documentos del Procedimiento (Fase 2) ──────────────────────────
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle } from "lucide-react"; // ─── Documentos del Procedimiento (Fase 2) ──────────────────────────
 
 /** Tipos de documento que interesan en la Fase 2 */
 const FASE2_DOC_TYPES = ["REGISTRO_ADQUIRENTES", "ACTA_RECEPCION", "ACTA_APERTURA"];
@@ -100,6 +124,7 @@ const DOCUMENTOS_DISPLAY: Record<string, string> = {
   REGISTRO_ADQUIRENTES: "Registro de adquirentes del pliego",
   ACTA_RECEPCION: "Acta de recepción de sobres",
   ACTA_APERTURA: "Acta de apertura de sobres",
+  [INFORME_RECOMENDACION_DESIERTO_TIPO]: INFORME_RECOMENDACION_DESIERTO_LABEL,
 };
 
 // ─── Sub-componente: Botón Generar con validación ───────────────────
@@ -154,11 +179,25 @@ function GenerarDocBtn({ tipo, adquirentesCount, oferentesCount, onGenerar }: Ge
 interface Fase2PanelProps {
   expedienteId: string;
   readOnly?: boolean;
+  /** Solo gestión de expedientes: card + modal de declaratoria desierta */
+  enableDeclaratoriaDesierto?: boolean;
+  /** Solo gestión: listado de evaluaciones + acciones de cotejo/matriz */
+  enableParticipantesEvaluacion?: boolean;
+  basePath?: string;
+  /** Datos del GET expediente para hidratar desierto tras F5 */
+  declaratoriaDesiertoSeed?: DeclaratoriaDesiertoServerSeed | null;
 }
 
-export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) {
+export function Fase2Panel({
+  expedienteId,
+  readOnly = false,
+  enableDeclaratoriaDesierto = false,
+  enableParticipantesEvaluacion = false,
+  basePath = "/gestion-expedientes",
+  declaratoriaDesiertoSeed = null,
+}: Fase2PanelProps) {
   // ── Estado de Adquirentes ──
-  const [adquirentes, setAdreadquirentes] = useState<Adquirente[]>([]);
+  const [adquirentes, setAdquirentes] = useState<Adquirente[]>([]);
   const [adquirentesPage, setAdquirentesPage] = useState(1);
   const ADQ_PAGE_SIZE = 5;
   const [adquirenteSheetOpen, setAdquirenteSheetOpen] = useState(false);
@@ -166,6 +205,13 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
   const [deleteAdquirenteOpen, setDeleteAdquirenteOpen] = useState(false);
   const [adquirenteToDelete, setAdquirenteToDelete] = useState<string | null>(null);
   const [loadingAdquirentes, setLoadingAdquirentes] = useState(false);
+  const [desiertoModalOpen, setDesiertoModalOpen] = useState(false);
+  const [isDeclaringDesierto, setIsDeclaringDesierto] = useState(false);
+
+  const { isDesierto, hasInformeDesierto, saveDeclaratoria } = useDeclaratoriaDesierto(
+    expedienteId,
+    enableDeclaratoriaDesierto ? declaratoriaDesiertoSeed : null
+  );
 
   // ── Estado de Oferentes ──
   const [oferentes, setOferentes] = useState<Oferente[]>([]);
@@ -176,6 +222,12 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
   const [deleteOferenteOpen, setDeleteOferenteOpen] = useState(false);
   const [oferenteToDelete, setOferenteToDelete] = useState<string | null>(null);
   const [loadingOferentes, setLoadingOferentes] = useState(false);
+
+  // ── Estado de Evaluaciones (gestión) ──
+  const [participantes, setParticipantes] = useState<ParticipanteEvaluacion[]>([]);
+  const [loadingParticipantes, setLoadingParticipantes] = useState(false);
+  const [participantesPage, setParticipantesPage] = useState(1);
+  const [downloadingListaCotejoId, setDownloadingListaCotejoId] = useState<string | null>(null);
 
   // ── Modal de proveedor guardado rápidamente ──
   const [showProviderWarning, setShowProviderWarning] = useState(false);
@@ -222,6 +274,67 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
     }
   };
 
+  const loadParticipantes = async () => {
+    if (!expedienteId || !enableParticipantesEvaluacion) return;
+    setLoadingParticipantes(true);
+    try {
+      const [raw, ofertas] = await Promise.all([
+        listarEvaluacionesFase3(expedienteId),
+        listarOferentes(expedienteId).catch(
+          () => [] as Awaited<ReturnType<typeof listarOferentes>>
+        ),
+      ]);
+      const list = parseEvaluacionesResponse(raw);
+      const montoByOfertaId = new Map<string, number>();
+      for (const oferta of ofertas as Array<Record<string, unknown>>) {
+        const id = String(oferta.id ?? "");
+        const monto = Number(oferta.montoOfertaBs);
+        if (id && Number.isFinite(monto)) {
+          montoByOfertaId.set(id, monto);
+        }
+      }
+
+      const mapped = list.map(mapToParticipanteEvaluacion).map((participante) => {
+        if (participante.montoOfertaBs !== null) return participante;
+        const fromOferta = montoByOfertaId.get(participante.ofertaId);
+        return fromOferta !== undefined
+          ? { ...participante, montoOfertaBs: fromOferta }
+          : participante;
+      });
+
+      // El listado a menudo no incluye sobre1/sobre2; completar con GET por evaluación
+      const withCotejo = await Promise.all(
+        mapped.map(async (participante) => {
+          if (participante.listaCotejoCompletada || !participante.id) return participante;
+          try {
+            const detalle = await obtenerEvaluacionFase3(participante.id);
+            const detalleObj =
+              detalle && typeof detalle === "object"
+                ? (detalle as Record<string, unknown>)
+                : undefined;
+            return {
+              ...participante,
+              listaCotejoCompletada: isListaCotejoCompletada(
+                detalleObj?.sobre1,
+                detalleObj?.sobre2
+              ),
+            };
+          } catch {
+            return participante;
+          }
+        })
+      );
+
+      setParticipantes(sortByPrelacion(withCotejo));
+      setParticipantesPage(1);
+    } catch (error) {
+      console.error("Error al cargar evaluaciones:", error);
+      toast.error("No se pudo cargar la lista de participantes");
+    } finally {
+      setLoadingParticipantes(false);
+    }
+  };
+
   const loadAdquirentes = async () => {
     if (!expedienteId) return;
     setLoadingAdquirentes(true);
@@ -236,7 +349,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
         correo: item.correoProveedorAdquiriente,
         deposito: item.datosPagoPliego || "—",
       }));
-      setAdreadquirentes(mapped);
+      setAdquirentes(mapped);
       setAdquirentesPage(1); // Reiniciar a página 1 tras cargar
     } catch (error) {
       console.error("Error al cargar adquirentes:", error);
@@ -264,8 +377,11 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
     loadOferentes();
     loadAdquirentes();
     loadDocumentos();
+    if (enableParticipantesEvaluacion) {
+      void loadParticipantes();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expedienteId]);
+  }, [expedienteId, enableParticipantesEvaluacion]);
 
   // ── Helpers de formato ──
   function formatDate(iso: string): string {
@@ -378,6 +494,9 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
       }
 
       loadOferentes();
+      if (enableParticipantesEvaluacion) {
+        void loadParticipantes();
+      }
       loadDocumentos();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar oferente");
@@ -393,10 +512,73 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
         setOferenteToDelete(null);
         setDeleteOferenteOpen(false);
         loadOferentes();
+        if (enableParticipantesEvaluacion) {
+          void loadParticipantes();
+        }
         loadDocumentos();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Error al eliminar oferente");
       }
+    }
+  };
+
+  const openOferenteDetalle = async (ofertaId: string) => {
+    try {
+      const detallado = await obtenerOferente(ofertaId);
+      setOferenteEditando({
+        id: detallado.id,
+        nombreEmpresa: detallado.nombreProveedorOferente,
+        rif: detallado.rifProveedorOferente,
+        representanteLegal: detallado.nombreRepLegalOferente,
+        cedula: detallado.cedulaRepLegalOferente,
+        registroMercantil: detallado.datosRegistroMercantilProveedorOferente || "—",
+        cantidadSobres: detallado.numeroSobresEntregados
+          ? String(detallado.numeroSobresEntregados)
+          : "0",
+        montoOferta: String(detallado.montoOfertaBs),
+      });
+      setOferenteSheetOpen(true);
+    } catch {
+      toast.error("Error al obtener detalles del oferente");
+    }
+  };
+
+  const handlePreviewListaCotejo = async (evaluacionId: string) => {
+    setIsPreviewing(true);
+    setPreviewDocOpen(true);
+    try {
+      const result = await previewListaCotejoEvaluacion(evaluacionId);
+      setPreviewDocUrl(result.urlArchivo);
+      setPreviewDocTitle(result.tituloDocumento || "Lista de Cotejo");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Error al previsualizar";
+      toast.error(msg);
+      setPreviewDocOpen(false);
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleDownloadListaCotejo = async (evaluacionId: string) => {
+    setDownloadingListaCotejoId(evaluacionId);
+    try {
+      const { data, fileName } = await descargarListaCotejoEvaluacion(evaluacionId);
+      const blob = new Blob([new Uint8Array(data)], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Lista de cotejo descargada exitosamente");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al descargar lista de cotejo");
+    } finally {
+      setDownloadingListaCotejoId(null);
     }
   };
 
@@ -434,6 +616,13 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
   };
 
   const handlePreviewDocumento = async (doc: DocumentoStatus) => {
+    if (doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO) {
+      toast.info(
+        "La previsualización del informe desierto estará disponible cuando exista el API."
+      );
+      return;
+    }
+
     const endpoint = TIPO_TO_ENDPOINT[doc.tipo];
     if (!endpoint || !expedienteId) return;
 
@@ -455,6 +644,10 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
   };
 
   const handleDownloadDocumento = async (doc: DocumentoStatus) => {
+    if (doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO) {
+      toast.info("La descarga del informe desierto estará disponible cuando exista el API.");
+      return;
+    }
     const endpoint = TIPO_TO_ENDPOINT[doc.tipo];
     if (!endpoint || !expedienteId) return;
 
@@ -487,8 +680,92 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
     }
   };
 
+  const documentosVisibles = useMemo(() => {
+    if (!enableDeclaratoriaDesierto || !hasInformeDesierto) return documentos;
+
+    const alreadyPresent = documentos.some(
+      (doc) => doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO
+    );
+    if (alreadyPresent) return documentos;
+
+    const informeDesierto: DocumentoStatus = {
+      tipo: INFORME_RECOMENDACION_DESIERTO_TIPO,
+      label: INFORME_RECOMENDACION_DESIERTO_LABEL,
+      generado: true,
+      estaDesactualizado: false,
+      documento: null,
+    };
+
+    return [...documentos, informeDesierto];
+  }, [documentos, enableDeclaratoriaDesierto, hasInformeDesierto]);
+
+  const handleConfirmDeclaratoria = async (payload: {
+    causal_declaratoria_desierto_au_au: CausalDeclaratoriaDesierto;
+    justificacion_declaratoria_desierto_au_au: string;
+  }) => {
+    setIsDeclaringDesierto(true);
+    try {
+      await declararExpedienteDesierto(expedienteId, {
+        causalDeclaratoriaDesierto: toCausalDeclaratoriaDesiertoApi(
+          payload.causal_declaratoria_desierto_au_au
+        ),
+        justificacionDeclaratoriaDesierto: payload.justificacion_declaratoria_desierto_au_au,
+      });
+      saveDeclaratoria(payload);
+      setDesiertoModalOpen(false);
+      toast.success("Procedimiento declarado desierto correctamente.");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al declarar el procedimiento desierto"
+      );
+    } finally {
+      setIsDeclaringDesierto(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {enableDeclaratoriaDesierto ? (
+        <Card className="border border-border bg-card shadow-sm">
+          <CardContent className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[15px] font-bold leading-tight text-color-titulos">
+                  Registro y control de participantes
+                </h2>
+                {isDesierto ? (
+                  <Badge
+                    variant="outline"
+                    className="border-destructive/30 bg-destructive/10 text-destructive"
+                  >
+                    Declarado desierto
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="text-[12px] italic leading-relaxed text-muted-foreground">
+                Gestione el listado de adquirentes y registre las ofertas recibidas para la
+                evaluación.
+              </p>
+            </div>
+
+            {!readOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isDesierto}
+                onClick={() => setDesiertoModalOpen(true)}
+                className="shrink-0 gap-2 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive disabled:opacity-60"
+              >
+                <AlertCircle className="h-4 w-4" />
+                {isDesierto
+                  ? "Procedimiento declarado desierto"
+                  : "Declarar Procedimiento Desierto"}
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* ── Sección Superior: Adquirentes + Documentos ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Tabla de Adquirentes (2/3) */}
@@ -687,8 +964,9 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
           </CardHeader>
           <CardContent className="px-6 pb-6 flex-1 flex flex-col">
             <div className="space-y-8 mt-2">
-              {documentos.map((doc) => {
+              {documentosVisibles.map((doc) => {
                 const desactualizado = doc.estaDesactualizado && doc.generado;
+                const isInformeDesierto = doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO;
                 return (
                   <div key={doc.tipo} className="flex items-center justify-between gap-2">
                     {/* ── Icono + Label ── */}
@@ -732,11 +1010,11 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <div className="w-[46px] h-[46px] rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
-                          {TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
-                            <FaRegClipboard className="w-[20px] h-[20px] text-slate-700" />
+                        <div className="w-[46px] h-[46px] rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                          {isInformeDesierto || TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
+                            <FaRegClipboard className="w-[20px] h-[20px] text-muted-foreground" />
                           ) : (
-                            <IoReceiptOutline className="w-[22px] h-[22px] text-slate-700" />
+                            <IoReceiptOutline className="w-[22px] h-[22px] text-muted-foreground" />
                           )}
                         </div>
                       )}
@@ -755,7 +1033,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                         <>
                           {/* Visualizar */}
                           <button
-                            className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="text-muted-foreground hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             disabled={!doc.generado}
                             onClick={() => handlePreviewDocumento(doc)}
                           >
@@ -764,7 +1042,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
 
                           {/* Descargar */}
                           <button
-                            className="text-[#334155] hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="text-muted-foreground hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             disabled={!doc.generado || isDownloading[doc.tipo]}
                             onClick={() => handleDownloadDocumento(doc)}
                           >
@@ -778,17 +1056,31 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                           </button>
 
                           {/* Generar (primera vez) / Regenerar (cuando desactualizado) / Icono inactivo */}
-                          {!doc.generado ? (
+                          {isInformeDesierto ? (
+                            <button
+                              className="cursor-not-allowed text-muted-foreground opacity-30"
+                              disabled
+                              title="Pendiente de API"
+                            >
+                              <BsArrowClockwise className="h-[20px] w-[20px]" />
+                            </button>
+                          ) : !doc.generado ? (
                             <GenerarDocBtn
                               tipo={doc.tipo}
                               adquirentesCount={readOnly ? 0 : adquirentes.length}
-                              oferentesCount={readOnly ? 0 : oferentes.length}
+                              oferentesCount={
+                                readOnly
+                                  ? 0
+                                  : enableParticipantesEvaluacion
+                                    ? participantes.length
+                                    : oferentes.length
+                              }
                               onGenerar={handleGenerarDocumento}
                             />
                           ) : desactualizado ? (
                             // Regenerar — activo solo cuando estaDesactualizado
                             <button
-                              className="text-red-400 hover:text-red-600 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                              className="text-destructive/70 transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30"
                               onClick={() => handleRegenerarDocumento(doc)}
                               title="Regenerar documento"
                               disabled={readOnly}
@@ -798,7 +1090,7 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
                           ) : (
                             // Ya generado y al día — botón deshabilitado
                             <button
-                              className="text-[#334155] opacity-30 cursor-not-allowed"
+                              className="cursor-not-allowed text-muted-foreground opacity-30"
                               disabled
                             >
                               <BsArrowClockwise className="w-[20px] h-[20px]" />
@@ -837,171 +1129,186 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
             </Button>
           )}
         </CardHeader>
-        <CardContent className="p-0 overflow-hidden">
-          <Table className="table-fixed w-full">
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-b border-border">
-                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[18%]">
-                  Empresa
-                </TableHead>
-                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[12%]">
-                  RIF
-                </TableHead>
-                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
-                  Rep. Legal
-                </TableHead>
-                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[11%]">
-                  Cédula
-                </TableHead>
-                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[19%]">
-                  Reg. Mercantil
-                </TableHead>
-                <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
-                  Monto oferta
-                </TableHead>
-                <TableHead className="text-color-titulos font-bold px-2 text-center h-10 text-[11px] w-[10%]">
-                  Acciones
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loadingOferentes ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground italic py-12">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
-                      <p>Cargando oferentes...</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : oferentes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground italic py-12">
-                    No hay oferentes registrados.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                (() => {
-                  const start = (oferentesPage - 1) * OFE_PAGE_SIZE;
-                  const paginados = oferentes.slice(start, start + OFE_PAGE_SIZE);
-                  return paginados.map((ofe) => (
-                    <TableRow key={ofe.id} className="border-b border-border hover:bg-slate-50/50">
-                      <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
-                        {ofe.nombreEmpresa}
-                      </TableCell>
-                      <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
-                        {ofe.rif}
-                      </TableCell>
-                      <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
-                        {ofe.representanteLegal}
-                      </TableCell>
-                      <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
-                        {ofe.cedula}
-                      </TableCell>
-                      <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
-                        {ofe.registroMercantil}
-                      </TableCell>
-                      <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 tabular-nums text-center whitespace-normal break-all leading-tight">
-                        {ofe.montoOferta}
-                      </TableCell>
-                      <TableCell className="text-center py-4">
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            className="text-slate-500 hover:text-navy transition-colors"
-                            onClick={async () => {
-                              try {
-                                const detallado = await obtenerOferente(ofe.id);
-                                setOferenteEditando({
-                                  id: detallado.id,
-                                  nombreEmpresa: detallado.nombreProveedorOferente,
-                                  rif: detallado.rifProveedorOferente,
-                                  representanteLegal: detallado.nombreRepLegalOferente,
-                                  cedula: detallado.cedulaRepLegalOferente,
-                                  registroMercantil:
-                                    detallado.datosRegistroMercantilProveedorOferente || "—",
-                                  cantidadSobres: detallado.numeroSobresEntregados
-                                    ? String(detallado.numeroSobresEntregados)
-                                    : "0",
-                                  montoOferta: String(detallado.montoOfertaBs),
-                                });
-                                setOferenteSheetOpen(true);
-                              } catch (e) {
-                                toast.error("Error al obtener detalles del oferente");
-                              }
-                            }}
-                          >
-                            <BsEye className="w-[18px] h-[18px]" />
-                          </button>
-                          {!readOnly && (
-                            <button
-                              className="text-red-400 hover:text-red-600 transition-colors"
-                              onClick={() => {
-                                setOferenteToDelete(ofe.id);
-                                setDeleteOferenteOpen(true);
-                              }}
-                            >
-                              <FaRegTrashAlt className="w-4 h-4" />
-                            </button>
-                          )}
+        <CardContent className="overflow-hidden p-0">
+          {enableParticipantesEvaluacion ? (
+            <OferentesEvaluacionTable
+              participantes={participantes}
+              loading={loadingParticipantes}
+              page={participantesPage}
+              pageSize={OFE_PAGE_SIZE}
+              onPageChange={setParticipantesPage}
+              basePath={basePath}
+              expedienteId={expedienteId}
+              readOnly={readOnly}
+              onViewOferente={(ofertaId) => void openOferenteDetalle(ofertaId)}
+              onDeleteOferente={(ofertaId) => {
+                setOferenteToDelete(ofertaId);
+                setDeleteOferenteOpen(true);
+              }}
+              onPreviewListaCotejo={(evaluacionId) => void handlePreviewListaCotejo(evaluacionId)}
+              onDownloadListaCotejo={(evaluacionId) => void handleDownloadListaCotejo(evaluacionId)}
+              downloadingId={downloadingListaCotejoId}
+            />
+          ) : (
+            <>
+              <Table className="table-fixed w-full">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-border">
+                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[18%]">
+                      Empresa
+                    </TableHead>
+                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[12%]">
+                      RIF
+                    </TableHead>
+                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
+                      Rep. Legal
+                    </TableHead>
+                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[11%]">
+                      Cédula
+                    </TableHead>
+                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[19%]">
+                      Reg. Mercantil
+                    </TableHead>
+                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
+                      Monto oferta
+                    </TableHead>
+                    <TableHead className="text-color-titulos font-bold px-2 text-center h-10 text-[11px] w-[10%]">
+                      Acciones
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingOferentes ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center text-muted-foreground italic py-12"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                          <p>Cargando oferentes...</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ));
-                })()
-              )}
-            </TableBody>
-          </Table>
-
-          <div className="px-6 py-4 bg-slate-50 border-t border-border mt-auto">
-            <Pagination className="justify-end">
-              <PaginationContent className="gap-1">
-                <PaginationItem>
-                  <button
-                    disabled={oferentesPage === 1}
-                    onClick={() => setOferentesPage((prev) => Math.max(prev - 1, 1))}
-                    className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    &lt;
-                  </button>
-                </PaginationItem>
-                {Array.from(
-                  { length: Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1) },
-                  (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <PaginationItem key={pageNum}>
-                        <button
-                          onClick={() => setOferentesPage(pageNum)}
-                          className={`h-8 w-8 flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
-                            oferentesPage === pageNum
-                              ? "bg-navy text-white hover:bg-navy-hover"
-                              : "bg-white border border-border text-muted-foreground hover:bg-slate-100"
-                          }`}
+                  ) : oferentes.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center text-muted-foreground italic py-12"
+                      >
+                        No hay oferentes registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    (() => {
+                      const start = (oferentesPage - 1) * OFE_PAGE_SIZE;
+                      const paginados = oferentes.slice(start, start + OFE_PAGE_SIZE);
+                      return paginados.map((ofe) => (
+                        <TableRow
+                          key={ofe.id}
+                          className="border-b border-border hover:bg-slate-50/50"
                         >
-                          {pageNum}
-                        </button>
-                      </PaginationItem>
-                    );
-                  }
-                )}
-                <PaginationItem>
-                  <button
-                    disabled={
-                      oferentesPage === Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1)
-                    }
-                    onClick={() =>
-                      setOferentesPage((prev) =>
-                        Math.min(prev + 1, Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1))
-                      )
-                    }
-                    className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    &gt;
-                  </button>
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+                          <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                            {ofe.nombreEmpresa}
+                          </TableCell>
+                          <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
+                            {ofe.rif}
+                          </TableCell>
+                          <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                            {ofe.representanteLegal}
+                          </TableCell>
+                          <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
+                            {ofe.cedula}
+                          </TableCell>
+                          <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                            {ofe.registroMercantil}
+                          </TableCell>
+                          <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 tabular-nums text-center whitespace-normal break-all leading-tight">
+                            {ofe.montoOferta}
+                          </TableCell>
+                          <TableCell className="text-center py-4">
+                            <div className="flex items-center justify-center gap-3">
+                              <button
+                                className="text-slate-500 hover:text-navy transition-colors"
+                                onClick={() => void openOferenteDetalle(ofe.id)}
+                              >
+                                <BsEye className="w-[18px] h-[18px]" />
+                              </button>
+                              {!readOnly && (
+                                <button
+                                  className="text-red-400 hover:text-red-600 transition-colors"
+                                  onClick={() => {
+                                    setOferenteToDelete(ofe.id);
+                                    setDeleteOferenteOpen(true);
+                                  }}
+                                >
+                                  <FaRegTrashAlt className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()
+                  )}
+                </TableBody>
+              </Table>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-border mt-auto">
+                <Pagination className="justify-end">
+                  <PaginationContent className="gap-1">
+                    <PaginationItem>
+                      <button
+                        disabled={oferentesPage === 1}
+                        onClick={() => setOferentesPage((prev) => Math.max(prev - 1, 1))}
+                        className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        &lt;
+                      </button>
+                    </PaginationItem>
+                    {Array.from(
+                      { length: Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1) },
+                      (_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <button
+                              onClick={() => setOferentesPage(pageNum)}
+                              className={`h-8 w-8 flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
+                                oferentesPage === pageNum
+                                  ? "bg-navy text-white hover:bg-navy-hover"
+                                  : "bg-white border border-border text-muted-foreground hover:bg-slate-100"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          </PaginationItem>
+                        );
+                      }
+                    )}
+                    <PaginationItem>
+                      <button
+                        disabled={
+                          oferentesPage === Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1)
+                        }
+                        onClick={() =>
+                          setOferentesPage((prev) =>
+                            Math.min(
+                              prev + 1,
+                              Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1)
+                            )
+                          )
+                        }
+                        className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        &gt;
+                      </button>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -1100,6 +1407,15 @@ export function Fase2Panel({ expedienteId, readOnly = false }: Fase2PanelProps) 
         tituloManual={previewDocTitle}
         isLoading={isPreviewing}
       />
+
+      {enableDeclaratoriaDesierto ? (
+        <DeclararProcedimientoDesiertoModal
+          open={desiertoModalOpen}
+          onOpenChange={setDesiertoModalOpen}
+          isSubmitting={isDeclaringDesierto}
+          onConfirm={handleConfirmDeclaratoria}
+        />
+      ) : null}
     </div>
   );
 }

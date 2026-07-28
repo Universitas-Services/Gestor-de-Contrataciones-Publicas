@@ -1,8 +1,8 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, type MouseEvent } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home } from "lucide-react";
 import {
   Breadcrumb,
@@ -12,6 +12,17 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useNavigationGuard } from "@/components/shared/NavigationGuardContext";
 
 /** Subrutas bajo /{modulo}/[id] que muestran una tercera miga */
 const EXPEDIENTE_ID_SUB_ROUTES = new Set(["contrato", "informe", "fase-1", "editar"]);
@@ -116,15 +127,22 @@ function resolveSegmentHref(segments: string[], index: number): string {
 
   let href = "/" + segments.slice(0, index + 1).join("/");
 
+  const root = segments[0];
   const expedienteId = segments[1];
   const subRoute = segments[2];
+
+  if (root === "elaboracion-expediente" && subRoute === "contrato" && index === 1 && expedienteId) {
+    href = `/elaboracion-expediente/${expedienteId}?tab=fase-4`;
+  }
+
+  // Desde el formulario de fase preparatoria, "Detalle de expediente" abre el tab Fase 1
   if (
-    segments[0] === "elaboracion-expediente" &&
-    subRoute === "contrato" &&
+    EXPEDIENTE_ROOT_SEGMENTS.has(root ?? "") &&
+    subRoute === "fase-1" &&
     index === 1 &&
     expedienteId
   ) {
-    href = `/elaboracion-expediente/${expedienteId}?tab=fase-4`;
+    href = `/${root}/${expedienteId}?tab=fase-1`;
   }
 
   return href;
@@ -135,6 +153,8 @@ function resolveSegmentHref(segments: string[], index: number): string {
  */
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const router = useRouter();
+  const navigationGuard = useNavigationGuard();
 
   let segments = pathname.split("/").filter((segment) => segment !== "");
   segments = trimExpedienteSegments(segments);
@@ -154,34 +174,72 @@ export function Breadcrumbs() {
     };
   });
 
+  const handleNavigate = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (!navigationGuard?.guard?.enabled) return;
+
+    event.preventDefault();
+    navigationGuard.requestNavigation(href, () => {
+      router.push(href);
+    });
+  };
+
   return (
-    <Breadcrumb className="mb-6 -mt-4">
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/">
-              <Home className="h-4 w-4" />
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
+    <>
+      <Breadcrumb className="mb-6 -mt-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/" onClick={(event) => handleNavigate(event, "/")}>
+                <Home className="h-4 w-4" />
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-        <BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-        {breadcrumbs.map((breadcrumb) => (
-          <Fragment key={`${breadcrumb.href}-${breadcrumb.label}`}>
-            <BreadcrumbItem>
-              {breadcrumb.isLast ? (
-                <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link href={breadcrumb.href}>{breadcrumb.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-            {!breadcrumb.isLast && <BreadcrumbSeparator />}
-          </Fragment>
-        ))}
-      </BreadcrumbList>
-    </Breadcrumb>
+          {breadcrumbs.map((breadcrumb) => (
+            <Fragment key={`${breadcrumb.href}-${breadcrumb.label}`}>
+              <BreadcrumbItem>
+                {breadcrumb.isLast ? (
+                  <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link
+                      href={breadcrumb.href}
+                      onClick={(event) => handleNavigate(event, breadcrumb.href)}
+                    >
+                      {breadcrumb.label}
+                    </Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+              {!breadcrumb.isLast && <BreadcrumbSeparator />}
+            </Fragment>
+          ))}
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {navigationGuard ? (
+        <AlertDialog
+          open={navigationGuard.isConfirmOpen}
+          onOpenChange={(open) => {
+            if (!open) navigationGuard.cancelPendingNavigation();
+          }}
+        >
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{navigationGuard.confirmTitle}</AlertDialogTitle>
+              <AlertDialogDescription>{navigationGuard.confirmMessage}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={navigationGuard.confirmPendingNavigation}>
+                Sí, salir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </>
   );
 }

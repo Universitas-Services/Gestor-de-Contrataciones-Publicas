@@ -3,14 +3,9 @@
 import { useEffect, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Plus, X } from "lucide-react";
-import { Controller, useForm, type Resolver } from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 
-import { FASE1_FIELD_COPY } from "@/lib/constants/fase1";
-import {
-  productoItemSchema,
-  type ProductoItemFormInputValues,
-  type ProductoItemFormValues,
-} from "@/lib/schemas/fase1Schema";
+import { UnidadMedidaCombobox } from "@/components/features-components/GestionExpedientes/fase1/UnidadMedidaCombobox";
 import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FASE1_FIELD_COPY } from "@/lib/constants/fase1";
+import { normalizeCantidadForUnidad, unidadAllowsDecimals } from "@/lib/constants/unidadMedida";
+import {
+  productoItemSchema,
+  type ProductoItemFormInputValues,
+  type ProductoItemFormValues,
+} from "@/lib/schemas/fase1Schema";
 
 const UNIDAD_MEDIDA_OPTIONS = ["Unidad", "Kg", "Mts", "Horas"] as const;
 
@@ -46,6 +48,8 @@ export interface ProductoItemModalProps {
   initialValues?: ProductoItemFormInputValues;
   submitLabel?: string;
   isSubmitting?: boolean;
+  /** Gestión: combobox + cantidad según unidad. Elaboración: Select fijo. */
+  enableUnidadMedidaAvanzada?: boolean;
 }
 
 const labelClass = "text-[13px] font-bold text-slate-700";
@@ -80,6 +84,7 @@ export function ProductoItemModal({
   initialValues,
   submitLabel,
   isSubmitting = false,
+  enableUnidadMedidaAvanzada = false,
 }: ProductoItemModalProps) {
   const form = useForm<ProductoItemFormInputValues>({
     resolver: zodResolver(productoItemSchema) as unknown as Resolver<ProductoItemFormInputValues>,
@@ -92,16 +97,37 @@ export function ProductoItemModal({
     control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = form;
+
+  const unidadMedida = useWatch({ control, name: "unidadMedida" });
+  const allowDecimals = !enableUnidadMedidaAvanzada || unidadAllowsDecimals(unidadMedida);
 
   useEffect(() => {
     if (!open) return;
     reset(mode === "edit" ? (initialValues ?? DEFAULT_FORM_VALUES) : DEFAULT_FORM_VALUES);
   }, [initialValues, mode, open, reset]);
 
+  useEffect(() => {
+    if (!enableUnidadMedidaAvanzada || !open) return;
+    const current = form.getValues("cantidadRequerida");
+    if (!current || allowDecimals) return;
+    const normalized = normalizeCantidadForUnidad(String(current), unidadMedida ?? "");
+    if (normalized !== String(current)) {
+      setValue("cantidadRequerida", normalized, { shouldValidate: false });
+    }
+  }, [allowDecimals, enableUnidadMedidaAvanzada, form, open, setValue, unidadMedida]);
+
   const onSubmitForm = async (values: ProductoItemFormInputValues) => {
-    await onSubmit(values as unknown as ProductoItemFormValues);
+    const next = { ...values };
+    if (enableUnidadMedidaAvanzada && !unidadAllowsDecimals(next.unidadMedida)) {
+      next.cantidadRequerida = normalizeCantidadForUnidad(
+        String(next.cantidadRequerida ?? ""),
+        next.unidadMedida
+      );
+    }
+    await onSubmit(next as unknown as ProductoItemFormValues);
   };
 
   const title = mode === "edit" ? "Editar ítem del presupuesto" : "Añadir ítem al presupuesto";
@@ -163,20 +189,28 @@ export function ProductoItemModal({
               <Controller
                 control={control}
                 name="unidadMedida"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className={`${inputClass} w-full`}>
-                      <SelectValue placeholder="Unidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIDAD_MEDIDA_OPTIONS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                render={({ field }) =>
+                  enableUnidadMedidaAvanzada ? (
+                    <UnidadMedidaCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      triggerClassName={inputClass}
+                    />
+                  ) : (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className={`${inputClass} w-full`}>
+                        <SelectValue placeholder="Unidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNIDAD_MEDIDA_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
+                }
               />
             </FieldBlock>
 
@@ -194,7 +228,8 @@ export function ProductoItemModal({
                     value={field.value}
                     onBlur={field.onBlur}
                     onValueChange={field.onChange}
-                    placeholder="Ej. 10"
+                    fractionDigits={allowDecimals ? 2 : 0}
+                    placeholder={allowDecimals ? "Ej. 10,50" : "Ej. 10"}
                     className={inputClass}
                   />
                 )}

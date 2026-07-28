@@ -53,12 +53,37 @@ export const FASE1_STEP_FIELDS = {
   5: ["condicionPlurianual", "viabilidadContratoMarco", "justificacionContratoMarco"],
 } as const;
 
+/** En gestión: acto + fecha van en Parámetros legales (paso 1 del wizard de 4). */
+export const FASE1_PARAMETROS_LEGALES_FIELDS_GESTION = [
+  "datosActoAutorizacionInicio",
+  "fechaActaInicio",
+  ...FASE1_STEP_FIELDS[3],
+] as const;
+
+export function isFase1GestionFlow(basePath = "/elaboracion-expediente"): boolean {
+  return basePath === "/gestion-expedientes";
+}
+
+export const FASE1_DATOS_ACTO_AUTORIZACION_INICIO_PLACEHOLDER_ELABORACION =
+  "Ejemplo: 0002-2026 de fecha 02-03-2026";
+
+export const FASE1_DATOS_ACTO_AUTORIZACION_INICIO_PLACEHOLDER_GESTION =
+  "Ejemplo: 111-2026, de fecha 20 de Julio de 2026, y publicada en la Gaceta Oficial del Estado Lara N° 33.333, de fecha 26 de Julio de 2026";
+
+export function getDatosActoAutorizacionInicioPlaceholder(
+  basePath = "/elaboracion-expediente"
+): string {
+  return basePath === "/gestion-expedientes"
+    ? FASE1_DATOS_ACTO_AUTORIZACION_INICIO_PLACEHOLDER_GESTION
+    : FASE1_DATOS_ACTO_AUTORIZACION_INICIO_PLACEHOLDER_ELABORACION;
+}
+
 export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
   datosActoAutorizacionInicio: {
     label:
       "Indique los datos del acto administrativo de autorización de inicio emitido por la Máxima Autoridad (Número y fecha punto de cuenta)",
     description: "Artículos 18.3 LOPA; 23 NORMAS DE CONTROL INTERNO SUNAI.",
-    placeholder: "Ejemplo: 0002-2026 de fecha 02-03-2026",
+    placeholder: FASE1_DATOS_ACTO_AUTORIZACION_INICIO_PLACEHOLDER_ELABORACION,
   },
   fechaActaInicio: {
     label: "Indique la fecha de elaboración del acta de inicio",
@@ -307,6 +332,37 @@ export const FASE1_PDF_MARKER_MAP: Record<string, string> = {
 };
 
 export const FASE1_IVA_RATE = 0.16;
+
+export type Fase1DocumentoIcon = "receipt" | "clipboard";
+
+export interface Fase1DocumentoConfig {
+  tipo: string;
+  label: string;
+  endpoint: string;
+  icon: Fase1DocumentoIcon;
+}
+
+/** Documentos generables desde Fase 1 (panel + modal del wizard). */
+export const FASE1_DOCUMENTOS: Fase1DocumentoConfig[] = [
+  {
+    tipo: "ACTA_INICIO",
+    label: "Acta de inicio",
+    endpoint: "acta-inicio",
+    icon: "receipt",
+  },
+  {
+    tipo: "PLIEGO_CONDICIONES",
+    label: "Pliego de condiciones",
+    endpoint: "pliego-condiciones",
+    icon: "clipboard",
+  },
+  {
+    tipo: "LLAMADO_PARTICIPAR",
+    label: "Llamado a participar",
+    endpoint: "llamado-participar",
+    icon: "receipt",
+  },
+];
 
 /** Normativas de referencia mostradas en el modal de verificación (solo lectura UI). */
 export const FASE1_NORMATIVAS_PREDEFINIDAS = [

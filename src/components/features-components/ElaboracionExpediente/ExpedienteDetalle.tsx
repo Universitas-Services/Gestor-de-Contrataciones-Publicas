@@ -23,7 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Fase1Panel } from "./fase-1/Fase1Panel";
-import { Fase2Panel } from "./fase2/Fase2Panel";
+import { Fase2Panel } from "@/components/features-components/GestionExpedientes/fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
 import { Fase4Panel } from "./fase4/Fase4Panel";
 import { EditarFichaModal } from "@/components/features-components/GestionExpedientes/EditarFichaModal";
@@ -43,7 +43,9 @@ import { isFechaEditable, moverFechaCronograma } from "@/lib/utils/cronogramaUti
 import type { IEvent } from "./calendar/types";
 import { PlanificacionStep } from "./steps/PlanificacionStep";
 import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import { useDeclaratoriaDesierto } from "@/hooks/useDeclaratoriaDesierto";
 import { getYearRangeForCronograma } from "@/lib/utils/diasNoLaborablesUtils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   getFechaAnclaLabel,
   getModalidadDisplayLabel,
@@ -260,6 +262,30 @@ export function ExpedienteDetalle({
   const [isDirty, setIsDirty] = useState(false);
   const [editarFichaOpen, setEditarFichaOpen] = useState(false);
 
+  const enableDeclaratoriaDesierto = basePath === "/gestion-expedientes";
+  const enableParticipantesEvaluacion = basePath === "/gestion-expedientes";
+  const declaratoriaDesiertoSeed = useMemo(
+    () =>
+      enableDeclaratoriaDesierto
+        ? {
+            causalDeclaratoriaDesierto: data.causalDeclaratoriaDesierto,
+            justificacionDeclaratoriaDesierto: data.justificacionDeclaratoriaDesierto,
+            estatusProceso: data.estatusProceso,
+          }
+        : null,
+    [
+      enableDeclaratoriaDesierto,
+      data.causalDeclaratoriaDesierto,
+      data.justificacionDeclaratoriaDesierto,
+      data.estatusProceso,
+    ]
+  );
+  const { isDesierto } = useDeclaratoriaDesierto(
+    enableDeclaratoriaDesierto ? data.id : "",
+    declaratoriaDesiertoSeed
+  );
+  const fasesPosterioresBloqueadas = enableDeclaratoriaDesierto && isDesierto;
+
   useEffect(() => {
     const nomenclatura = data.codigoNomenclatura?.trim();
     setOverrideTitle(nomenclatura || "Detalle del expediente");
@@ -273,8 +299,21 @@ export function ExpedienteDetalle({
     setActiveTab(resolveTabFromParam(searchParams.get("tab"), initialTab));
   }, [searchParams, initialTab]);
 
+  useEffect(() => {
+    if (fasesPosterioresBloqueadas && (activeTab === "fase-3" || activeTab === "fase-4")) {
+      setActiveTab("fase-2");
+      router.replace(`${basePath}/${data.id}?tab=fase-2`, { scroll: false });
+    }
+  }, [fasesPosterioresBloqueadas, activeTab, basePath, data.id, router]);
+
   const handleTabChange = (value: string) => {
     const tab = value as Fase1TabValue;
+    if (fasesPosterioresBloqueadas && (tab === "fase-3" || tab === "fase-4")) {
+      toast.error(
+        "El procedimiento fue declarado desierto. No es posible avanzar a las fases 3 y 4."
+      );
+      return;
+    }
     setActiveTab(tab);
     router.replace(`${basePath}/${data.id}?tab=${tab}`, { scroll: false });
   };
@@ -536,25 +575,48 @@ export function ExpedienteDetalle({
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
             <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
-              {FASES.map((fase, i) => (
-                <TabsTrigger
-                  key={i}
-                  value={`fase-${i}`}
-                  className={[
-                    /* layout & reset */
-                    "relative rounded-none px-1 sm:px-2 py-2 text-[12px] sm:text-[13px] font-medium transition-colors whitespace-nowrap",
-                    /* inactivos */
-                    "text-navy bg-transparent hover:bg-slate-100/50",
-                    /* activo: bloque azul sólido con letras blancas, alineado a la base */
-                    "data-[state=active]:bg-navy data-[state=active]:text-white",
-                    /* para ocultar la línea de abajo en el activo (opcional) pero como está sobre la línea, el bg solid lo cubre */
-                    "shadow-none data-[state=active]:shadow-none",
-                    "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
-                  ].join(" ")}
-                >
-                  {fase}
-                </TabsTrigger>
-              ))}
+              {FASES.map((fase, i) => {
+                const tabValue = `fase-${i}` as Fase1TabValue;
+                const isFaseBloqueada =
+                  fasesPosterioresBloqueadas && (tabValue === "fase-3" || tabValue === "fase-4");
+                const trigger = (
+                  <TabsTrigger
+                    value={tabValue}
+                    disabled={isFaseBloqueada}
+                    className={[
+                      /* layout & reset */
+                      "relative rounded-none px-1 sm:px-2 py-2 text-[12px] sm:text-[13px] font-medium transition-colors whitespace-nowrap",
+                      /* inactivos */
+                      "text-navy bg-transparent hover:bg-slate-100/50",
+                      /* activo: bloque azul sólido con letras blancas, alineado a la base */
+                      "data-[state=active]:bg-navy data-[state=active]:text-white",
+                      /* para ocultar la línea de abajo en el activo (opcional) pero como está sobre la línea, el bg solid lo cubre */
+                      "shadow-none data-[state=active]:shadow-none",
+                      "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                      isFaseBloqueada ? "cursor-not-allowed opacity-40" : "",
+                    ].join(" ")}
+                  >
+                    {fase}
+                  </TabsTrigger>
+                );
+
+                if (!isFaseBloqueada) {
+                  return <React.Fragment key={i}>{trigger}</React.Fragment>;
+                }
+
+                return (
+                  <TooltipProvider key={i} delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">{trigger}</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[240px] text-center text-xs">
+                        Procedimiento declarado desierto: las fases 3 y 4 no están disponibles.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })}
             </TabsList>
 
             {/* ── TabsContent: Fase 0 — Ficha Técnica ── */}
@@ -562,19 +624,19 @@ export function ExpedienteDetalle({
               {/* ── Grid Principal ── */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Objeto del Procedimiento (2/3) */}
-                <Card className="col-span-1 lg:col-span-2 border border-slate-200 shadow-sm">
+                <Card className="col-span-1 min-w-0 overflow-hidden lg:col-span-2 border border-slate-200 shadow-sm">
                   <CardHeader className="pb-2 pt-5 px-6">
                     <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
                       Objeto del Procedimiento
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="px-6 pb-6">
-                    <p className="text-slate-700 text-sm leading-relaxed font-inter">
+                  <CardContent className="min-w-0 px-6 pb-6">
+                    <p className="break-words text-sm leading-relaxed text-slate-700 font-inter [overflow-wrap:anywhere]">
                       {data.descripcionObjeto || "—"}
                     </p>
                     <p className="text-xs text-slate-400 mt-3 font-inter italic">
                       Código:{" "}
-                      <span className="font-mono font-semibold text-slate-600">
+                      <span className="font-mono font-semibold text-slate-600 break-all">
                         {data.codigoNomenclatura || "—"}
                       </span>
                     </p>
@@ -694,6 +756,12 @@ export function ExpedienteDetalle({
                             : "—"}
                         </p>
                       </div>
+                      {basePath === "/gestion-expedientes" &&
+                        !rawCronograma?.fechaLlamadoParticipar && (
+                          <p className="mt-2 text-xs text-amber-700 font-inter">
+                            Complete la fecha desde Editar ficha
+                          </p>
+                        )}
                     </CardContent>
                   </Card>
                 </div>
@@ -849,7 +917,14 @@ export function ExpedienteDetalle({
 
             {/* ── TabsContent: Fase 2 — Gestión participantes ── */}
             <TabsContent value="fase-2" className="mt-6">
-              <Fase2Panel expedienteId={data.id} readOnly={readOnly} />
+              <Fase2Panel
+                expedienteId={data.id}
+                readOnly={readOnly}
+                enableDeclaratoriaDesierto={enableDeclaratoriaDesierto}
+                enableParticipantesEvaluacion={enableParticipantesEvaluacion}
+                basePath={basePath}
+                declaratoriaDesiertoSeed={declaratoriaDesiertoSeed}
+              />
             </TabsContent>
 
             {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}

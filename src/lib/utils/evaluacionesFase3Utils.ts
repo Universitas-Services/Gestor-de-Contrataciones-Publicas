@@ -7,6 +7,57 @@ export interface ParticipanteEvaluacion {
   oferenteCalificado: boolean | null;
   prelacion: string | null;
   montoOfertaBs: number | null;
+  /** True si Sobre 1 (lista de cotejo) ya tiene respuestas guardadas */
+  listaCotejoCompletada: boolean;
+}
+
+/** Campos booleanos de las 13 preguntas de Sobre 1 (gestión ampliado) */
+const SOBRE1_QUESTION_FIELDS = [
+  "cartaManifestacionVoluntad",
+  "cartaAutorizacion",
+  "docConstitutivo",
+  "copiaRifVigente",
+  "certificadoRnc",
+  "solvenciaLaboral",
+  "declaracionSociosNoInhabilitados",
+  "declaracionNoDeudas",
+  "declaracionNoImpedimentosLcp",
+  "declaracionInfoFinanciera",
+  "relacionServiciosPrestados",
+  "evaluacionDesempenio",
+  "referenciasComerciales",
+] as const;
+
+/** Campos booleanos del checklist Sobre 2 (11 ítems — gestión) */
+const SOBRE2_CHECKLIST_FIELDS = [
+  "ofertaTecnicoEconomica",
+  "cartaOferta",
+  "declaracionCapacidadFinanciera",
+  "declaracionCompromisoRespSocial",
+  "garantiaMantenimientoOferta",
+  "declaracionAutocalculoVan",
+  "cartaNotificaciones",
+  "garantiaFielCumpl",
+  "cartaCompromiso",
+  "fianzaLaboral",
+  "experienciaPersonalTecnico",
+] as const;
+
+export function isSobre1Completado(sobre1: unknown): boolean {
+  if (!sobre1 || typeof sobre1 !== "object") return false;
+  const data = sobre1 as Record<string, unknown>;
+  return SOBRE1_QUESTION_FIELDS.some((field) => data[field] !== null && data[field] !== undefined);
+}
+
+export function isSobre2ChecklistCompletado(sobre2: unknown): boolean {
+  if (!sobre2 || typeof sobre2 !== "object") return false;
+  const data = sobre2 as Record<string, unknown>;
+  return SOBRE2_CHECKLIST_FIELDS.some((field) => data[field] !== null && data[field] !== undefined);
+}
+
+/** Lista de cotejo completa en gestión = Sobre 1 + checklist Sobre 2 */
+export function isListaCotejoCompletada(sobre1: unknown, sobre2: unknown): boolean {
+  return isSobre1Completado(sobre1) && isSobre2ChecklistCompletado(sobre2);
 }
 
 export const PRELACION_ORDER = [
@@ -48,21 +99,33 @@ export function mapToParticipanteEvaluacion(item: Record<string, unknown>): Part
     item.sobre2 && typeof item.sobre2 === "object"
       ? (item.sobre2 as Record<string, unknown>)
       : null;
+  const oferta =
+    item.oferta && typeof item.oferta === "object"
+      ? (item.oferta as Record<string, unknown>)
+      : null;
 
-  const montoRaw = item.montoOfertaBs ?? sobre2?.montoOfertaBs;
+  const montoRaw =
+    item.montoOfertaBs ??
+    item.montoOferta ??
+    sobre2?.montoOfertaBs ??
+    oferta?.montoOfertaBs ??
+    oferta?.montoOferta;
   const montoOfertaBs =
     montoRaw !== null && montoRaw !== undefined && montoRaw !== "" ? Number(montoRaw) : null;
 
   return {
     id: String(item.id ?? ""),
-    ofertaId: String(item.ofertaId ?? ""),
-    nombreEmpresa: String(item.nombreProveedorEvaluado ?? "—"),
-    representanteLegal: String(item.nombreRepLegalEvaluado ?? "—"),
-    rif: String(item.rifProveedorEvaluado ?? "—"),
+    ofertaId: String(item.ofertaId ?? oferta?.id ?? ""),
+    nombreEmpresa: String(item.nombreProveedorEvaluado ?? oferta?.nombreProveedorOferente ?? "—"),
+    representanteLegal: String(
+      item.nombreRepLegalEvaluado ?? oferta?.nombreRepLegalOferente ?? "—"
+    ),
+    rif: String(item.rifProveedorEvaluado ?? oferta?.rifProveedorOferente ?? "—"),
     oferenteCalificado:
       item.oferenteCalificado === true ? true : item.oferenteCalificado === false ? false : null,
     prelacion: item.posicionPrelacion != null ? String(item.posicionPrelacion) : null,
     montoOfertaBs: montoOfertaBs !== null && !Number.isNaN(montoOfertaBs) ? montoOfertaBs : null,
+    listaCotejoCompletada: isListaCotejoCompletada(item.sobre1, item.sobre2),
   };
 }
 

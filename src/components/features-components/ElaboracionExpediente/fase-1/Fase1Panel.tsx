@@ -20,6 +20,7 @@ import type {
   ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
+import { FASE1_DOCUMENTOS, isFase1GestionFlow } from "@/lib/constants/fase1";
 import {
   actualizarPresupuestoItem,
   crearPresupuestoItem,
@@ -69,34 +70,6 @@ interface Fase1PanelProps {
   /** Ruta canónica del módulo de expedientes (default: gestion). */
   basePath?: string;
 }
-
-interface Fase1DocumentoConfig {
-  tipo: string;
-  label: string;
-  endpoint: string;
-  icon: "receipt" | "clipboard";
-}
-
-const FASE1_DOCUMENTOS: Fase1DocumentoConfig[] = [
-  {
-    tipo: "ACTA_INICIO",
-    label: "Acta de inicio",
-    endpoint: "acta-inicio",
-    icon: "receipt",
-  },
-  {
-    tipo: "PLIEGO_CONDICIONES",
-    label: "Pliego de condiciones",
-    endpoint: "pliego-condiciones",
-    icon: "clipboard",
-  },
-  {
-    tipo: "LLAMADO_PARTICIPAR",
-    label: "Llamado a participar",
-    endpoint: "llamado-participar",
-    icon: "receipt",
-  },
-];
 
 const DEFAULT_META: PresupuestoItemsMeta = {
   total: 0,
@@ -933,6 +906,7 @@ export function Fase1Panel({
         initialValues={toProductoItemFormInputValues(selectedItem)}
         submitLabel={sheetMode === "edit" ? "Guardar" : "Guardar Ítem"}
         isSubmitting={isSavingItem}
+        enableUnidadMedidaAvanzada={isFase1GestionFlow(basePath)}
       />
 
       <AlertDialog
