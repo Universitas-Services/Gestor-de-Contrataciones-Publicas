@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -25,8 +27,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { FormDropdownSelect } from "@/components/features-components/GestionExpedientes/FormDropdownSelect";
+import { BusinessDayCalendar } from "@/components/shared/BusinessDayCalendar";
 import { completarCronogramaDesdeFechaAncla } from "@/lib/modalidades/completarCronogramaDesdeFechaAncla";
 import {
   getFechaAnclaLabel,
@@ -35,6 +39,7 @@ import {
   isModalidadExcluida,
 } from "@/lib/modalidades/modalidadDisplay";
 import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import { cn } from "@/lib/utils";
 import {
   editarExpediente,
   guardarCronograma,
@@ -135,9 +140,11 @@ export function EditarFichaModal({ open, onOpenChange, expediente }: EditarFicha
     return {
       desde: `${year - 1}-01-01`,
       hasta: `${year + 5}-12-31`,
+      fromYear: year - 1,
+      toYear: year + 5,
     };
   }, []);
-  const { nonWorkingDays } = useDiasNoLaborables(
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
     showFechaAncla ? feriadosRange.desde : null,
     showFechaAncla ? feriadosRange.hasta : null
   );
@@ -433,13 +440,42 @@ export function EditarFichaModal({ open, onOpenChange, expediente }: EditarFicha
                       <FormLabel className="font-inter text-sm font-semibold text-slate-700">
                         {fechaAnclaLabel}
                       </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="date"
-                          className="h-10 border-slate-300 bg-white font-inter text-sm text-slate-700 shadow-none"
-                        />
-                      </FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={isSaving}
+                              className={cn(
+                                "h-10 w-full justify-between border-slate-300 bg-white px-3 text-left font-inter text-sm font-normal shadow-none",
+                                !field.value ? "text-slate-400" : "text-slate-700"
+                              )}
+                            >
+                              {field.value
+                                ? format(new Date(field.value + "T00:00:00"), "dd/MM/yyyy")
+                                : "Seleccione una fecha"}
+                              <CalendarIcon className="h-4 w-4 shrink-0 text-slate-400" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <BusinessDayCalendar
+                            mode="single"
+                            captionLayout="dropdown"
+                            fromYear={feriadosRange.fromYear}
+                            toYear={feriadosRange.toYear}
+                            selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
+                            onSelect={(date) => {
+                              if (date) field.onChange(format(date, "yyyy-MM-dd"));
+                            }}
+                            nonWorkingDays={nonWorkingDays}
+                            feriadoDescriptions={feriadoDescriptions}
+                            locale={es}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <p className="text-xs text-slate-500 font-inter">
                         Al guardar se calcularán las fechas sugeridas del cronograma.
                       </p>
