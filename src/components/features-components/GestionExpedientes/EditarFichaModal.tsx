@@ -27,12 +27,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormDropdownSelect } from "@/components/features-components/GestionExpedientes/FormDropdownSelect";
+import { completarCronogramaDesdeFechaAncla } from "@/lib/modalidades/completarCronogramaDesdeFechaAncla";
 import {
+  getFechaAnclaLabel,
   isConsultaPrecios,
   isContratacionDirecta,
   isModalidadExcluida,
 } from "@/lib/modalidades/modalidadDisplay";
-import { editarExpediente, type ExpedienteResponse } from "@/services/expedienteService";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
+import {
+  editarExpediente,
+  guardarCronograma,
+  type ExpedienteResponse,
+} from "@/services/expedienteService";
 import { listarComisionesContrataciones } from "@/services/comisionContratacionesService";
 import { listarMaximasAutoridades } from "@/services/maximaAutoridadService";
 import { listarUnidadesUsuarias } from "@/services/unidadUsuariaService";
@@ -56,17 +63,25 @@ const editarFichaFieldsSchema = z.object({
   autoridadFirmaComoDelegado: z.boolean(),
   unidadUsuariaId: z.string().min(1, "Debe seleccionar una Unidad Usuaria"),
   comisionId: z.string().optional(),
+  fechaAncla: z.string().optional(),
 });
 
 type EditarFichaFormValues = z.infer<typeof editarFichaFieldsSchema>;
 
-function buildEditarFichaSchema(requiresComision: boolean) {
+function buildEditarFichaSchema(requiresComision: boolean, needsCronogramaSetup: boolean) {
   return editarFichaFieldsSchema.superRefine((data, ctx) => {
     if (requiresComision && !data.comisionId?.trim()) {
       ctx.addIssue({
         code: "custom",
         path: ["comisionId"],
         message: "Debe seleccionar una Comisión de Contrataciones",
+      });
+    }
+    if (needsCronogramaSetup && !data.fechaAncla?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["fechaAncla"],
+        message: "Debe seleccionar la fecha ancla del procedimiento",
       });
     }
   });
@@ -82,6 +97,10 @@ function shouldRequireComision(expediente: ExpedienteResponse) {
   return !comisionOmitida;
 }
 
+function needsCronogramaSetup(expediente: ExpedienteResponse): boolean {
+  return !expediente.cronograma?.fechaLlamadoParticipar;
+}
+
 function buildDefaultValues(expediente: ExpedienteResponse): EditarFichaFormValues {
   return {
     descripcionObjeto: expediente.descripcionObjeto ?? "",
@@ -90,6 +109,7 @@ function buildDefaultValues(expediente: ExpedienteResponse): EditarFichaFormValu
     autoridadFirmaComoDelegado: expediente.autoridadFirmaComoDelegado ?? false,
     unidadUsuariaId: expediente.unidadUsuaria?.id ?? "",
     comisionId: expediente.comision?.id ? String(expediente.comision.id) : "",
+    fechaAncla: "",
   };
 }
 
@@ -102,7 +122,25 @@ export interface EditarFichaModalProps {
 export function EditarFichaModal({ open, onOpenChange, expediente }: EditarFichaModalProps) {
   const router = useRouter();
   const requiresComision = useMemo(() => shouldRequireComision(expediente), [expediente]);
-  const schema = useMemo(() => buildEditarFichaSchema(requiresComision), [requiresComision]);
+  const showFechaAncla = useMemo(() => needsCronogramaSetup(expediente), [expediente]);
+  const modalidadCode = expediente.modalidad?.modalidadSeleccion ?? "";
+  const fechaAnclaLabel = getFechaAnclaLabel(modalidadCode);
+  const schema = useMemo(
+    () => buildEditarFichaSchema(requiresComision, showFechaAncla),
+    [requiresComision, showFechaAncla]
+  );
+
+  const feriadosRange = useMemo(() => {
+    const year = new Date().getFullYear();
+    return {
+      desde: `${year - 1}-01-01`,
+      hasta: `${year + 5}-12-31`,
+    };
+  }, []);
+  const { nonWorkingDays } = useDiasNoLaborables(
+    showFechaAncla ? feriadosRange.desde : null,
+    showFechaAncla ? feriadosRange.hasta : null
+  );
 
   const [autoridades, setAutoridades] = useState<AutoridadOption[]>([]);
   const [comisiones, setComisiones] = useState<{ value: string; label: string }[]>([]);
@@ -212,6 +250,8 @@ export function EditarFichaModal({ open, onOpenChange, expediente }: EditarFicha
   const onSubmit = async (values: EditarFichaFormValues) => {
     setIsSaving(true);
     try {
+      const fechaAncla = values.fechaAncla?.trim();
+
       await editarExpediente(expediente.id, {
         descripcionObjeto: values.descripcionObjeto,
         codigoNomenclatura: values.codigoNomenclatura,
@@ -219,9 +259,27 @@ export function EditarFichaModal({ open, onOpenChange, expediente }: EditarFicha
         autoridadFirmaComoDelegado: values.autoridadFirmaComoDelegado,
         unidadUsuariaId: values.unidadUsuariaId,
         ...(requiresComision && values.comisionId ? { comisionId: values.comisionId } : {}),
+        ...(showFechaAncla && fechaAncla ? { fechaLlamadoParticipar: fechaAncla } : {}),
       });
 
-      toast.success("Ficha actualizada correctamente.");
+      if (showFechaAncla && fechaAncla) {
+        const { cronograma, usedLocalFallback } = await completarCronogramaDesdeFechaAncla({
+          modalidadCode,
+          tipoContratacion: expediente.modalidad?.tipoContratacion,
+          fechaAncla,
+          feriados: nonWorkingDays,
+        });
+
+        if (usedLocalFallback) {
+          toast.warning("No se pudo obtener el cronograma del servidor; se usó el cálculo local.");
+        }
+
+        await guardarCronograma(expediente.id, cronograma);
+        toast.success("Ficha y cronograma actualizados correctamente.");
+      } else {
+        toast.success("Ficha actualizada correctamente.");
+      }
+
       onOpenChange(false);
       router.refresh();
     } catch (error) {
@@ -360,6 +418,31 @@ export function EditarFichaModal({ open, onOpenChange, expediente }: EditarFicha
                           placeholder="Seleccione una comisión"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {showFechaAncla && (
+                <FormField
+                  control={form.control}
+                  name="fechaAncla"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-inter text-sm font-semibold text-slate-700">
+                        {fechaAnclaLabel}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          className="h-10 border-slate-300 bg-white font-inter text-sm text-slate-700 shadow-none"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-slate-500 font-inter">
+                        Al guardar se calcularán las fechas sugeridas del cronograma.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

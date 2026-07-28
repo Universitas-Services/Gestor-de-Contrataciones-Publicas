@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -8,20 +8,27 @@ import { useForm, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 
 import {
+  FASE1_DOCUMENTOS,
+  FASE1_PARAMETROS_LEGALES_FIELDS_GESTION,
   FASE1_STEP_FIELDS,
   FASE1_WIZARD_DESCRIPTION,
   FASE1_WIZARD_TITLE,
+  isFase1GestionFlow,
 } from "@/lib/constants/fase1";
 import {
   normalizeCrearPresupuestoItemResponse,
   normalizePresupuestoItemRecord,
 } from "@/lib/utils/fase1Presupuesto";
 import {
-  fase1FormSchema,
+  getFase1FormSchema,
   type Fase1FormInputValues,
   type Fase1PayloadFormValues,
   type ProductoItemFormValues,
 } from "@/lib/schemas/fase1Schema";
+import {
+  useRegisterNavigationGuard,
+  useNavigationGuard,
+} from "@/components/shared/NavigationGuardContext";
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
 import {
   actualizarFasePreparatoria,
@@ -30,12 +37,22 @@ import {
   guardarFasePreparatoria,
   listarPresupuestoItems,
 } from "@/services/fase1Service";
+import {
+  generarDocumento,
+  obtenerStatusDocumentos,
+  regenerarDocumento,
+} from "@/services/generadorDocumentosService";
 import type {
   CrearOActualizarFase1Payload,
   FasePreparatoriaDetalleResponse,
   PresupuestoItemRecord,
 } from "@/types/fase1.types";
-import { AlertDialog, AlertDialogContent, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -202,9 +219,14 @@ function getObservacionesFields(viabilidadContratoMarco: boolean | undefined) {
   return baseFields;
 }
 
-function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payload {
+function buildPayload(
+  values: Fase1PayloadFormValues,
+  basePath = "/elaboracion-expediente"
+): CrearOActualizarFase1Payload {
+  const isGestionFlow = isFase1GestionFlow(basePath);
+
   if (
-    values.origenCrsRegistro === undefined ||
+    (!isGestionFlow && values.origenCrsRegistro === undefined) ||
     values.pliegoGratuito === undefined ||
     values.condicionPlurianual === undefined ||
     values.viabilidadContratoMarco === undefined
@@ -215,10 +237,10 @@ function buildPayload(values: Fase1PayloadFormValues): CrearOActualizarFase1Payl
   const payload: CrearOActualizarFase1Payload = {
     datosActoAutorizacionInicio: values.datosActoAutorizacionInicio,
     fechaActaInicio: buildFechaIso(values.fechaActaInicio),
-    detallesTecnicosCalidad: values.detallesTecnicosCalidad,
-    alcanceCantidadesObra: values.alcanceCantidadesObra,
-    justificacionVentajas: values.justificacionVentajas,
-    origenCrsRegistro: values.origenCrsRegistro,
+    detallesTecnicosCalidad: values.detallesTecnicosCalidad ?? "",
+    alcanceCantidadesObra: values.alcanceCantidadesObra ?? "",
+    justificacionVentajas: values.justificacionVentajas ?? "",
+    origenCrsRegistro: values.origenCrsRegistro ?? false,
     diasValidezOferta: values.diasValidezOferta,
     autoridadAclaratorias: values.autoridadAclaratorias,
     normativaLegal: values.normativaLegal,
@@ -258,12 +280,18 @@ export function Fase1Form({
   basePath = "/gestion-expedientes",
 }: Fase1FormProps) {
   const router = useRouter();
+  const formSchema = useMemo(() => getFase1FormSchema(basePath), [basePath]);
+  const navigationGuard = useNavigationGuard();
+  const clearNavigationGuard = navigationGuard?.setGuard;
   const [currentStep, setCurrentStep] = useState(1);
   const [items, setItems] = useState<PresupuestoItemRecord[]>([]);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [isSavingPhase, setIsSavingPhase] = useState(false);
+  const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
   const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const hasNavigatedAwayRef = useRef(false);
+  const isGeneratingDocsRef = useRef(false);
 
   const defaultValues = useMemo(
     () =>
@@ -275,13 +303,19 @@ export function Fase1Form({
   );
 
   const form = useForm<Fase1FormInputValues>({
-    resolver: zodResolver(fase1FormSchema) as unknown as Resolver<Fase1FormInputValues>,
+    resolver: zodResolver(formSchema) as unknown as Resolver<Fase1FormInputValues>,
     mode: "onTouched",
     shouldUnregister: false,
     defaultValues,
   });
   const pliegoGratuito = form.watch("pliegoGratuito");
   const viabilidadContratoMarco = form.watch("viabilidadContratoMarco");
+
+  useRegisterNavigationGuard(!isEditMode && !readOnly, {
+    title: "¿Salir de la fase preparatoria?",
+    message:
+      "Está creando la fase preparatoria por primera vez. Si sale ahora se perderá la información cargada hasta este momento. ¿Desea continuar?",
+  });
 
   useEffect(() => {
     if (viabilidadContratoMarco !== true) {
@@ -359,53 +393,68 @@ export function Fase1Form({
     [expedienteId, readOnly]
   );
 
-  const visibleSteps = useMemo<Fase1WizardStep[]>(
-    () => [
+  const visibleSteps = useMemo<Fase1WizardStep[]>(() => {
+    const presupuestoStep: Fase1WizardStep = {
+      id: "presupuesto",
+      fields: FASE1_STEP_FIELDS[2],
+      render: () => (
+        <Paso2PresupuestoStep
+          items={items}
+          onAddItem={handleAddItem}
+          onDeleteItem={handleDeleteItem}
+          isSubmitting={isSavingItem || isLoadingItems}
+          enableUnidadMedidaAvanzada={isFase1GestionFlow(basePath)}
+        />
+      ),
+    };
+
+    const parametrosLegalesStep: Fase1WizardStep = {
+      id: "parametrosLegales",
+      fields: isFase1GestionFlow(basePath)
+        ? FASE1_PARAMETROS_LEGALES_FIELDS_GESTION
+        : FASE1_STEP_FIELDS[3],
+      render: () => <Paso3ParametrosLegalesStep form={form} basePath={basePath} />,
+    };
+
+    const llamadoPublicoStep: Fase1WizardStep = {
+      id: "llamadoPublico",
+      fields: getLlamadoPublicoFields(pliegoGratuito),
+      render: () => <Paso4LlamadoPublicoStep form={form} />,
+    };
+
+    const observacionesStep: Fase1WizardStep = {
+      id: "observaciones",
+      fields: getObservacionesFields(viabilidadContratoMarco),
+      render: () => <Paso5ObservacionesStep form={form} />,
+    };
+
+    if (isFase1GestionFlow(basePath)) {
+      return [parametrosLegalesStep, presupuestoStep, llamadoPublicoStep, observacionesStep];
+    }
+
+    return [
       {
         id: "definicion",
         fields: FASE1_STEP_FIELDS[1],
         render: () => <Paso1DefinicionStep form={form} tipoContratacion={tipoContratacion} />,
       },
-      {
-        id: "presupuesto",
-        fields: FASE1_STEP_FIELDS[2],
-        render: () => (
-          <Paso2PresupuestoStep
-            items={items}
-            onAddItem={handleAddItem}
-            onDeleteItem={handleDeleteItem}
-            isSubmitting={isSavingItem || isLoadingItems}
-          />
-        ),
-      },
-      {
-        id: "parametrosLegales",
-        fields: FASE1_STEP_FIELDS[3],
-        render: () => <Paso3ParametrosLegalesStep form={form} />,
-      },
-      {
-        id: "llamadoPublico",
-        fields: getLlamadoPublicoFields(pliegoGratuito),
-        render: () => <Paso4LlamadoPublicoStep form={form} />,
-      },
-      {
-        id: "observaciones",
-        fields: getObservacionesFields(viabilidadContratoMarco),
-        render: () => <Paso5ObservacionesStep form={form} />,
-      },
-    ],
-    [
-      form,
-      handleAddItem,
-      handleDeleteItem,
-      isLoadingItems,
-      isSavingItem,
-      items,
-      pliegoGratuito,
-      tipoContratacion,
-      viabilidadContratoMarco,
-    ]
-  );
+      presupuestoStep,
+      parametrosLegalesStep,
+      llamadoPublicoStep,
+      observacionesStep,
+    ];
+  }, [
+    basePath,
+    form,
+    handleAddItem,
+    handleDeleteItem,
+    isLoadingItems,
+    isSavingItem,
+    items,
+    pliegoGratuito,
+    tipoContratacion,
+    viabilidadContratoMarco,
+  ]);
 
   const totalSteps = visibleSteps.length;
   const currentStepConfig = visibleSteps[currentStep - 1] ?? visibleSteps[0];
@@ -460,7 +509,7 @@ export function Fase1Form({
       return;
     }
 
-    const parsed = fase1FormSchema.safeParse(form.getValues());
+    const parsed = formSchema.safeParse(form.getValues());
     if (!parsed.success) {
       toast.error("Complete los campos obligatorios antes de finalizar.");
       return;
@@ -469,7 +518,7 @@ export function Fase1Form({
     setIsSavingPhase(true);
 
     try {
-      const payload = buildPayload(parsed.data);
+      const payload = buildPayload(parsed.data, basePath);
       if (isEditMode || initialFasePreparatoria) {
         await actualizarFasePreparatoria(expedienteId, payload);
       } else {
@@ -496,10 +545,58 @@ export function Fase1Form({
     goToStep(currentStep + 1);
   };
 
-  const handleSuccessClose = () => {
-    setIsConfirmOpen(false);
-    router.push(`${basePath}/${expedienteId}?tab=fase-1`);
-    router.refresh();
+  const goToExpedienteFase1 = useCallback(() => {
+    if (hasNavigatedAwayRef.current) return;
+    hasNavigatedAwayRef.current = true;
+    clearNavigationGuard?.(null);
+    router.replace(`${basePath}/${expedienteId}?tab=fase-1`);
+  }, [basePath, clearNavigationGuard, expedienteId, router]);
+
+  const handleGenerateDocuments = async () => {
+    if (isGeneratingDocsRef.current || hasNavigatedAwayRef.current) return;
+
+    isGeneratingDocsRef.current = true;
+    setIsGeneratingDocs(true);
+
+    try {
+      const statuses = await obtenerStatusDocumentos(expedienteId);
+      let generatedCount = 0;
+      let failedCount = 0;
+
+      for (const config of FASE1_DOCUMENTOS) {
+        const existing = statuses.find((status) => status.tipo === config.tipo);
+
+        try {
+          if (existing?.documento?.id) {
+            await regenerarDocumento(existing.documento.id);
+          } else {
+            await generarDocumento(config.endpoint, expedienteId);
+          }
+          generatedCount += 1;
+        } catch {
+          failedCount += 1;
+        }
+      }
+
+      if (failedCount === 0) {
+        toast.success("Documentos generados exitosamente.");
+      } else if (generatedCount > 0) {
+        toast.warning(
+          `Se procesaron ${generatedCount} documento(s); ${failedCount} no pudieron generarse.`
+        );
+      } else {
+        toast.error("No se pudieron generar los documentos.");
+      }
+
+      setIsConfirmOpen(false);
+      goToExpedienteFase1();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo obtener el estado de los documentos."
+      );
+      isGeneratingDocsRef.current = false;
+      setIsGeneratingDocs(false);
+    }
   };
 
   const renderCurrentStep = () =>
@@ -523,7 +620,7 @@ export function Fase1Form({
 
             <CardContent className="p-0">
               <div className="px-5 pt-6 md:px-8">
-                <Fase1StepProgressBar currentStep={currentStep} />
+                <Fase1StepProgressBar currentStep={currentStep} basePath={basePath} />
               </div>
 
               <Form {...form}>
@@ -537,9 +634,11 @@ export function Fase1Form({
                       onBack={handleBack}
                       onNext={handleNext}
                       nextLabel={isLastStep ? "Finalizar" : "Siguiente"}
-                      isLoading={isSavingPhase}
-                      backDisabled={currentStep === 1}
-                      nextDisabled={isSavingItem || isLoadingItems}
+                      isLoading={isSavingPhase || isGeneratingDocs}
+                      backDisabled={currentStep === 1 || isConfirmOpen || isGeneratingDocs}
+                      nextDisabled={
+                        isSavingItem || isLoadingItems || isConfirmOpen || isGeneratingDocs
+                      }
                     />
                   </div>
                 </form>
@@ -552,11 +651,21 @@ export function Fase1Form({
       <AlertDialog
         open={isConfirmOpen}
         onOpenChange={(open) => {
-          if (!open) handleSuccessClose();
+          // No cerrar ni re-disparar generación mientras se generan documentos.
+          if (!open && isGeneratingDocsRef.current) return;
+          if (!open) {
+            setIsConfirmOpen(false);
+            goToExpedienteFase1();
+            return;
+          }
+          setIsConfirmOpen(true);
         }}
       >
         <AlertDialogContent className="max-w-[340px] rounded-xl border border-slate-200 bg-white p-6 shadow-lg">
           <AlertDialogTitle className="sr-only">Fase preparatoria completada</AlertDialogTitle>
+          <AlertDialogDescription className="sr-only">
+            Puede generar el Acta de Inicio, el Pliego de Condiciones y el Llamado a Participar.
+          </AlertDialogDescription>
 
           <div className="flex flex-col items-center text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-emerald-500">
@@ -576,10 +685,11 @@ export function Fase1Form({
 
             <Button
               type="button"
-              onClick={handleSuccessClose}
-              className="mt-4 h-9 w-full max-w-[200px] cursor-pointer bg-navy text-[12px] font-semibold text-white hover:bg-navy-hover"
+              onClick={() => void handleGenerateDocuments()}
+              disabled={isGeneratingDocs}
+              className="mt-4 h-9 w-full max-w-[200px] cursor-pointer bg-navy text-[12px] font-semibold text-white hover:bg-navy-hover disabled:opacity-60"
             >
-              Generar documentos
+              {isGeneratingDocs ? "Generando..." : "Generar documentos"}
             </Button>
           </div>
         </AlertDialogContent>

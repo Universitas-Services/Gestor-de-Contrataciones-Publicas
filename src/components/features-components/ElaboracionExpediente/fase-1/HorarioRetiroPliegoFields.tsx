@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   formatHorarioRetiroPliego,
@@ -82,22 +82,15 @@ export function HorarioRetiroPliegoFields({
   onBlur,
 }: HorarioRetiroPliegoFieldsProps) {
   const [parts, setParts] = useState<HorarioRetiroParts>(() => parseHorarioRetiroPliego(value));
-  const [syncedValue, setSyncedValue] = useState(value);
 
-  if (value !== syncedValue) {
-    setSyncedValue(value);
-    const formatted = formatHorarioRetiroPliego(parts);
-    if (value !== formatted && (value || formatted)) {
-      setParts(parseHorarioRetiroPliego(value));
-    }
-  }
+  useEffect(() => {
+    setParts(parseHorarioRetiroPliego(value));
+  }, [value]);
 
-  const updateSlot = (key: keyof HorarioRetiroParts, nextSlot: HorarioTimeSlot) => {
-    setParts((prev) => {
-      const next = { ...prev, [key]: nextSlot };
-      onChange(formatHorarioRetiroPliego(next));
-      return next;
-    });
+  const handleSlotChange = (key: keyof HorarioRetiroParts, nextSlot: HorarioTimeSlot) => {
+    const next = { ...parts, [key]: nextSlot };
+    setParts(next);
+    onChange(formatHorarioRetiroPliego(next));
   };
 
   const preview = previewHorarioRetiroPliego(parts);
@@ -107,28 +100,28 @@ export function HorarioRetiroPliegoFields({
       <div className="flex flex-wrap items-center gap-2">
         <TimeSlotSelects
           slot={parts.start1}
-          onChange={(slot) => updateSlot("start1", slot)}
+          onChange={(slot) => handleSlotChange("start1", slot)}
           onBlur={onBlur}
           ariaLabel="Inicio tramo 1"
         />
         <span className="text-[11px] font-semibold text-slate-500">a</span>
         <TimeSlotSelects
           slot={parts.end1}
-          onChange={(slot) => updateSlot("end1", slot)}
+          onChange={(slot) => handleSlotChange("end1", slot)}
           onBlur={onBlur}
           ariaLabel="Fin tramo 1"
         />
         <span className="text-[11px] font-semibold text-slate-500">y</span>
         <TimeSlotSelects
           slot={parts.start2}
-          onChange={(slot) => updateSlot("start2", slot)}
+          onChange={(slot) => handleSlotChange("start2", slot)}
           onBlur={onBlur}
           ariaLabel="Inicio tramo 2"
         />
         <span className="text-[11px] font-semibold text-slate-500">a</span>
         <TimeSlotSelects
           slot={parts.end2}
-          onChange={(slot) => updateSlot("end2", slot)}
+          onChange={(slot) => handleSlotChange("end2", slot)}
           onBlur={onBlur}
           ariaLabel="Fin tramo 2"
         />

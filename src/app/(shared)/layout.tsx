@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Header } from "@/components/shared/Header";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
+import { SharedContentShell } from "@/components/shared/SharedContentShell";
 import { getCurrentUser } from "@/lib/auth/auth";
 
 export const metadata: Metadata = {
@@ -36,8 +37,10 @@ export default async function SharedDashboardLayout({ children }: { children: Re
         userRole={authenticatedUser.role}
       />
       <div className="p-8">
-        <Breadcrumbs />
-        {children}
+        <SharedContentShell>
+          <Breadcrumbs />
+          {children}
+        </SharedContentShell>
       </div>
     </DashboardLayout>
   );

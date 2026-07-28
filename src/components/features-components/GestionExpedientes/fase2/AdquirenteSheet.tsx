@@ -55,6 +55,8 @@ export function AdquirenteSheet({
   mode = "crear",
   onSubmit,
 }: AdquirenteSheetProps) {
+  const currentYear = new Date().getFullYear();
+
   const form = useForm<AdquirenteFormValues>({
     resolver: zodResolver(adquirenteSchema),
     defaultValues: {
@@ -178,8 +180,12 @@ export function AdquirenteSheet({
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
+                            captionLayout="dropdown"
+                            fromYear={currentYear - 1}
+                            toYear={currentYear + 5}
                             selected={field.value ? new Date(field.value) : undefined}
                             onSelect={(date) => field.onChange(date ? date.toISOString() : "")}
+                            locale={es}
                             initialFocus
                           />
                         </PopoverContent>

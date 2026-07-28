@@ -146,6 +146,9 @@ export interface ExpedienteResponse {
   causalProcedenciaCc?: string;
   causalProcedenciaCp?: string;
   causalProcedenciaMe?: string;
+  /** Declaratoria de desierto (Art. 113 LCP) */
+  causalDeclaratoriaDesierto?: string;
+  justificacionDeclaratoriaDesierto?: string;
   [key: string]: unknown;
 }
 
@@ -423,6 +426,39 @@ export const editarExpediente = async (
   });
 
   return handleResponse<ExpedienteResponse>(response, "Error al actualizar el expediente");
+};
+
+/**
+ * PATCH /expedientes/{id}/declarar-desierto
+ * Declarar desierto un expediente (Art. 113 LCP).
+ */
+export interface DeclararDesiertoPayload {
+  causalDeclaratoriaDesierto: string;
+  justificacionDeclaratoriaDesierto: string;
+}
+
+export const declararExpedienteDesierto = async (
+  id: string,
+  payload: DeclararDesiertoPayload
+): Promise<ExpedienteResponse> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/expedientes/${id}/declarar-desierto`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await handleResponse<ExpedienteResponse>(
+    response,
+    "Error al declarar el expediente desierto"
+  );
+  revalidateExpedienteDetail(id);
+  revalidateExpedienteList();
+  return result;
 };
 
 /**

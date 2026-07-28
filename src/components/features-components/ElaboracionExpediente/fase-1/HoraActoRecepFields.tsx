@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 
 import {
@@ -33,15 +33,10 @@ const periodTriggerClass =
 
 export function HoraActoRecepFields({ value, onChange, onBlur }: HoraActoRecepFieldsProps) {
   const [slot, setSlot] = useState<HorarioTimeSlot>(() => parseHoraActoRecepAper(value));
-  const [syncedValue, setSyncedValue] = useState(value);
 
-  if (value !== syncedValue) {
-    setSyncedValue(value);
-    const formatted = formatHoraActoRecepAper(slot);
-    if (value !== formatted && (value || formatted)) {
-      setSlot(parseHoraActoRecepAper(value));
-    }
-  }
+  useEffect(() => {
+    setSlot(parseHoraActoRecepAper(value));
+  }, [value]);
 
   const updateSlot = (next: HorarioTimeSlot) => {
     setSlot(next);

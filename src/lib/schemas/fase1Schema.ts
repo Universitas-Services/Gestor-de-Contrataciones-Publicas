@@ -77,122 +77,148 @@ export const productoItemSchema = z.object({
 export type ProductoItemFormInputValues = z.input<typeof productoItemSchema>;
 export type ProductoItemFormValues = z.output<typeof productoItemSchema>;
 
-export const fase1FormSchema = z
-  .object({
-    datosActoAutorizacionInicio: requiredText("Los datos del acto administrativo son requeridos"),
-    fechaActaInicio: requiredText("La fecha del acta de inicio es requerida", 50),
-    detallesTecnicosCalidad: requiredText(
-      "Las caracteristicas tecnicas son requeridas",
-      MAX_TEXT_1000
-    ),
-    alcanceCantidadesObra: requiredText("Las cantidades o alcance son requeridos", MAX_TEXT_1000),
-    justificacionVentajas: requiredText("La justificacion de ventajas es requerida", MAX_TEXT_500),
-    origenCrsRegistro: z.boolean().optional(),
-    diasValidezOferta: requiredInteger("Los dias de validez de la oferta son requeridos"),
-    autoridadAclaratorias: requiredText("La autoridad encargada de aclaratorias es requerida"),
-    normativaLegal: z
-      .array(
-        z
-          .string()
-          .trim()
-          .min(1, "La normativa no puede estar vacia")
-          .max(MAX_TEXT_500, `Maximo ${MAX_TEXT_500} caracteres`)
-      )
-      .default([]),
-    diasVigenciaGarantiaExtension: requiredInteger(
-      "Los dias de vigencia de la garantia son requeridos"
-    ),
-    objetivosEspecificos1: requiredText("El objetivo especifico 1 es requerido"),
-    objetivosEspecificos2: requiredText("El objetivo especifico 2 es requerido"),
-    objetivosEspecificos3: requiredText("El objetivo especifico 3 es requerido"),
-    direccionRetiroPliego: requiredText("La direccion de retiro del pliego es requerida"),
-    horarioRetiroPliego: requiredText("El horario de retiro del pliego es requerido"),
-    pliegoGratuito: z.boolean().optional(),
-    costoPliegoBs: optionalDecimal,
-    bancoPagoPliego: optionalText(MAX_TEXT_100),
-    cuentaPagoPliego: optionalBankAccount,
-    titularPagoPliego: optionalText(MAX_TEXT_100),
-    horaActoRecepAper: requiredText("La hora del acto de recepcion y apertura es requerida", 50),
-    condicionPlurianual: z.boolean().optional(),
-    viabilidadContratoMarco: z.boolean().optional(),
-    justificacionContratoMarco: optionalText(MAX_TEXT_100),
-  })
-  .superRefine((data, ctx) => {
-    if (data.origenCrsRegistro === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["origenCrsRegistro"],
-        message:
-          "Debe indicar si el proyecto de responsabilidad social tiene origen en el registro",
-      });
-    }
+const optionalPaso1Text = (maxLength: number) => z.string().max(maxLength).default("");
 
-    if (data.pliegoGratuito === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["pliegoGratuito"],
-        message: "Debe indicar si el pliego de condiciones tendra costo",
-      });
-    }
+const fase1Paso1FieldsElaboracion = {
+  detallesTecnicosCalidad: requiredText(
+    "Las caracteristicas tecnicas son requeridas",
+    MAX_TEXT_1000
+  ),
+  alcanceCantidadesObra: requiredText("Las cantidades o alcance son requeridos", MAX_TEXT_1000),
+  justificacionVentajas: requiredText("La justificacion de ventajas es requerida", MAX_TEXT_500),
+  origenCrsRegistro: z.boolean().optional(),
+} as const;
 
-    if (data.pliegoGratuito === false) {
-      if (data.costoPliegoBs == null) {
+const fase1Paso1FieldsGestion = {
+  detallesTecnicosCalidad: optionalPaso1Text(MAX_TEXT_1000),
+  alcanceCantidadesObra: optionalPaso1Text(MAX_TEXT_1000),
+  justificacionVentajas: optionalPaso1Text(MAX_TEXT_500),
+  origenCrsRegistro: z.boolean().optional(),
+} as const;
+
+function buildFase1FormSchema(gestionPaso1Simplificado: boolean) {
+  const paso1Fields = gestionPaso1Simplificado
+    ? fase1Paso1FieldsGestion
+    : fase1Paso1FieldsElaboracion;
+
+  return z
+    .object({
+      datosActoAutorizacionInicio: requiredText("Los datos del acto administrativo son requeridos"),
+      fechaActaInicio: requiredText("La fecha del acta de inicio es requerida", 50),
+      ...paso1Fields,
+      diasValidezOferta: requiredInteger("Los dias de validez de la oferta son requeridos"),
+      autoridadAclaratorias: requiredText("La autoridad encargada de aclaratorias es requerida"),
+      normativaLegal: z
+        .array(
+          z
+            .string()
+            .trim()
+            .min(1, "La normativa no puede estar vacia")
+            .max(MAX_TEXT_500, `Maximo ${MAX_TEXT_500} caracteres`)
+        )
+        .default([]),
+      diasVigenciaGarantiaExtension: requiredInteger(
+        "Los dias de vigencia de la garantia son requeridos"
+      ),
+      objetivosEspecificos1: requiredText("El objetivo especifico 1 es requerido"),
+      objetivosEspecificos2: requiredText("El objetivo especifico 2 es requerido"),
+      objetivosEspecificos3: requiredText("El objetivo especifico 3 es requerido"),
+      direccionRetiroPliego: requiredText("La direccion de retiro del pliego es requerida"),
+      horarioRetiroPliego: requiredText("El horario de retiro del pliego es requerido"),
+      pliegoGratuito: z.boolean().optional(),
+      costoPliegoBs: optionalDecimal,
+      bancoPagoPliego: optionalText(MAX_TEXT_100),
+      cuentaPagoPliego: optionalBankAccount,
+      titularPagoPliego: optionalText(MAX_TEXT_100),
+      horaActoRecepAper: requiredText("La hora del acto de recepcion y apertura es requerida", 50),
+      condicionPlurianual: z.boolean().optional(),
+      viabilidadContratoMarco: z.boolean().optional(),
+      justificacionContratoMarco: optionalText(MAX_TEXT_100),
+    })
+    .superRefine((data, ctx) => {
+      if (!gestionPaso1Simplificado && data.origenCrsRegistro === undefined) {
         ctx.addIssue({
           code: "custom",
-          path: ["costoPliegoBs"],
-          message: "El costo del pliego es requerido",
+          path: ["origenCrsRegistro"],
+          message:
+            "Debe indicar si el proyecto de responsabilidad social tiene origen en el registro",
         });
       }
 
-      if (!data.bancoPagoPliego) {
+      if (data.pliegoGratuito === undefined) {
         ctx.addIssue({
           code: "custom",
-          path: ["bancoPagoPliego"],
-          message: "El banco para el pago del pliego es requerido",
+          path: ["pliegoGratuito"],
+          message: "Debe indicar si el pliego de condiciones tendra costo",
         });
       }
 
-      if (!data.cuentaPagoPliego) {
+      if (data.pliegoGratuito === false) {
+        if (data.costoPliegoBs == null) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["costoPliegoBs"],
+            message: "El costo del pliego es requerido",
+          });
+        }
+
+        if (!data.bancoPagoPliego) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["bancoPagoPliego"],
+            message: "El banco para el pago del pliego es requerido",
+          });
+        }
+
+        if (!data.cuentaPagoPliego) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["cuentaPagoPliego"],
+            message: "La cuenta para el pago del pliego es requerida",
+          });
+        }
+
+        if (!data.titularPagoPliego) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["titularPagoPliego"],
+            message: "El titular de la cuenta es requerido",
+          });
+        }
+      }
+
+      if (data.condicionPlurianual === undefined) {
         ctx.addIssue({
           code: "custom",
-          path: ["cuentaPagoPliego"],
-          message: "La cuenta para el pago del pliego es requerida",
+          path: ["condicionPlurianual"],
+          message: "Debe indicar si la contratacion es de ejecucion plurianual",
         });
       }
 
-      if (!data.titularPagoPliego) {
+      if (data.viabilidadContratoMarco === undefined) {
         ctx.addIssue({
           code: "custom",
-          path: ["titularPagoPliego"],
-          message: "El titular de la cuenta es requerido",
+          path: ["viabilidadContratoMarco"],
+          message: "Debe indicar si se opto por agrupar esta contratacion o usar un contrato marco",
         });
       }
-    }
 
-    if (data.condicionPlurianual === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["condicionPlurianual"],
-        message: "Debe indicar si la contratacion es de ejecucion plurianual",
-      });
-    }
+      if (data.viabilidadContratoMarco === true && !data.justificacionContratoMarco) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["justificacionContratoMarco"],
+          message: "La evaluacion sobre el contrato marco es requerida",
+        });
+      }
+    });
+}
 
-    if (data.viabilidadContratoMarco === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["viabilidadContratoMarco"],
-        message: "Debe indicar si se opto por agrupar esta contratacion o usar un contrato marco",
-      });
-    }
+export const fase1FormSchema = buildFase1FormSchema(false);
+export const fase1GestionFormSchema = buildFase1FormSchema(true);
 
-    if (data.viabilidadContratoMarco === true && !data.justificacionContratoMarco) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["justificacionContratoMarco"],
-        message: "La evaluacion sobre el contrato marco es requerida",
-      });
-    }
-  });
+export function getFase1FormSchema(basePath = "/elaboracion-expediente") {
+  return basePath === "/gestion-expedientes" ? fase1GestionFormSchema : fase1FormSchema;
+}
 
 export type Fase1FormInputValues = z.input<typeof fase1FormSchema>;
 export type Fase1PayloadFormValues = z.output<typeof fase1FormSchema>;

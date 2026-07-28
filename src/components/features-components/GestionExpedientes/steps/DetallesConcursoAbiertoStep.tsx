@@ -112,13 +112,13 @@ export function DetallesConcursoAbiertoStep({
                   <Textarea
                     {...field}
                     disabled={readOnly}
-                    maxLength={255}
+                    maxLength={500}
                     rows={4}
                     className="resize-none border-slate-300 bg-white pr-16 pb-8"
                     placeholder="Describa el objeto del procedimiento..."
                   />
                   <span className="absolute bottom-2 right-3 text-xs text-slate-400 font-inter">
-                    {descripcionObjeto.length} / 255
+                    {descripcionObjeto.length} / 500
                   </span>
                 </div>
               </FormControl>

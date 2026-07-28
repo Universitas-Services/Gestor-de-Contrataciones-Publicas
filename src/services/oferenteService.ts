@@ -2,6 +2,13 @@
 
 import { getServerToken } from "@/lib/auth/session";
 import { revalidateExpedienteList } from "@/lib/utils/expedienteRevalidate";
+import type {
+  CalificacionEvaluacionTecnicaPayload,
+  CalificacionPayload,
+  Sobre1Payload,
+  Sobre2ChecklistPayload,
+  Sobre2EvaluacionPayload,
+} from "@/types/evaluacionFase3.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -206,7 +213,10 @@ export const listarEvaluacionesFase3 = async (expedienteId: string): Promise<any
  * PATCH /evaluacion-fase3/{evaluacionId}/sobre1
  * Guarda la evaluación del Sobre N°1 (recaudos legales y financieros).
  */
-export const evaluarSobre1Fase3 = async (evaluacionId: string, payload: any): Promise<any> => {
+export const evaluarSobre1Fase3 = async (
+  evaluacionId: string,
+  payload: Sobre1Payload | Record<string, unknown>
+): Promise<any> => {
   const token = await getServerToken();
 
   const response = await fetch(`${API_URL}/evaluacion-fase3/${evaluacionId}/sobre1`, {
@@ -233,7 +243,10 @@ export const evaluarSobre1Fase3 = async (evaluacionId: string, payload: any): Pr
  * PATCH /evaluacion-fase3/{evaluacionId}/sobre2
  * Guarda la evaluación del Sobre N°2 (oferta técnica y económica) y matriz.
  */
-export const evaluarSobre2Fase3 = async (evaluacionId: string, payload: any): Promise<any> => {
+export const evaluarSobre2Fase3 = async (
+  evaluacionId: string,
+  payload: Record<string, unknown>
+): Promise<any> => {
   const token = await getServerToken();
 
   const response = await fetch(`${API_URL}/evaluacion-fase3/${evaluacionId}/sobre2`, {
@@ -250,6 +263,56 @@ export const evaluarSobre2Fase3 = async (evaluacionId: string, payload: any): Pr
     throw new Error(
       ((errorData as Record<string, unknown>)?.message as string) ??
         "Error al guardar la evaluación del Sobre N°2"
+    );
+  }
+
+  return response.json();
+};
+
+/**
+ * PATCH /evaluacion-fase3/{evaluacionId}/sobre2 — solo checklist (gestión, 1.er uso).
+ */
+export const evaluarSobre2ChecklistFase3 = async (
+  evaluacionId: string,
+  payload: Sobre2ChecklistPayload
+): Promise<any> => {
+  return evaluarSobre2Fase3(evaluacionId, payload as unknown as Record<string, unknown>);
+};
+
+/**
+ * PATCH /evaluacion-fase3/{evaluacionId}/sobre2 — matriz / evaluación (gestión, 2.º uso).
+ */
+export const evaluarSobre2EvaluacionFase3 = async (
+  evaluacionId: string,
+  payload: Sobre2EvaluacionPayload
+): Promise<any> => {
+  return evaluarSobre2Fase3(evaluacionId, payload as unknown as Record<string, unknown>);
+};
+
+/**
+ * PATCH /evaluacion-fase3/{evaluacionId}/calificacion
+ * Guarda calificación legal/financiera/técnica (fase 2 gestión).
+ */
+export const evaluarCalificacionFase3 = async (
+  evaluacionId: string,
+  payload: CalificacionPayload | CalificacionEvaluacionTecnicaPayload
+): Promise<any> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/evaluacion-fase3/${evaluacionId}/calificacion`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      ((errorData as Record<string, unknown>)?.message as string) ??
+        "Error al guardar la calificación del oferente"
     );
   }
 

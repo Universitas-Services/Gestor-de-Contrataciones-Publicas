@@ -97,7 +97,7 @@ export const detallesConcursoAbiertoSchema = z.object({
   descripcionObjeto: z
     .string()
     .min(1, "La descripción del objeto es requerida")
-    .max(255, "Máximo 255 caracteres"),
+    .max(500, "Máximo 500 caracteres"),
   codigoNomenclatura: z
     .string()
     .min(1, "La nomenclatura es requerida")
@@ -133,7 +133,7 @@ export const detallesContratacionDirectaSchema = z.object({
   descObjetoContratacionCd: z
     .string()
     .min(1, "La descripción del objeto es requerida")
-    .max(255, "Máximo 255 caracteres"),
+    .max(500, "Máximo 500 caracteres"),
   /** Backend: cod_nomenclatura_proceso_cd */
   codNomenclaturaProcesoCd: z
     .string()
@@ -207,7 +207,7 @@ export const detallesConcursoCerradoSchema = z.object({
   descObjetoContratacionCc: z
     .string()
     .min(1, "La descripción del objeto es requerida")
-    .max(255, "Máximo 255 caracteres"),
+    .max(500, "Máximo 500 caracteres"),
   /** Backend: cod_nomenclatura_proceso_cc */
   codNomenclaturaProcesoCc: z
     .string()
@@ -264,7 +264,7 @@ export const detallesConsultaPreciosSchema = z.object({
   descObjetoContratacionCp: z
     .string()
     .min(1, "La descripción del objeto es requerida")
-    .max(255, "Máximo 255 caracteres"),
+    .max(500, "Máximo 500 caracteres"),
   /** Backend: cod_nomenclatura_proceso_cp */
   codNomenclaturaProcesoCp: z
     .string()
@@ -343,7 +343,7 @@ export const detallesModalidadesExcluidasSchema = z.object({
   descObjetoContratacionMe: z
     .string()
     .min(1, "La descripción del objeto es requerida")
-    .max(255, "Máximo 255 caracteres"),
+    .max(500, "Máximo 500 caracteres"),
   /** Backend: cod_nomenclatura_proceso_me */
   codNomenclaturaProcesoMe: z
     .string()

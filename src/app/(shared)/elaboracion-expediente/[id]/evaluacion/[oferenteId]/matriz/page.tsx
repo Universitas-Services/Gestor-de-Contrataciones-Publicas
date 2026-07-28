@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { FaRegBuilding } from "react-icons/fa";
 import { FaCheckCircle } from "react-icons/fa";
 import { LuTrash2 } from "react-icons/lu";
@@ -17,6 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  evaluacionPath,
+  expedienteTabPath,
+  resolveEvaluacionBasePath,
+  resolveEvaluacionReturnTab,
+} from "@/lib/utils/evaluacionRoutes";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +110,9 @@ export default function MatrizEvaluacionPage({
   params: Promise<{ id: string; oferenteId: string }>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const basePath = resolveEvaluacionBasePath(pathname);
+  const returnTab = resolveEvaluacionReturnTab(basePath);
   const unwrappedParams = React.use(params);
   const { id, oferenteId } = unwrappedParams;
   const { readOnly } = useRoleAccess();
@@ -350,7 +359,7 @@ export default function MatrizEvaluacionPage({
 
   const handleCerrarModal = () => {
     setShowModal(false);
-    router.push(`/elaboracion-expediente/${id}?tab=fase3`);
+    router.push(expedienteTabPath(basePath, id, returnTab));
   };
 
   const handlePreviewCotejo = async () => {
@@ -411,7 +420,7 @@ export default function MatrizEvaluacionPage({
         <br />
         <Button
           className="mt-4"
-          onClick={() => router.push(`/elaboracion-expediente/${id}?tab=fase3`)}
+          onClick={() => router.push(expedienteTabPath(basePath, id, returnTab))}
         >
           Volver
         </Button>
@@ -684,9 +693,7 @@ export default function MatrizEvaluacionPage({
           <Button
             variant="outline"
             className="h-11 px-8 rounded-md font-semibold text-slate-500 border-slate-200 hover:bg-slate-50"
-            onClick={() =>
-              router.push(`/elaboracion-expediente/${id}/evaluacion/${oferenteId}/sobre-2`)
-            }
+            onClick={() => router.push(evaluacionPath(basePath, id, oferenteId, "sobre-2"))}
           >
             Anterior
           </Button>

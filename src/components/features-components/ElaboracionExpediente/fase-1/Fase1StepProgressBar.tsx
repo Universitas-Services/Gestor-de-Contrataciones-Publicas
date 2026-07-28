@@ -10,7 +10,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-const FASE1_STEPPER_STEPS: Array<{ label: string; icon: LucideIcon }> = [
+import { isFase1GestionFlow } from "@/lib/constants/fase1";
+
+const FASE1_STEPPER_STEPS_ELABORACION: Array<{ label: string; icon: LucideIcon }> = [
   { label: "Definición Técnica", icon: Settings2 },
   { label: "Presupuesto", icon: Calculator },
   { label: "Parámetros Legales", icon: Scale },
@@ -18,14 +20,28 @@ const FASE1_STEPPER_STEPS: Array<{ label: string; icon: LucideIcon }> = [
   { label: "Observaciones", icon: ClipboardList },
 ];
 
+const FASE1_STEPPER_STEPS_GESTION: Array<{ label: string; icon: LucideIcon }> = [
+  { label: "Parámetros Legales", icon: Scale },
+  { label: "Presupuesto", icon: Calculator },
+  { label: "Llamado Público", icon: Megaphone },
+  { label: "Observaciones", icon: ClipboardList },
+];
+
 interface Fase1StepProgressBarProps {
   currentStep: number;
+  basePath?: string;
 }
 
-export function Fase1StepProgressBar({ currentStep }: Fase1StepProgressBarProps) {
-  const steps = FASE1_STEPPER_STEPS;
+export function Fase1StepProgressBar({
+  currentStep,
+  basePath = "/elaboracion-expediente",
+}: Fase1StepProgressBarProps) {
+  const steps = isFase1GestionFlow(basePath)
+    ? FASE1_STEPPER_STEPS_GESTION
+    : FASE1_STEPPER_STEPS_ELABORACION;
   const progressWidth =
     steps.length <= 1 ? 0 : (Math.min(currentStep - 1, steps.length - 1) / (steps.length - 1)) * 80;
+  const columnWidthClass = steps.length === 4 ? "w-1/4" : "w-1/5";
 
   return (
     <div className="mb-8 w-full px-2 pt-2 pb-1 md:px-4">
@@ -62,7 +78,10 @@ export function Fase1StepProgressBar({ currentStep }: Fase1StepProgressBarProps)
           }
 
           return (
-            <div key={step.label} className="relative z-10 flex w-1/5 flex-col items-center">
+            <div
+              key={step.label}
+              className={`relative z-10 flex ${columnWidthClass} flex-col items-center`}
+            >
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-full shadow-sm transition-all duration-300 ${circleClass}`}
               >
