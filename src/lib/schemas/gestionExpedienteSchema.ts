@@ -60,7 +60,7 @@ export const MODALIDAD_CONCURSO_ABIERTO_OPTIONS: {
 /** Campos editables antes de Validar montos. */
 export const calculoModalidadInputSchema = z.object({
   fechaActaInicio: z.string().min(1, "La fecha de elaboración del acta de inicio es requerida"),
-  tasa_referencial_bcv: z
+  tasaReferencialBcv: z
     .number({ message: "La tasa referencial BCV es requerida" })
     .positive("La tasa referencial BCV debe ser mayor a cero"),
   tipoContratacion: z.enum(TIPOS_CONTRATACION_BACKEND, {
@@ -79,14 +79,14 @@ export type CalculoModalidadInputValues = z.infer<typeof calculoModalidadInputSc
 /** Snapshot del dictamen tras Validar (estado en memoria del wizard). */
 export interface DictamenModalidadResult {
   fechaActaInicio: string;
-  tasa_referencial_bcv: number;
+  tasaReferencialBcv: number;
   tipoContratacion: CalculoModalidadInputValues["tipoContratacion"];
   monedaEntrada: MonedaEntrada;
   montoEntrada: number;
   montoEstimadoBs: number;
   montoEstimadoDolar: number;
   valorUcauBase: number;
-  /** Alias del valor usado en el cálculo (= tasa_referencial_bcv). */
+  /** Alias del valor usado en el cálculo (= tasaReferencialBcv). */
   tasaBcvUsd: number;
   valorUcau: number;
   modalidadSugeridaLabel: string;

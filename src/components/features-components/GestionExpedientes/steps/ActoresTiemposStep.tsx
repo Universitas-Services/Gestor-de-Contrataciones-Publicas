@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/form";
 import { FormDropdownSelect } from "@/components/features-components/GestionExpedientes/FormDropdownSelect";
 import {
-  configuracionActoresSchema,
+  createConfiguracionActoresSchema,
   type ConfiguracionActoresFormValues,
 } from "@/lib/schemas/expedienteSchema";
 import { listarMaximasAutoridades } from "@/services/maximaAutoridadService";
@@ -38,13 +38,20 @@ interface AutoridadOption {
 
 export interface ActoresTiemposStepProps {
   initialValues?: ConfiguracionActoresFormValues | null;
+  /** Fecha de elaboración del acta (yyyy-MM-dd). El llamado debe ser al menos un día después. */
+  fechaActaInicio?: string | null;
   onBack: () => void;
   onNext: (data: ConfiguracionActoresFormValues) => void;
   readOnly?: boolean;
 }
 
+function minFechaLlamadoFromActa(fechaActaInicio: string): string {
+  return format(addDays(new Date(`${fechaActaInicio}T00:00:00`), 1), "yyyy-MM-dd");
+}
+
 export function ActoresTiemposStep({
   initialValues = null,
+  fechaActaInicio = null,
   onBack,
   onNext,
   readOnly = false,
@@ -53,6 +60,16 @@ export function ActoresTiemposStep({
   const [comisiones, setComisiones] = useState<{ value: string; label: string }[]>([]);
   const [unidades, setUnidades] = useState<{ value: string; label: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+
+  const minFechaLlamado = useMemo(
+    () => (fechaActaInicio ? minFechaLlamadoFromActa(fechaActaInicio) : null),
+    [fechaActaInicio]
+  );
+
+  const actoresSchema = useMemo(
+    () => createConfiguracionActoresSchema(minFechaLlamado ?? undefined),
+    [minFechaLlamado]
+  );
 
   const feriadosRange = useMemo(() => {
     const year = new Date().getFullYear();
@@ -69,16 +86,30 @@ export function ActoresTiemposStep({
     feriadosRange.hasta
   );
 
+  const initialFechaLlamado = (() => {
+    const prev = initialValues?.fechaLlamadoParticipar ?? "";
+    if (prev && minFechaLlamado && prev < minFechaLlamado) return "";
+    return prev;
+  })();
+
   const form = useForm<ConfiguracionActoresFormValues>({
-    resolver: zodResolver(configuracionActoresSchema),
+    resolver: zodResolver(actoresSchema),
     defaultValues: {
       autoridadId: initialValues?.autoridadId ?? "",
       autoridadFirmaComoDelegado: initialValues?.autoridadFirmaComoDelegado ?? false,
       comisionId: initialValues?.comisionId ?? "",
       unidadUsuariaId: initialValues?.unidadUsuariaId ?? "",
-      fechaLlamadoParticipar: initialValues?.fechaLlamadoParticipar ?? "",
+      fechaLlamadoParticipar: initialFechaLlamado,
     },
   });
+
+  useEffect(() => {
+    form.clearErrors("fechaLlamadoParticipar");
+    const current = form.getValues("fechaLlamadoParticipar");
+    if (current && minFechaLlamado && current < minFechaLlamado) {
+      form.setValue("fechaLlamadoParticipar", "");
+    }
+  }, [form, minFechaLlamado]);
 
   useEffect(() => {
     const load = async () => {
@@ -265,6 +296,13 @@ export function ActoresTiemposStep({
                 <FormLabel className="text-heading-dark font-semibold font-inter text-sm">
                   Fecha del Llamado a Participar
                 </FormLabel>
+                {minFechaLlamado ? (
+                  <p className="text-slate-500 italic text-xs mt-0.5">
+                    Debe ser a partir del{" "}
+                    {format(new Date(`${minFechaLlamado}T00:00:00`), "dd/MM/yyyy")} (un día después
+                    del acta de inicio).
+                  </p>
+                ) : null}
                 <div className="mt-auto space-y-1 pt-1.5">
                   <Popover>
                     <PopoverTrigger asChild>
@@ -295,6 +333,14 @@ export function ActoresTiemposStep({
                         onSelect={(date) => {
                           if (date) field.onChange(format(date, "yyyy-MM-dd"));
                         }}
+                        isDateDisabled={
+                          minFechaLlamado
+                            ? (date) => format(date, "yyyy-MM-dd") < minFechaLlamado
+                            : undefined
+                        }
+                        getExtraDisabledTooltip={() =>
+                          "No se pueden elegir fechas anteriores o iguales al acta de inicio"
+                        }
                         nonWorkingDays={nonWorkingDays}
                         feriadoDescriptions={feriadoDescriptions}
                         locale={es}

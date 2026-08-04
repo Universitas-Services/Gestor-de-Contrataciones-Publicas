@@ -248,25 +248,27 @@ export function ExpedientesPanel({
           </Select>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
-          <table className="w-full text-[13px] text-left">
+        {/* Table — table-fixed evita scroll horizontal; celdas truncan con tooltip */}
+        <div className="w-full overflow-hidden bg-white rounded-lg border border-slate-200 shadow-sm">
+          <table className="w-full table-fixed text-[13px] text-left">
             <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
+                <th className="w-[15%] px-2 py-3 font-semibold text-center">
                   <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-navy">
-                    Nomenclaturas
-                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="truncate">Nomenclaturas</span>
+                    <ArrowUpDown className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3 font-semibold text-center">Objeto del Contrato</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Tipo</th>
-                <th className="px-4 py-3 font-semibold text-center">Modalidad</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Progreso</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Fases</th>
-                <th className="px-4 py-3 font-semibold text-center whitespace-nowrap w-[88px]">
-                  Acción
+                <th className="w-[24%] px-2 py-3 font-semibold text-center">
+                  <span className="truncate block">Objeto del Contrato</span>
                 </th>
+                <th className="w-[10%] px-2 py-3 font-semibold text-center">Tipo</th>
+                <th className="w-[18%] px-2 py-3 font-semibold text-center">
+                  <span className="truncate block">Modalidad</span>
+                </th>
+                <th className="w-[12%] px-2 py-3 font-semibold text-center">Progreso</th>
+                <th className="w-[13%] px-2 py-3 font-semibold text-center">Fases</th>
+                <th className="w-[8%] px-2 py-3 font-semibold text-center">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -431,19 +433,22 @@ function ExpedienteRow({
     <>
       {/* Nomenclatura */}
       <td
-        className={`px-4 py-3 font-semibold text-center break-words max-w-[150px] ${
+        className={`px-2 py-3 font-semibold text-center ${
           isAnulado ? "text-slate-400 line-through" : "text-slate-700"
         }`}
       >
-        {expediente.codigoNomenclatura}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block truncate cursor-default">{expediente.codigoNomenclatura}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-sm text-center text-balance">
+            {expediente.codigoNomenclatura}
+          </TooltipContent>
+        </Tooltip>
       </td>
 
       {/* Objeto del Contrato — 1 línea + tooltip */}
-      <td
-        className={`px-4 py-3 text-center max-w-[200px] ${
-          isAnulado ? "text-slate-400" : "text-slate-600"
-        }`}
-      >
+      <td className={`px-2 py-3 text-center ${isAnulado ? "text-slate-400" : "text-slate-600"}`}>
         {expediente.descripcionObjeto ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -459,9 +464,9 @@ function ExpedienteRow({
       </td>
 
       {/* Tipo Badge – en gris si ANULADO */}
-      <td className="px-4 py-3 text-center">
+      <td className="px-2 py-3 text-center">
         <span
-          className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${
+          className={`inline-flex max-w-full truncate px-2 py-1 rounded-full text-xs font-bold border ${
             isAnulado ? "bg-slate-100 text-slate-400 border-slate-300" : tipoStyle
           }`}
         >
@@ -471,17 +476,24 @@ function ExpedienteRow({
 
       {/* Modalidad */}
       <td
-        className={`px-4 py-3 text-[12px] text-center break-words max-w-[180px] ${
+        className={`px-2 py-3 text-[12px] text-center ${
           isAnulado ? "text-slate-400" : "text-slate-600"
         }`}
       >
-        {modalidadDisplay}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block truncate cursor-default">{modalidadDisplay}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-sm text-center text-balance">
+            {modalidadDisplay}
+          </TooltipContent>
+        </Tooltip>
       </td>
 
       {/* Progreso – sin barra si ANULADO */}
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2 justify-center">
-          <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+      <td className="px-2 py-3">
+        <div className="flex min-w-0 items-center gap-1.5 justify-center">
+          <div className="h-1.5 min-w-0 flex-1 max-w-16 bg-slate-200 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 isAnulado ? "bg-slate-300" : "bg-progress-bar"
@@ -490,7 +502,7 @@ function ExpedienteRow({
             />
           </div>
           <span
-            className={`text-xs font-semibold min-w-[32px] ${
+            className={`shrink-0 text-xs font-semibold tabular-nums ${
               isAnulado ? "text-slate-400" : "text-slate-600"
             }`}
           >
@@ -500,14 +512,14 @@ function ExpedienteRow({
       </td>
 
       {/* Fases */}
-      <td className="px-4 py-3 text-center">
-        <div className="flex flex-col items-center justify-center gap-1">
-          <div className="flex items-center gap-1.5 justify-center">
+      <td className="px-2 py-3 text-center">
+        <div className="flex min-w-0 flex-col items-center justify-center gap-1">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 justify-center">
             <span
-              className={`w-2.5 h-2.5 rounded-full ${isAnulado ? "bg-slate-300" : faseDotColor}`}
+              className={`size-2.5 shrink-0 rounded-full ${isAnulado ? "bg-slate-300" : faseDotColor}`}
             />
             <span
-              className={`text-xs font-medium ${isAnulado ? "text-slate-400" : "text-slate-600"}`}
+              className={`truncate text-xs font-medium ${isAnulado ? "text-slate-400" : "text-slate-600"}`}
             >
               {isAnulado ? "Anulado" : fase}
             </span>
@@ -515,7 +527,7 @@ function ExpedienteRow({
           {showAsDesierto ? (
             <Badge
               variant="outline"
-              className="border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] font-semibold text-destructive"
+              className="max-w-full truncate border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] font-semibold text-destructive"
             >
               Declarado desierto
             </Badge>
@@ -524,8 +536,8 @@ function ExpedienteRow({
       </td>
 
       {/* Acción – todas deshabilitadas si ANULADO */}
-      <td className="px-4 py-3 text-center whitespace-nowrap w-[88px]">
-        <div className="inline-flex items-center justify-center gap-2">
+      <td className="px-1 py-3 text-center">
+        <div className="inline-flex items-center justify-center gap-0.5">
           {isAnulado ? (
             <>
               <span className="inline-flex size-8 items-center justify-center text-slate-300 cursor-not-allowed">

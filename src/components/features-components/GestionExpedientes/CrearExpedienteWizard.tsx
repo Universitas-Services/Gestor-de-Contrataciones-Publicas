@@ -313,7 +313,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
 
   const fase0ExtrasFromDictamen = (dictamen: DictamenModalidadResult) => ({
     fechaActaInicio: toFechaActaInicioIso(dictamen.fechaActaInicio),
-    tasa_referencial_bcv: dictamen.tasa_referencial_bcv,
+    tasaReferencialBcv: dictamen.tasaReferencialBcv,
   });
 
   /** POST/PATCH borrador (misma modalidad backend LICITACION_PUBLICA = apertura única). */
@@ -1071,6 +1071,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           (isConcursoAbierto ? (
             <ActoresTiemposStep
               initialValues={actoresPaso3}
+              fechaActaInicio={dictamenPaso1?.fechaActaInicio ?? null}
               onBack={() => goToStep(2)}
               onNext={handlePaso3Complete}
               readOnly={readOnly || isLoading}

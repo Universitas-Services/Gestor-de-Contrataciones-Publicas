@@ -76,7 +76,7 @@ export function CalculoModalidadStep({
   const [isValidating, setIsValidating] = useState(false);
   const [isLoadingTasa, setIsLoadingTasa] = useState(false);
   const [tasaSdkDelDia, setTasaSdkDelDia] = useState<number | null>(
-    initialDictamen?.tasa_referencial_bcv ?? null
+    initialDictamen?.tasaReferencialBcv ?? null
   );
   const [dictamen, setDictamen] = useState<DictamenModalidadResult | null>(initialDictamen);
 
@@ -99,7 +99,7 @@ export function CalculoModalidadStep({
     resolver: zodResolver(calculoModalidadInputSchema),
     defaultValues: {
       fechaActaInicio: initialDictamen?.fechaActaInicio ?? "",
-      tasa_referencial_bcv: initialDictamen?.tasa_referencial_bcv,
+      tasaReferencialBcv: initialDictamen?.tasaReferencialBcv,
       tipoContratacion: initialDictamen?.tipoContratacion,
       monedaEntrada: initialDictamen?.monedaEntrada ?? "USD",
       montoEntrada: initialDictamen?.montoEntrada,
@@ -128,7 +128,7 @@ export function CalculoModalidadStep({
           throw new Error("La tasa BCV del día actual no es válida.");
         }
         setTasaSdkDelDia(tasa);
-        form.setValue("tasa_referencial_bcv", tasa, { shouldValidate: true, shouldDirty: true });
+        form.setValue("tasaReferencialBcv", tasa, { shouldValidate: true, shouldDirty: true });
         toast.info(
           "Aún no hay tasa BCV para la fecha seleccionada. Se muestra la tasa del día de hoy.",
           { duration: 6000 }
@@ -142,10 +142,10 @@ export function CalculoModalidadStep({
         throw new Error("La tasa BCV obtenida no es válida.");
       }
       setTasaSdkDelDia(tasa);
-      form.setValue("tasa_referencial_bcv", tasa, { shouldValidate: true, shouldDirty: true });
+      form.setValue("tasaReferencialBcv", tasa, { shouldValidate: true, shouldDirty: true });
     } catch (error) {
       setTasaSdkDelDia(null);
-      form.setValue("tasa_referencial_bcv", undefined as unknown as number, {
+      form.setValue("tasaReferencialBcv", undefined as unknown as number, {
         shouldValidate: true,
       });
       toast.error(
@@ -165,7 +165,7 @@ export function CalculoModalidadStep({
     if (!valid) return;
 
     const values = form.getValues();
-    if (!values.fechaActaInicio || !values.tasa_referencial_bcv) {
+    if (!values.fechaActaInicio || !values.tasaReferencialBcv) {
       toast.error("Indique la fecha del acta de inicio y la tasa referencial BCV.");
       return;
     }
@@ -174,7 +174,7 @@ export function CalculoModalidadStep({
     setDictamen(null);
 
     const minSpinnerMs = 1500;
-    const tasaBcvUsd = values.tasa_referencial_bcv;
+    const tasaBcvUsd = values.tasaReferencialBcv;
 
     try {
       const [ucauRes] = await Promise.all([
@@ -203,7 +203,7 @@ export function CalculoModalidadStep({
 
       setDictamen({
         fechaActaInicio: values.fechaActaInicio,
-        tasa_referencial_bcv: tasaBcvUsd,
+        tasaReferencialBcv: tasaBcvUsd,
         tipoContratacion: values.tipoContratacion,
         monedaEntrada: values.monedaEntrada,
         montoEntrada: values.montoEntrada,
@@ -284,6 +284,39 @@ export function CalculoModalidadStep({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200 items-stretch">
           <FormField
             control={form.control}
+            name="tipoContratacion"
+            render={({ field }) => (
+              <FormItem className="flex h-full min-h-0 flex-col gap-0">
+                <FormLabel className="text-heading-dark font-bold text-sm">
+                  Seleccione el tipo de contratación:
+                </FormLabel>
+                <p className="mt-0.5 mb-2 min-h-10 text-slate-500 italic text-xs leading-relaxed">
+                  Artículos 118.1 LCP; 34 NORMAS DE CONTROL INTERNO SUNAI.
+                </p>
+                <div className="mt-auto space-y-1">
+                  <FormControl>
+                    <FormDropdownSelect
+                      value={field.value ?? ""}
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        setDictamen(null);
+                      }}
+                      disabled={readOnly || isValidating}
+                      placeholder="seleccione una opción"
+                      options={TIPOS_CONTRATACION_OPTIONS.map((opt) => ({
+                        value: opt.value,
+                        label: opt.label,
+                      }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="fechaActaInicio"
             render={({ field }) => (
               <FormItem className="flex h-full min-h-0 flex-col gap-0">
@@ -337,10 +370,12 @@ export function CalculoModalidadStep({
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           <FormField
             control={form.control}
-            name="tasa_referencial_bcv"
+            name="tasaReferencialBcv"
             render={({ field, fieldState }) => (
               <FormItem className="flex h-full min-h-0 flex-col gap-0">
                 <FormLabel className="text-heading-dark font-bold text-sm">
@@ -399,52 +434,17 @@ export function CalculoModalidadStep({
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          <FormField
-            control={form.control}
-            name="tipoContratacion"
-            render={({ field }) => (
-              <FormItem className="flex h-full flex-col gap-0">
-                <FormLabel className="text-heading-dark font-bold text-sm">
-                  Seleccione el tipo de contratación:
-                </FormLabel>
-                <p className="text-slate-500 italic text-xs mt-0.5 mb-2">
-                  Artículos 118.1 LCP; 34 NORMAS DE CONTROL INTERNO SUNAI.
-                </p>
-                <div className="mt-auto space-y-1">
-                  <FormControl>
-                    <FormDropdownSelect
-                      value={field.value ?? ""}
-                      onValueChange={(v) => {
-                        field.onChange(v);
-                        setDictamen(null);
-                      }}
-                      disabled={readOnly || isValidating}
-                      placeholder="seleccione una opción"
-                      options={TIPOS_CONTRATACION_OPTIONS.map((opt) => ({
-                        value: opt.value,
-                        label: opt.label,
-                      }))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </div>
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}
             name="montoEntrada"
             render={({ field, fieldState }) => (
-              <FormItem className="flex h-full flex-col gap-0">
+              <FormItem className="flex h-full min-h-0 flex-col gap-0">
                 <FormLabel className="text-heading-dark font-bold text-sm">
                   Ingrese el monto estimado de la contratación, incluyendo el Impuesto al Valor
                   Agregado (IVA).
                 </FormLabel>
-                <p className="text-slate-500 italic text-xs mt-0.5 mb-2">
+                <p className="mt-0.5 mb-2 min-h-10 text-slate-500 italic text-xs leading-relaxed">
                   Artículo 107.2 RLCP; 6 LCC; 38 (1 al 5 primer párrafo), 91.1.9.17.23.29 LOCGR; 15
                   Y 24 NORMAS DE CONTROL INTERNO SUNAI.
                 </p>

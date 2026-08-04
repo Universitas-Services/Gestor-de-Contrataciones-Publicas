@@ -34,7 +34,7 @@ export interface BorradorPayload {
   modalidadSeleccion: ModalidadSeleccion;
   /** ISO YYYY-MM-DDT00:00:00.000Z */
   fechaActaInicio: string;
-  tasa_referencial_bcv: number;
+  tasaReferencialBcv: number;
 }
 
 /**
@@ -55,7 +55,7 @@ export interface EditarExpedientePayload {
   autoridadFirmaComoDelegado?: boolean;
   fechaLlamadoParticipar?: string;
   fechaActaInicio?: string;
-  tasa_referencial_bcv?: number;
+  tasaReferencialBcv?: number;
 }
 
 // ─── Sub-types del GET /expedientes/{id} ──────────────────────────
@@ -120,7 +120,7 @@ export interface ModalidadData {
   montoEstimadoDolar: string;
   valorUcauBase: string;
   modalidadSeleccion: string;
-  tasa_referencial_bcv?: string | number;
+  tasaReferencialBcv?: string | number;
 }
 
 export interface UnidadContratanteData {
@@ -141,7 +141,7 @@ export interface ExpedienteResponse {
   updatedAt: string;
   /** Fecha de elaboración del acta de inicio (Fase 0). */
   fechaActaInicio?: string;
-  tasa_referencial_bcv?: string | number;
+  tasaReferencialBcv?: string | number;
   modalidad?: ModalidadData;
   comision?: ComisionData;
   unidadUsuaria?: UnidadUsuariaData;
@@ -231,7 +231,7 @@ export const crearExpedienteBorrador = async (
   formData: DatosBasicosFormValues,
   valorUcauBase?: number,
   montoDolar?: number,
-  extras?: { fechaActaInicio: string; tasa_referencial_bcv: number }
+  extras?: { fechaActaInicio: string; tasaReferencialBcv: number }
 ): Promise<ExpedienteResponse> => {
   const token = await getServerToken();
 
@@ -244,7 +244,7 @@ export const crearExpedienteBorrador = async (
     valorUcauBase: valorUcauBase ?? 0,
     modalidadSeleccion: "LICITACION_PUBLICA",
     fechaActaInicio: toFechaActaInicioIso(extras?.fechaActaInicio ?? ""),
-    tasa_referencial_bcv: extras?.tasa_referencial_bcv ?? 0,
+    tasaReferencialBcv: extras?.tasaReferencialBcv ?? 0,
   };
 
   const response = await fetch(`${API_URL}/expedientes/borrador`, {
@@ -268,7 +268,7 @@ export interface BorradorMultimodalBase {
   montoEstimadoDolar: number;
   valorUcauBase: number;
   fechaActaInicio: string;
-  tasa_referencial_bcv: number;
+  tasaReferencialBcv: number;
 }
 
 export type BorradorConcursoCerradoPayload = BorradorMultimodalBase;

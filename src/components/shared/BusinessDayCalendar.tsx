@@ -43,18 +43,28 @@ export type BusinessDayCalendarProps = DistributiveOmit<
 > & {
   nonWorkingDays?: Set<string>;
   feriadoDescriptions?: Map<string, string>;
+  /** Fechas adicionales a deshabilitar (además de fines de semana/feriados). */
+  isDateDisabled?: (date: Date) => boolean;
+  /** Tooltip para fechas deshabilitadas por `isDateDisabled` (tiene prioridad). */
+  getExtraDisabledTooltip?: (date: Date) => string | undefined;
 };
 
 export function BusinessDayCalendar({
   nonWorkingDays,
   feriadoDescriptions,
+  isDateDisabled,
+  getExtraDisabledTooltip,
   classNames,
   ...props
 }: BusinessDayCalendarProps) {
   const DayButtonWithTooltip = React.useCallback(
     (buttonProps: React.ComponentProps<typeof DayButton>) => {
       const { day, modifiers, className, ...rest } = buttonProps;
-      const tooltip = getDisabledDayTooltip(day.date, feriadoDescriptions);
+      const isExtraDisabled = Boolean(isDateDisabled?.(day.date));
+      const tooltip = isExtraDisabled
+        ? (getExtraDisabledTooltip?.(day.date) ??
+          "No se pueden elegir fechas anteriores al acta de inicio")
+        : getDisabledDayTooltip(day.date, feriadoDescriptions);
       const showTooltip = Boolean(
         tooltip && (modifiers.disabled || modifiers.feriado || modifiers.weekend)
       );
@@ -65,9 +75,11 @@ export function BusinessDayCalendar({
           modifiers={modifiers}
           className={cn(
             modifiers.feriado &&
+              !isExtraDisabled &&
               "!bg-cal-feriado-ente-bg !text-cal-feriado-ente hover:!bg-cal-feriado-ente-bg opacity-100",
             modifiers.weekend &&
               !modifiers.feriado &&
+              !isExtraDisabled &&
               "!bg-cal-weekend-bg !text-muted-foreground hover:!bg-cal-weekend-bg opacity-100",
             className
           )}
@@ -86,12 +98,12 @@ export function BusinessDayCalendar({
         </Tooltip>
       );
     },
-    [feriadoDescriptions]
+    [feriadoDescriptions, getExtraDisabledTooltip, isDateDisabled]
   );
 
   return (
     <Calendar
-      disabled={(date) => isNonWorkingDay(date, nonWorkingDays)}
+      disabled={(date) => isNonWorkingDay(date, nonWorkingDays) || Boolean(isDateDisabled?.(date))}
       modifiers={{
         feriado: (date) => isFeriadoWeekday(date, nonWorkingDays, feriadoDescriptions),
         weekend: (date) => isWeekend(date),
