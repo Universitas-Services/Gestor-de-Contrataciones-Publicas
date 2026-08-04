@@ -13,6 +13,7 @@ import {
   revalidateExpedienteDetail,
   revalidateExpedienteList,
 } from "@/lib/utils/expedienteRevalidate";
+import { toFechaActaInicioIso } from "@/lib/utils/toFechaActaInicioIso";
 
 /**
  * Servicio para el módulo de Expedientes (Elaboración de Expediente)
@@ -31,6 +32,9 @@ export interface BorradorPayload {
   montoEstimadoDolar: number;
   valorUcauBase: number;
   modalidadSeleccion: ModalidadSeleccion;
+  /** ISO YYYY-MM-DDT00:00:00.000Z */
+  fechaActaInicio: string;
+  tasa_referencial_bcv: number;
 }
 
 /**
@@ -50,6 +54,8 @@ export interface EditarExpedientePayload {
   unidadUsuariaId?: string;
   autoridadFirmaComoDelegado?: boolean;
   fechaLlamadoParticipar?: string;
+  fechaActaInicio?: string;
+  tasa_referencial_bcv?: number;
 }
 
 // ─── Sub-types del GET /expedientes/{id} ──────────────────────────
@@ -114,6 +120,7 @@ export interface ModalidadData {
   montoEstimadoDolar: string;
   valorUcauBase: string;
   modalidadSeleccion: string;
+  tasa_referencial_bcv?: string | number;
 }
 
 export interface UnidadContratanteData {
@@ -132,6 +139,9 @@ export interface ExpedienteResponse {
   autoridadFirmaComoDelegado: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Fecha de elaboración del acta de inicio (Fase 0). */
+  fechaActaInicio?: string;
+  tasa_referencial_bcv?: string | number;
   modalidad?: ModalidadData;
   comision?: ComisionData;
   unidadUsuaria?: UnidadUsuariaData;
@@ -220,7 +230,8 @@ async function handleResponse<T>(response: Response, errorMsg: string): Promise<
 export const crearExpedienteBorrador = async (
   formData: DatosBasicosFormValues,
   valorUcauBase?: number,
-  montoDolar?: number
+  montoDolar?: number,
+  extras?: { fechaActaInicio: string; tasa_referencial_bcv: number }
 ): Promise<ExpedienteResponse> => {
   const token = await getServerToken();
 
@@ -232,6 +243,8 @@ export const crearExpedienteBorrador = async (
     montoEstimadoDolar: montoDolar ?? 0,
     valorUcauBase: valorUcauBase ?? 0,
     modalidadSeleccion: "LICITACION_PUBLICA",
+    fechaActaInicio: toFechaActaInicioIso(extras?.fechaActaInicio ?? ""),
+    tasa_referencial_bcv: extras?.tasa_referencial_bcv ?? 0,
   };
 
   const response = await fetch(`${API_URL}/expedientes/borrador`, {
@@ -254,6 +267,8 @@ export interface BorradorMultimodalBase {
   montoEstimadoBs: number;
   montoEstimadoDolar: number;
   valorUcauBase: number;
+  fechaActaInicio: string;
+  tasa_referencial_bcv: number;
 }
 
 export type BorradorConcursoCerradoPayload = BorradorMultimodalBase;
@@ -276,13 +291,17 @@ async function postBorradorModalidad(
   errorMsg: string
 ): Promise<ExpedienteResponse> {
   const token = await getServerToken();
+  const normalized = {
+    ...payload,
+    fechaActaInicio: toFechaActaInicioIso(String(payload.fechaActaInicio ?? "")),
+  };
   const response = await fetch(`${API_URL}/expedientes/borrador/${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(normalized),
   });
   return handleResponse<ExpedienteResponse>(response, errorMsg);
 }

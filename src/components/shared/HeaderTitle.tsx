@@ -11,6 +11,10 @@ interface HeaderTitleProps {
   userRole: UserRole;
 }
 
+/** text-xl / leading-snug — medición siempre a este tamaño para evitar oscilación. */
+const MEASURE_FONT_SIZE = "1.25rem";
+const MEASURE_LINE_HEIGHT = "1.375";
+
 export function HeaderTitle({ userRole }: HeaderTitleProps) {
   const pathname = usePathname();
   const { overrideTitle } = useHeaderTitleOverride();
@@ -26,14 +30,19 @@ export function HeaderTitle({ userRole }: HeaderTitleProps) {
     }
 
     const measureTitle = () => {
+      // Medir siempre con el tamaño grande; si no, text-base ↔ text-xl oscila en títulos largos.
+      element.style.fontSize = MEASURE_FONT_SIZE;
+      element.style.lineHeight = MEASURE_LINE_HEIGHT;
+
       const lineHeight = Number.parseFloat(window.getComputedStyle(element).lineHeight);
+      const wraps = Number.isFinite(lineHeight)
+        ? element.scrollHeight > lineHeight + 2
+        : element.scrollHeight > 24;
 
-      if (!Number.isFinite(lineHeight)) {
-        setIsWrapped(element.scrollHeight > 24);
-        return;
-      }
+      element.style.fontSize = "";
+      element.style.lineHeight = "";
 
-      setIsWrapped(element.scrollHeight > lineHeight + 2);
+      setIsWrapped((prev) => (prev === wraps ? prev : wraps));
     };
 
     measureTitle();
@@ -57,7 +66,7 @@ export function HeaderTitle({ userRole }: HeaderTitleProps) {
         ref={titleRef}
         title={title}
         className={cn(
-          "line-clamp-2 max-w-136 text-center font-semibold text-color-titulos text-balance transition-[font-size,line-height] duration-150",
+          "line-clamp-2 max-w-136 text-center font-semibold text-color-titulos text-balance",
           isWrapped ? "text-base leading-tight" : "text-xl leading-snug"
         )}
       >

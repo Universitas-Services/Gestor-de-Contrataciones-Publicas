@@ -74,7 +74,6 @@ export interface ListarPresupuestoItemsResponse {
 
 export interface CrearOActualizarFase1Payload {
   datosActoAutorizacionInicio: string;
-  fechaActaInicio: string;
   detallesTecnicosCalidad: string;
   alcanceCantidadesObra: string;
   justificacionVentajas: string;
@@ -104,7 +103,8 @@ export interface FasePreparatoriaDetalleResponse {
   id: string;
   expedienteId: string;
   datosActoAutorizacionInicio: string;
-  fechaActaInicio: string;
+  /** Legacy: puede venir del GET si el backend aún lo expone. */
+  fechaActaInicio?: string;
   detallesTecnicosCalidad: string;
   alcanceCantidadesObra: string;
   justificacionVentajas: string;

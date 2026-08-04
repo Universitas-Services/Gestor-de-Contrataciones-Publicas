@@ -10,7 +10,6 @@ import { Paso5ObservacionesStep } from "@/components/features-components/Elabora
 function buildValidDefaults(): Fase1FormInputValues {
   return {
     datosActoAutorizacionInicio: "Acto 001",
-    fechaActaInicio: "2026-06-05",
     detallesTecnicosCalidad: "Detalle tecnico valido",
     alcanceCantidadesObra: "Alcance valido",
     justificacionVentajas: "Justificacion valida",

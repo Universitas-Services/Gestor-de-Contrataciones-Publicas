@@ -7,7 +7,6 @@ import {
   Search,
   Eye,
   Trash2,
-  SlidersHorizontal,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +16,6 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -35,10 +33,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { obtenerExpedientes, eliminarExpediente } from "@/services/expedienteService";
 import type { ExpedienteListItem } from "@/services/expedienteService";
+import { isEstatusProcesoDesierto } from "@/lib/constants/fase2Desierto";
 import { getModalidadDisplayLabel } from "@/lib/modalidades/modalidadDisplay";
+import { cn } from "@/lib/utils";
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -83,7 +84,6 @@ export function ExpedientesPanel({
   const [tipoFilter, setTipoFilter] = useState<string>(initialTipo);
   const [faseFilter, setFaseFilter] = useState<string>("todos");
   const [page, setPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Data from backend
   const [expedientes, setExpedientes] = useState<ExpedienteListItem[]>([]);
@@ -144,26 +144,6 @@ export function ExpedientesPanel({
 
   // Paginated data (may already be paginated from backend)
   const paginatedData = filteredData;
-
-  // Selection
-  const toggleSelect = (id: string) => {
-    if (readOnly) return;
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (readOnly) return;
-    if (selectedIds.size === paginatedData.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(paginatedData.map((e) => e.id)));
-    }
-  };
 
   // ─── Delete handler ─────────────────────────────────────────────
   const handleDelete = async () => {
@@ -266,14 +246,6 @@ export function ExpedientesPanel({
               <SelectItem value="Fase 4">Fase 4</SelectItem>
             </SelectContent>
           </Select>
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 border-slate-300 text-slate-500 hover:text-slate-700 shrink-0"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </Button>
         </div>
 
         {/* Table */}
@@ -281,18 +253,6 @@ export function ExpedientesPanel({
           <table className="w-full text-[13px] text-left">
             <thead className="bg-slate-bg text-text-muted-dark font-medium border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 w-10">
-                  <Checkbox
-                    checked={
-                      !readOnly &&
-                      selectedIds.size === paginatedData.length &&
-                      paginatedData.length > 0
-                    }
-                    onCheckedChange={readOnly ? undefined : toggleSelectAll}
-                    disabled={readOnly}
-                    className="border-slate-300"
-                  />
-                </th>
                 <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">
                   <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-navy">
                     Nomenclaturas
@@ -312,7 +272,7 @@ export function ExpedientesPanel({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center">
+                  <td colSpan={7} className="px-4 py-10 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span>Cargando expedientes...</span>
@@ -325,17 +285,16 @@ export function ExpedientesPanel({
                     key={`${exp.id}-${index}`}
                     expediente={exp}
                     isEven={index % 2 !== 0}
-                    isSelected={selectedIds.has(exp.id)}
-                    onToggle={() => toggleSelect(exp.id)}
                     onDelete={() => setDeleteId(exp.id)}
                     isAnulado={exp.estatusProceso === "ANULADO"}
+                    isDesierto={isEstatusProcesoDesierto(exp.estatusProceso)}
                     readOnly={readOnly}
                     basePath={basePath}
                   />
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500 italic">
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500 italic">
                     No se encontraron expedientes
                   </td>
                 </tr>
@@ -423,19 +382,17 @@ export function ExpedientesPanel({
 function ExpedienteRow({
   expediente,
   isEven,
-  isSelected,
-  onToggle,
   onDelete,
   isAnulado,
+  isDesierto = false,
   readOnly = false,
   basePath = "/elaboracion-expediente",
 }: {
   expediente: ExpedienteListItem;
   isEven: boolean;
-  isSelected: boolean;
-  onToggle: () => void;
   onDelete: () => void;
   isAnulado?: boolean;
+  isDesierto?: boolean;
   readOnly?: boolean;
   basePath?: string;
 }) {
@@ -444,7 +401,7 @@ function ExpedienteRow({
   const tipoDisplay = (TIPO_BACKEND_TO_DISPLAY[tipoBackend] || tipoBackend) as TipoDisplay;
   const tipoStyle = TIPO_STYLES[tipoDisplay] || TIPO_STYLES["Bienes"];
 
-  // Fase y progreso (usando estatusProceso si fase no viene explÃ­cita)
+  // Fase y progreso (usando estatusProceso si fase no viene explícita)
   let fase: FaseDisplay = "Fase 1";
   if (expediente.fase) {
     fase = expediente.fase as FaseDisplay;
@@ -458,25 +415,20 @@ function ExpedienteRow({
   // Modalidad display from nested modalidad object
   const modalidadDisplay = getModalidadDisplayLabel(expediente.modalidad?.modalidadSeleccion);
 
-  // Estilos diferenciados para expedientes ANULADOS
+  // ANULADO tiene prioridad visual sobre desierto
+  const showAsDesierto = Boolean(isDesierto) && !isAnulado;
+
   const rowBase = isAnulado
-    ? `border-b border-slate-100 last:border-0 bg-slate-100 opacity-60`
-    : `border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-        isEven ? "bg-slate-50/50" : "bg-white"
-      }`;
+    ? "border-b border-slate-100 last:border-0 bg-slate-100 opacity-60"
+    : cn(
+        "border-b border-slate-100 last:border-0 transition-colors",
+        showAsDesierto
+          ? "border-l-2 border-l-destructive/40 bg-destructive/5 hover:bg-destructive/10"
+          : cn("hover:bg-slate-50", isEven ? "bg-slate-50/50" : "bg-white")
+      );
 
   const rowContent = (
     <>
-      {/* Checkbox – deshabilitado si ANULADO */}
-      <td className="px-4 py-3">
-        <Checkbox
-          checked={isAnulado ? false : isSelected}
-          onCheckedChange={isAnulado || readOnly ? undefined : onToggle}
-          disabled={isAnulado || readOnly}
-          className="border-slate-300"
-        />
-      </td>
-
       {/* Nomenclatura */}
       <td
         className={`px-4 py-3 font-semibold text-center break-words max-w-[150px] ${
@@ -549,15 +501,25 @@ function ExpedienteRow({
 
       {/* Fases */}
       <td className="px-4 py-3 text-center">
-        <div className="flex items-center gap-1.5 justify-center">
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${isAnulado ? "bg-slate-300" : faseDotColor}`}
-          />
-          <span
-            className={`text-xs font-medium ${isAnulado ? "text-slate-400" : "text-slate-600"}`}
-          >
-            {isAnulado ? "Anulado" : fase}
-          </span>
+        <div className="flex flex-col items-center justify-center gap-1">
+          <div className="flex items-center gap-1.5 justify-center">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${isAnulado ? "bg-slate-300" : faseDotColor}`}
+            />
+            <span
+              className={`text-xs font-medium ${isAnulado ? "text-slate-400" : "text-slate-600"}`}
+            >
+              {isAnulado ? "Anulado" : fase}
+            </span>
+          </div>
+          {showAsDesierto ? (
+            <Badge
+              variant="outline"
+              className="border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] font-semibold text-destructive"
+            >
+              Declarado desierto
+            </Badge>
+          ) : null}
         </div>
       </td>
 
@@ -611,6 +573,24 @@ function ExpedienteRow({
             <p className="text-slate-300 text-xs mt-1 leading-snug">
               Este expediente se encuentra anulado. Por favor, acuda a soporte técnico si desea
               recuperarlo.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  if (showAsDesierto) {
+    return (
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <tr className={rowBase}>{rowContent}</tr>
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-800 text-white max-w-[250px] text-center border-slate-700 py-2.5 shadow-lg relative z-50">
+            <p className="font-semibold text-[13px]">Procedimiento declarado desierto</p>
+            <p className="text-slate-300 text-xs mt-1 leading-snug">
+              Art. 113 LCP. Puede abrir el expediente para consultar el detalle.
             </p>
           </TooltipContent>
         </Tooltip>

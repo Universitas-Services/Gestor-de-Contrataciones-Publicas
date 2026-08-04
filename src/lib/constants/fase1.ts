@@ -24,7 +24,6 @@ export const FASE1_SECTION_DESCRIPTIONS = {
 export const FASE1_STEP_FIELDS = {
   1: [
     "datosActoAutorizacionInicio",
-    "fechaActaInicio",
     "detallesTecnicosCalidad",
     "alcanceCantidadesObra",
     "justificacionVentajas",
@@ -53,10 +52,9 @@ export const FASE1_STEP_FIELDS = {
   5: ["condicionPlurianual", "viabilidadContratoMarco", "justificacionContratoMarco"],
 } as const;
 
-/** En gestión: acto + fecha van en Parámetros legales (paso 1 del wizard de 4). */
+/** En gestión: acto va en Parámetros legales (paso 1 del wizard de 4). */
 export const FASE1_PARAMETROS_LEGALES_FIELDS_GESTION = [
   "datosActoAutorizacionInicio",
-  "fechaActaInicio",
   ...FASE1_STEP_FIELDS[3],
 ] as const;
 
@@ -84,11 +82,6 @@ export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
       "Indique los datos del acto administrativo de autorización de inicio emitido por la Máxima Autoridad (Número y fecha punto de cuenta)",
     description: "Artículos 18.3 LOPA; 23 NORMAS DE CONTROL INTERNO SUNAI.",
     placeholder: FASE1_DATOS_ACTO_AUTORIZACION_INICIO_PLACEHOLDER_ELABORACION,
-  },
-  fechaActaInicio: {
-    label: "Indique la fecha de elaboración del acta de inicio",
-    description: "Artículos 18.3 LOPA; 23 NORMAS DE CONTROL INTERNO SUNAI.",
-    placeholder: "Seleccione una fecha",
   },
   detallesTecnicosCalidad: {
     label:
@@ -300,7 +293,6 @@ export const FASE1_HORA_OPTIONS = buildTimeOptions();
 
 export const FASE1_PDF_MARKER_MAP: Record<string, string> = {
   datosActoAutorizacionInicio: "datos_acto_autorizacion_inicio_au_au",
-  fechaActaInicio: "fec_acta_inicio_au_au",
   detallesTecnicosCalidad: "detalles_tecnicos_calidad_au_au",
   alcanceCantidadesObra: "alcance_cantidades_obra_au_au",
   justificacionVentajas: "justificacion_ventajas_au_au",

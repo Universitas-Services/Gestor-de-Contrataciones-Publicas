@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { CalendarDays, Check, Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { Controller, type UseFormReturn } from "react-hook-form";
 
 import {
@@ -15,7 +13,6 @@ import {
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
 import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   FormControl,
   FormDescription,
@@ -24,7 +21,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Fase1SectionHeader } from "../Fase1SectionHeader";
 import { NormativasLegalesModal } from "../NormativasLegalesModal";
 
@@ -37,8 +33,6 @@ const compactLabelClass = "font-bold text-color-titulos text-[11px] leading-snug
 const compactDescriptionClass = "text-[10px] text-muted-foreground italic leading-relaxed";
 const compactInputClass =
   "h-[32px] rounded-md border-slate-300 bg-white text-[11px] font-medium text-slate-600 shadow-none placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/60 focus-visible:ring-[2px]";
-const compactDateTriggerClass =
-  "h-[32px] w-full justify-start rounded-md border-slate-300 bg-white text-left text-[11px] font-medium text-slate-500 shadow-none focus-visible:ring-[2px]";
 const compactMessageClass = "text-[11px]";
 
 function asNormativaList(value: unknown): string[] {
@@ -60,7 +54,6 @@ export function Paso3ParametrosLegalesStep({
 }: Paso3ParametrosLegalesStepProps) {
   const isGestionFlow = isFase1GestionFlow(basePath);
   const datosActoPlaceholder = getDatosActoAutorizacionInicioPlaceholder(basePath);
-  const currentYear = new Date().getFullYear();
   const [normativasModalOpen, setNormativasModalOpen] = useState(false);
   const [draftNormativa, setDraftNormativa] = useState("");
 
@@ -114,69 +107,25 @@ export function Paso3ParametrosLegalesStep({
 
       <div className="space-y-5">
         {isGestionFlow ? (
-          <>
-            <FormField
-              control={form.control}
-              name="datosActoAutorizacionInicio"
-              render={({ field }) => (
-                <FormItem className="max-w-2xl">
-                  <p className={compactLabelClass}>
-                    {FASE1_FIELD_COPY.datosActoAutorizacionInicio.label}
-                  </p>
-                  <FormDescription className={compactDescriptionClass}>
-                    {FASE1_FIELD_COPY.datosActoAutorizacionInicio.description}
-                  </FormDescription>
-                  <p className="text-[10px] italic text-slate-400">{datosActoPlaceholder}</p>
-                  <FormControl>
-                    <Input {...field} className={compactInputClass} />
-                  </FormControl>
-                  <FormMessage className={compactMessageClass} />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="fechaActaInicio"
-              render={({ field }) => (
-                <FormItem className="max-w-sm">
-                  <p className={compactLabelClass}>{FASE1_FIELD_COPY.fechaActaInicio.label}</p>
-                  <FormDescription className={compactDescriptionClass}>
-                    {FASE1_FIELD_COPY.fechaActaInicio.description}
-                  </FormDescription>
-                  <Popover>
-                    <PopoverTrigger asChild className="cursor-pointer">
-                      <FormControl>
-                        <Button type="button" variant="outline" className={compactDateTriggerClass}>
-                          <CalendarDays className="mr-2 h-4 w-4 text-navy" />
-                          {field.value
-                            ? format(new Date(`${field.value}T12:00:00`), "dd 'de' MMMM, yyyy", {
-                                locale: es,
-                              })
-                            : FASE1_FIELD_COPY.fechaActaInicio.placeholder}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        captionLayout="dropdown"
-                        fromYear={currentYear - 1}
-                        toYear={currentYear + 5}
-                        selected={field.value ? new Date(`${field.value}T12:00:00`) : undefined}
-                        onSelect={(date) => {
-                          if (date) field.onChange(format(date, "yyyy-MM-dd"));
-                        }}
-                        locale={es}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage className={compactMessageClass} />
-                </FormItem>
-              )}
-            />
-          </>
+          <FormField
+            control={form.control}
+            name="datosActoAutorizacionInicio"
+            render={({ field }) => (
+              <FormItem className="max-w-2xl">
+                <p className={compactLabelClass}>
+                  {FASE1_FIELD_COPY.datosActoAutorizacionInicio.label}
+                </p>
+                <FormDescription className={compactDescriptionClass}>
+                  {FASE1_FIELD_COPY.datosActoAutorizacionInicio.description}
+                </FormDescription>
+                <p className="text-[10px] italic text-slate-400">{datosActoPlaceholder}</p>
+                <FormControl>
+                  <Input {...field} className={compactInputClass} />
+                </FormControl>
+                <FormMessage className={compactMessageClass} />
+              </FormItem>
+            )}
+          />
         ) : null}
 
         <FormField

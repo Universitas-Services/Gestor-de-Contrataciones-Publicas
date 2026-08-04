@@ -87,6 +87,7 @@ import {
   guardarCronograma,
   obtenerExpediente,
 } from "@/services/expedienteService";
+import { toFechaActaInicioIso } from "@/lib/utils/toFechaActaInicioIso";
 
 const STEP_META_BASE = [
   {
@@ -310,6 +311,11 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
     goToStep(2);
   };
 
+  const fase0ExtrasFromDictamen = (dictamen: DictamenModalidadResult) => ({
+    fechaActaInicio: toFechaActaInicioIso(dictamen.fechaActaInicio),
+    tasa_referencial_bcv: dictamen.tasa_referencial_bcv,
+  });
+
   /** POST/PATCH borrador (misma modalidad backend LICITACION_PUBLICA = apertura única). */
   const persistBorradorAperturaUnica = async (detalles: DetallesConcursoAbiertoFormValues) => {
     if (!dictamenPaso1) throw new Error("Faltan datos del análisis de modalidad.");
@@ -320,6 +326,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
       tipoContratacion: dictamenPaso1.tipoContratacion,
       montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
     };
+    const fase0Extras = fase0ExtrasFromDictamen(dictamenPaso1);
 
     if (expedienteId) {
       await editarExpediente(expedienteId, {
@@ -330,6 +337,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
         montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
         valorUcauBase: dictamenPaso1.valorUcauBase,
         modalidadSeleccion: "LICITACION_PUBLICA",
+        ...fase0Extras,
       });
       return expedienteId;
     }
@@ -337,7 +345,8 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
     const result = await crearExpedienteBorrador(
       formData,
       dictamenPaso1.valorUcauBase,
-      dictamenPaso1.montoEstimadoDolar
+      dictamenPaso1.montoEstimadoDolar,
+      fase0Extras
     );
 
     if (!result?.id) {
@@ -392,6 +401,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
         if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
         setExpedienteId(result.id);
@@ -403,6 +413,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
       }
       toast.success("Borrador de Concurso Cerrado creado exitosamente");
@@ -439,6 +450,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
         if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
         setExpedienteId(result.id);
@@ -450,6 +462,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
       }
       toast.success("Borrador de Modalidad Excluida creado exitosamente");
@@ -485,6 +498,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           numeralCausalProcedenciaCd: detallesContratacionDirecta.numeralCausalProcedenciaCd,
           causalProcedenciaCd: detallesContratacionDirecta.causalProcedenciaCd,
           unidadContratanteId: data.unidadContratanteId,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
         if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
         id = result.id;
@@ -545,6 +559,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
         if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
         id = result.id;
@@ -605,6 +620,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
           unidadContratanteId: data.unidadContratanteId,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
         if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
         id = result.id;
@@ -675,6 +691,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
           montoEstimadoBs: dictamenPaso1.montoEstimadoBs,
           montoEstimadoDolar: dictamenPaso1.montoEstimadoDolar,
           valorUcauBase: dictamenPaso1.valorUcauBase,
+          ...fase0ExtrasFromDictamen(dictamenPaso1),
         });
         if (!result?.id) throw new Error("El servidor no devolvió el ID del expediente.");
         id = result.id;
@@ -740,6 +757,7 @@ export function CrearExpedienteWizard({ readOnly = false }: CrearExpedienteWizar
         unidadUsuariaId: data.unidadUsuariaId,
         autoridadFirmaComoDelegado: data.autoridadFirmaComoDelegado,
         fechaLlamadoParticipar: data.fechaLlamadoParticipar,
+        ...fase0ExtrasFromDictamen(dictamenPaso1),
       });
 
       const expActualizado = await obtenerExpediente(id);

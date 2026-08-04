@@ -1,8 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { CalendarDays } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { TipoContratacionBackend } from "@/lib/schemas/expedienteSchema";
@@ -14,7 +11,6 @@ import {
 import { cn } from "@/lib/utils";
 import type { Fase1FormInputValues } from "@/lib/schemas/fase1Schema";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   FormControl,
   FormDescription,
@@ -23,7 +19,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Fase1SectionHeader } from "../Fase1SectionHeader";
 
@@ -38,14 +33,11 @@ const compactInputClass =
   "h-[32px] rounded-md border-slate-300 bg-white text-[11px] font-medium text-slate-600 shadow-none placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/60 focus-visible:ring-[2px]";
 const compactTextareaClass =
   "min-h-[88px] rounded-md border-slate-300 bg-white px-3 py-2 text-[11px] font-medium text-slate-600 shadow-none placeholder:text-[11px] placeholder:italic placeholder:font-medium placeholder:text-slate-500/60 focus-visible:ring-[2px]";
-const compactDateTriggerClass =
-  "h-[32px] w-full justify-start rounded-md border-slate-300 bg-white text-left text-[11px] font-medium text-slate-500 shadow-none focus-visible:ring-[2px]";
 const compactChoiceBaseClass =
   "h-8 min-w-[68px] cursor-pointer rounded-md border px-3 text-[11px] font-bold transition-colors";
 const compactMessageClass = "text-[11px]";
 
 export function Paso1DefinicionStep({ form, tipoContratacion }: Paso1DefinicionStepProps) {
-  const currentYear = new Date().getFullYear();
   const detallesTecnicosCalidadCopy = getFase1DynamicFieldCopy(
     "detallesTecnicosCalidad",
     tipoContratacion
@@ -77,48 +69,6 @@ export function Paso1DefinicionStep({ form, tipoContratacion }: Paso1DefinicionS
               <FormControl>
                 <Input {...field} className={compactInputClass} />
               </FormControl>
-              <FormMessage className={compactMessageClass} />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="fechaActaInicio"
-          render={({ field }) => (
-            <FormItem className="max-w-sm">
-              <p className={compactLabelClass}>{FASE1_FIELD_COPY.fechaActaInicio.label}</p>
-              <FormDescription className={compactDescriptionClass}>
-                {FASE1_FIELD_COPY.fechaActaInicio.description}
-              </FormDescription>
-              <Popover>
-                <PopoverTrigger asChild className="cursor-pointer">
-                  <FormControl>
-                    <Button type="button" variant="outline" className={compactDateTriggerClass}>
-                      <CalendarDays className="mr-2 h-4 w-4 text-navy" />
-                      {field.value
-                        ? format(new Date(`${field.value}T12:00:00`), "dd 'de' MMMM, yyyy", {
-                            locale: es,
-                          })
-                        : FASE1_FIELD_COPY.fechaActaInicio.placeholder}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    captionLayout="dropdown"
-                    fromYear={currentYear - 1}
-                    toYear={currentYear + 5}
-                    selected={field.value ? new Date(`${field.value}T12:00:00`) : undefined}
-                    onSelect={(date) => {
-                      if (date) field.onChange(format(date, "yyyy-MM-dd"));
-                    }}
-                    locale={es}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
               <FormMessage className={compactMessageClass} />
             </FormItem>
           )}

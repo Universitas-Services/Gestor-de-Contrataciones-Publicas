@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calculator, CheckCircle2, Loader2 } from "lucide-react";
+import { CalendarIcon, Calculator, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { UniversitasAPI } from "@universitas/sdk-global";
 
@@ -16,8 +17,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { BusinessDayCalendar } from "@/components/shared/BusinessDayCalendar";
+import { MoneyInput } from "@/components/ui/money-input";
 import { CurrencyMoneyInput } from "@/components/features-components/GestionExpedientes/currency/CurrencyMoneyInput";
 import { FormDropdownSelect } from "@/components/features-components/GestionExpedientes/FormDropdownSelect";
+import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
 import { TIPOS_CONTRATACION_OPTIONS } from "@/lib/schemas/expedienteSchema";
 import {
   calculoModalidadInputSchema,
@@ -28,6 +33,7 @@ import {
   type MonedaEntrada,
 } from "@/lib/schemas/gestionExpedienteSchema";
 import { resolveModalidadSugerida } from "@/lib/modalidades/resolveModalidadSugerida";
+import { cn } from "@/lib/utils";
 
 let _universitasClient: UniversitasAPI | null = null;
 function getClient(): UniversitasAPI {
@@ -50,6 +56,12 @@ function formatMoney(amount: number, style: "bs" | "usd" | "ucau" = "bs"): strin
   });
 }
 
+function parseCleanToNumber(clean: string): number | null {
+  if (!clean) return null;
+  const n = Number.parseFloat(clean.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
 export interface CalculoModalidadStepProps {
   initialDictamen?: DictamenModalidadResult | null;
   onComplete: (dictamen: DictamenModalidadResult) => void;
@@ -62,11 +74,32 @@ export function CalculoModalidadStep({
   readOnly = false,
 }: CalculoModalidadStepProps) {
   const [isValidating, setIsValidating] = useState(false);
+  const [isLoadingTasa, setIsLoadingTasa] = useState(false);
+  const [tasaSdkDelDia, setTasaSdkDelDia] = useState<number | null>(
+    initialDictamen?.tasa_referencial_bcv ?? null
+  );
   const [dictamen, setDictamen] = useState<DictamenModalidadResult | null>(initialDictamen);
+
+  const feriadosRange = useMemo(() => {
+    const year = new Date().getFullYear();
+    return {
+      desde: `${year - 1}-01-01`,
+      hasta: `${year + 5}-12-31`,
+      fromYear: year - 1,
+      toYear: year + 5,
+    };
+  }, []);
+
+  const { nonWorkingDays, feriadoDescriptions } = useDiasNoLaborables(
+    feriadosRange.desde,
+    feriadosRange.hasta
+  );
 
   const form = useForm<CalculoModalidadInputValues>({
     resolver: zodResolver(calculoModalidadInputSchema),
     defaultValues: {
+      fechaActaInicio: initialDictamen?.fechaActaInicio ?? "",
+      tasa_referencial_bcv: initialDictamen?.tasa_referencial_bcv,
       tipoContratacion: initialDictamen?.tipoContratacion,
       monedaEntrada: initialDictamen?.monedaEntrada ?? "USD",
       montoEntrada: initialDictamen?.montoEntrada,
@@ -76,6 +109,55 @@ export function CalculoModalidadStep({
 
   const aceptaSugerida = dictamen?.aceptaSugerida ?? null;
 
+  const loadTasaPorFecha = async (fecha: string) => {
+    if (!fecha || readOnly) return;
+
+    setIsLoadingTasa(true);
+    setDictamen(null);
+
+    const hoy = format(new Date(), "yyyy-MM-dd");
+    const esFechaFutura = fecha > hoy;
+
+    try {
+      let tasa: number;
+
+      if (esFechaFutura) {
+        const bcvRes = await getClient().economia.getBCV();
+        tasa = bcvRes.data.usd;
+        if (!tasa || !Number.isFinite(tasa)) {
+          throw new Error("La tasa BCV del día actual no es válida.");
+        }
+        setTasaSdkDelDia(tasa);
+        form.setValue("tasa_referencial_bcv", tasa, { shouldValidate: true, shouldDirty: true });
+        toast.info(
+          "Aún no hay tasa BCV para la fecha seleccionada. Se muestra la tasa del día de hoy.",
+          { duration: 6000 }
+        );
+        return;
+      }
+
+      const bcvRes = await getClient().economia.getBCVHistorico(fecha);
+      tasa = bcvRes.data.usd;
+      if (!tasa || !Number.isFinite(tasa)) {
+        throw new Error("La tasa BCV obtenida no es válida.");
+      }
+      setTasaSdkDelDia(tasa);
+      form.setValue("tasa_referencial_bcv", tasa, { shouldValidate: true, shouldDirty: true });
+    } catch (error) {
+      setTasaSdkDelDia(null);
+      form.setValue("tasa_referencial_bcv", undefined as unknown as number, {
+        shouldValidate: true,
+      });
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No se pudo obtener la tasa BCV para la fecha seleccionada."
+      );
+    } finally {
+      setIsLoadingTasa(false);
+    }
+  };
+
   const handleValidar = async () => {
     if (readOnly) return;
 
@@ -83,17 +165,22 @@ export function CalculoModalidadStep({
     if (!valid) return;
 
     const values = form.getValues();
+    if (!values.fechaActaInicio || !values.tasa_referencial_bcv) {
+      toast.error("Indique la fecha del acta de inicio y la tasa referencial BCV.");
+      return;
+    }
+
     setIsValidating(true);
     setDictamen(null);
 
     const minSpinnerMs = 1500;
+    const tasaBcvUsd = values.tasa_referencial_bcv;
 
     try {
-      const [[bcvRes, ucauRes]] = await Promise.all([
-        Promise.all([getClient().economia.getBCV(), getClient().economia.getUCAUU()]),
+      const [ucauRes] = await Promise.all([
+        getClient().economia.getUCAUU(),
         new Promise<void>((resolve) => setTimeout(resolve, minSpinnerMs)),
       ]);
-      const tasaBcvUsd: number = bcvRes.data.usd;
       const valorUcau: number = ucauRes.valor;
 
       if (!tasaBcvUsd || !valorUcau) {
@@ -115,6 +202,8 @@ export function CalculoModalidadStep({
       const sugerida = resolveModalidadSugerida(values.tipoContratacion, valorUcauBase);
 
       setDictamen({
+        fechaActaInicio: values.fechaActaInicio,
+        tasa_referencial_bcv: tasaBcvUsd,
         tipoContratacion: values.tipoContratacion,
         monedaEntrada: values.monedaEntrada,
         montoEntrada: values.montoEntrada,
@@ -195,6 +284,126 @@ export function CalculoModalidadStep({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200 items-stretch">
           <FormField
             control={form.control}
+            name="fechaActaInicio"
+            render={({ field }) => (
+              <FormItem className="flex h-full min-h-0 flex-col gap-0">
+                <FormLabel className="text-heading-dark font-bold text-sm">
+                  Indique la fecha de elaboración del acta de inicio
+                </FormLabel>
+                <p className="mt-0.5 mb-2 min-h-10 text-slate-500 italic text-xs leading-relaxed">
+                  Artículos 18.3 LOPA; 23 NORMAS DE CONTROL INTERNO SUNAI.
+                </p>
+                <div className="mt-auto space-y-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={readOnly || isValidating || isLoadingTasa}
+                          className={cn(
+                            "w-full h-11 justify-between text-left font-normal border-slate-300 rounded-md px-3",
+                            !field.value ? "text-slate-400" : "text-heading-dark"
+                          )}
+                        >
+                          {field.value
+                            ? format(new Date(field.value + "T00:00:00"), "dd/MM/yyyy")
+                            : "Seleccione una fecha"}
+                          <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <BusinessDayCalendar
+                        mode="single"
+                        captionLayout="dropdown"
+                        fromYear={feriadosRange.fromYear}
+                        toYear={feriadosRange.toYear}
+                        selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          const value = format(date, "yyyy-MM-dd");
+                          field.onChange(value);
+                          setDictamen(null);
+                          void loadTasaPorFecha(value);
+                        }}
+                        nonWorkingDays={nonWorkingDays}
+                        feriadoDescriptions={feriadoDescriptions}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="tasa_referencial_bcv"
+            render={({ field, fieldState }) => (
+              <FormItem className="flex h-full min-h-0 flex-col gap-0">
+                <FormLabel className="text-heading-dark font-bold text-sm">
+                  Tasa referencial (BCV)
+                </FormLabel>
+                <p className="mt-0.5 mb-2 min-h-10 text-slate-500 italic text-xs leading-relaxed">
+                  Se carga según la fecha del acta. Puede ajustarla; los cálculos usarán este valor.
+                </p>
+                <div className="mt-auto space-y-1">
+                  <div className="flex items-stretch gap-2">
+                    <FormControl>
+                      <MoneyInput
+                        disabled={readOnly || isValidating || isLoadingTasa}
+                        aria-invalid={!!fieldState.error}
+                        value={typeof field.value === "number" ? field.value.toFixed(2) : ""}
+                        onValueChange={(clean) => {
+                          const num = parseCleanToNumber(clean);
+                          field.onChange(num ?? undefined);
+                          setDictamen(null);
+                        }}
+                        className="h-11 min-w-0 flex-1 rounded-md border-slate-300"
+                        placeholder={isLoadingTasa ? "Consultando tasa..." : "0,00"}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      title="Restaurar tasa obtenida del BCV"
+                      aria-label="Restaurar tasa obtenida del BCV"
+                      disabled={
+                        readOnly ||
+                        isValidating ||
+                        isLoadingTasa ||
+                        !form.getValues("fechaActaInicio")
+                      }
+                      onClick={() => {
+                        const fecha = form.getValues("fechaActaInicio");
+                        if (!fecha) {
+                          toast.error("Seleccione primero la fecha del acta de inicio.");
+                          return;
+                        }
+                        void loadTasaPorFecha(fecha);
+                      }}
+                      className="h-11 w-11 shrink-0 border-slate-300"
+                    >
+                      {isLoadingTasa ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          <FormField
+            control={form.control}
             name="tipoContratacion"
             render={({ field }) => (
               <FormItem className="flex h-full flex-col gap-0">
@@ -267,7 +476,7 @@ export function CalculoModalidadStep({
           <Button
             type="button"
             onClick={handleValidar}
-            disabled={readOnly || isValidating}
+            disabled={readOnly || isValidating || isLoadingTasa}
             className="bg-navy hover:bg-navy-hover text-white font-semibold px-8 h-11 rounded-md cursor-pointer"
           >
             {isValidating ? (

@@ -471,6 +471,21 @@ export function ExpedienteDetalle({
   const ucauRaw = data.modalidad?.valorUcauBase ? parseFloat(data.modalidad.valorUcauBase) : NaN;
   const ucau = Number.isFinite(ucauRaw) ? ucauRaw : null;
 
+  const tasaRaw = (() => {
+    const fromModalidad = data.modalidad?.tasa_referencial_bcv;
+    const fromRoot = data.tasa_referencial_bcv;
+    const raw = fromModalidad ?? fromRoot;
+    if (raw == null || raw === "") return null;
+    const n = typeof raw === "number" ? raw : parseFloat(String(raw));
+    return Number.isFinite(n) ? n : null;
+  })();
+
+  const fechaActaInicioDisplay = (() => {
+    const raw = data.fechaActaInicio;
+    if (!raw || typeof raw !== "string") return null;
+    return formatDate(raw);
+  })();
+
   // Solo miembros principales (PRESIDENTE o MIEMBRO_PRINCIPAL)
   const miembrosPrincipales = (data.comision?.miembros ?? []).filter(
     (m) => m.tipoMiembro === "PRESIDENTE" || m.tipoMiembro === "MIEMBRO_PRINCIPAL"
@@ -651,6 +666,30 @@ export function ExpedienteDetalle({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-6 pb-6 space-y-3">
+                    {(fechaActaInicioDisplay || tasaRaw != null) && (
+                      <div className="space-y-2 pb-2 border-b border-slate-100">
+                        {fechaActaInicioDisplay && (
+                          <div>
+                            <p className="text-xs text-slate-400 font-inter italic">
+                              Fecha elaboración acta de inicio
+                            </p>
+                            <p className="text-sm font-semibold text-heading-dark font-inter">
+                              {fechaActaInicioDisplay}
+                            </p>
+                          </div>
+                        )}
+                        {tasaRaw != null && (
+                          <div>
+                            <p className="text-xs text-slate-400 font-inter italic">
+                              Tasa referencial BCV (USD)
+                            </p>
+                            <p className="text-sm font-semibold text-heading-dark font-inter tabular-nums">
+                              {formatMoney(tasaRaw)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs text-slate-400 font-inter italic">Valor UCAU</p>
                       <p className="text-2xl font-bold text-heading-dark font-inter tabular-nums">
