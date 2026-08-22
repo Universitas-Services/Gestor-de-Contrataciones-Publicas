@@ -49,6 +49,7 @@ export const ROLE_ROUTES = {
     usuarios: "/admin_ente/gestion-datos/usuarios",
     elaboracionExpediente: "/elaboracion-expediente",
     gestionExpedientes: "/gestion-expedientes",
+    complianceExpediente: "/compliance-expediente",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",
@@ -65,6 +66,7 @@ export const ROLE_ROUTES = {
     registroProveedores: "/registro-proveedores",
     elaboracionExpediente: "/elaboracion-expediente",
     gestionExpedientes: "/gestion-expedientes",
+    complianceExpediente: "/compliance-expediente",
     completarEnte: "/admin_ente/completar-ente",
     configuracion: "/admin_ente/configuracion",
     consultorIA: "/consultor-ia",
@@ -78,6 +80,7 @@ export const ROLE_ROUTES = {
     registroProveedores: "/registro-proveedores",
     elaboracionExpediente: "/elaboracion-expediente",
     gestionExpedientes: "/gestion-expedientes",
+    complianceExpediente: "/compliance-expediente",
     completarEnte: "/admin_ente/completar-ente",
     configuracion: "/admin_ente/configuracion",
     consultorIA: "/consultor-ia",

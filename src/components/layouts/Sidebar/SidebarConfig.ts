@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FolderOpen,
   Newspaper,
+  Search,
   SquarePen,
 } from "lucide-react";
 
@@ -58,6 +59,11 @@ const ENTE_FUNCTIONAL_ITEMS: SidebarItem[] = [
     label: "Gestión de expedientes",
     href: "/gestion-expedientes",
     icon: FolderOpen,
+  },
+  {
+    label: "Compliance de Expediente de selección de Contratista",
+    href: "/compliance-expediente",
+    icon: Search,
   },
 ];
 
@@ -110,6 +116,11 @@ export const SIDEBAR_CONFIGS: Record<UserRole, SidebarConfig> = {
         label: "Gestión de expedientes",
         href: "/gestion-expedientes",
         icon: FolderOpen,
+      },
+      {
+        label: "Compliance de Expediente de selección de Contratista",
+        href: "/compliance-expediente",
+        icon: Search,
       },
     ],
   },

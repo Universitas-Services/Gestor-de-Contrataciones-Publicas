@@ -46,6 +46,7 @@ const ROLE_ROOT_DASHBOARDS: Record<string, string> = {
 const ROUTE_SEGMENT_LABELS: Record<string, string> = {
   "elaboracion-expediente": "Elaboración de expediente",
   "gestion-expedientes": "Panel expediente",
+  "compliance-expediente": "Compliance de Expediente de selección de Contratista",
   admin_ente: "Admin Ente",
   supervisor: "Supervisor",
   visualizador: "Visualizador",
@@ -106,6 +107,9 @@ function formatSegment(segment: string, index: number, segments: string[]): stri
     }
     if (index > 0 && segments[index - 1] === "gestion-expedientes") {
       return "Detalle de expediente";
+    }
+    if (index > 0 && segments[index - 1] === "compliance-expediente") {
+      return "Sesión de compliance";
     }
     return "Perfil del proveedor";
   }

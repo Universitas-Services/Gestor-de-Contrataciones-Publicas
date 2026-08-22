@@ -51,6 +51,16 @@ const HEADER_TITLE_RULES: HeaderTitleRule[] = [
   },
   {
     type: "exact",
+    path: "/compliance-expediente",
+    title: "Compliance de Expediente de selección de Contratista",
+  },
+  {
+    type: "prefix",
+    path: "/compliance-expediente/",
+    title: "Sesión de compliance",
+  },
+  {
+    type: "exact",
     path: "/admin_ente/configuracion/maxima-autoridad",
     title: "Maxima autoridad",
     role: "admin_ente",
@@ -146,6 +156,7 @@ const KNOWN_ROUTE_LABELS: Record<string, string> = {
   "/gestion-datos": "Gestion de datos",
   "/registro-proveedores": "Registro de proveedores",
   "/elaboracion-expediente": "Elaboracion de expediente",
+  "/compliance-expediente": "Compliance de Expediente de selección de Contratista",
   "/supervisor": "Supervisor",
   "/visualizador": "Visualizador",
   "/ejecutor": "Ejecutor",
