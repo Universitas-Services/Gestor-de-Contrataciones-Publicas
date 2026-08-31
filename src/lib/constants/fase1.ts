@@ -216,7 +216,7 @@ export const FASE1_FIELD_COPY: Record<string, Fase1FieldCopy> = {
     description: "Ejemplo: 1",
   },
   precioUnitarioEstimado: {
-    label: "Precio unitario estimado en bolívares (Bs.)",
+    label: "Precio unitario estimado (Bs.).",
     description: "Ejemplo: 10.000,00",
   },
 };

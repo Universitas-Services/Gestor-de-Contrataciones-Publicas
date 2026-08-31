@@ -22,6 +22,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Fase1Panel } from "./fase-1/Fase1Panel";
+import { Fase1InicialPanel } from "@/components/features-components/GestionExpedientes/fase1/Fase1InicialPanel";
 import { Fase2Panel } from "@/components/features-components/GestionExpedientes/fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
 import { Fase4Panel } from "./fase4/Fase4Panel";
@@ -117,9 +118,17 @@ const TIPO_MIEMBRO: Record<string, string> = {
   PRESIDENTE: "Presidente",
 };
 
-const FASES = [
+const FASES_ELABORACION = [
   "Fase 0: Ficha Técnica",
   "Fase 1: Preparatoria",
+  "Fase 2: Gestión participantes",
+  "Fase 3: Análisis y recomendaciones",
+  "Fase 4: Decisión y formalización",
+];
+
+const FASES_GESTION = [
+  "Fase 0: Ficha Técnica",
+  "Fase 1: Inicial",
   "Fase 2: Gestión participantes",
   "Fase 3: Análisis y recomendaciones",
   "Fase 4: Decisión y formalización",
@@ -278,6 +287,11 @@ export function ExpedienteDetalle({
     declaratoriaDesiertoSeed
   );
   const fasesPosterioresBloqueadas = enableDeclaratoriaDesierto && isDesierto;
+  const fasesLabels = useMemo(
+    () => (basePath === "/gestion-expedientes" ? FASES_GESTION : FASES_ELABORACION),
+    [basePath]
+  );
+  const isGestionFlow = basePath === "/gestion-expedientes";
 
   useEffect(() => {
     const nomenclatura = data.codigoNomenclatura?.trim();
@@ -563,8 +577,8 @@ export function ExpedienteDetalle({
         {/* ── Tabs — una sola línea; texto truncado + tooltip con nombre completo ── */}
         <div className="w-full min-w-0">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
-            <TabsList className="flex h-auto w-full min-w-0 flex-nowrap justify-start gap-0 rounded-none border-b-2 border-navy bg-transparent p-0">
-              {FASES.map((fase, i) => {
+            <TabsList className="flex h-11 w-full min-w-0 flex-nowrap gap-1 rounded-xl border border-slate-200/80 bg-slate-50 p-1 shadow-inner">
+              {fasesLabels.map((fase, i) => {
                 const tabValue = `fase-${i}` as Fase1TabValue;
                 const isFaseBloqueada =
                   fasesPosterioresBloqueadas && (tabValue === "fase-3" || tabValue === "fase-4");
@@ -573,10 +587,10 @@ export function ExpedienteDetalle({
                     value={tabValue}
                     disabled={isFaseBloqueada}
                     className={[
-                      "relative h-auto w-full min-w-0 overflow-hidden rounded-none px-1.5 py-2 text-[12px] sm:text-[13px] font-medium transition-colors",
-                      "justify-center text-navy bg-transparent hover:bg-slate-100/50",
-                      "data-[state=active]:bg-navy data-[state=active]:text-white",
-                      "shadow-none data-[state=active]:shadow-none",
+                      "relative h-full w-full min-w-0 flex-1 overflow-hidden rounded-lg border border-transparent px-2 text-[12px] font-semibold transition-all duration-200 ease-in-out sm:text-[13px]",
+                      "justify-center bg-transparent text-slate-500 shadow-none after:hidden",
+                      "hover:bg-white/80 hover:text-slate-700 hover:shadow-sm",
+                      "data-[state=active]:border-navy/15 data-[state=active]:bg-navy data-[state=active]:text-white data-[state=active]:shadow-sm",
                       "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
                       isFaseBloqueada ? "cursor-not-allowed opacity-40" : "",
                     ].join(" ")}
@@ -868,26 +882,36 @@ export function ExpedienteDetalle({
 
             <TabsContent value="fase-1" className="mt-6">
               {isCaActoUnico ? (
-                <Fase1Panel
-                  expedienteId={data.id}
-                  fase1Creada={Boolean(data["fasePreparatoria"])}
-                  readOnly={readOnly}
-                  basePath={basePath}
-                  tipoContratacion={
-                    (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
-                    undefined
-                  }
-                />
+                isGestionFlow ? (
+                  <Fase1InicialPanel
+                    expedienteId={data.id}
+                    fase1Creada={Boolean(data["fasePreparatoria"])}
+                    readOnly={readOnly}
+                    basePath={basePath}
+                  />
+                ) : (
+                  <Fase1Panel
+                    expedienteId={data.id}
+                    fase1Creada={Boolean(data["fasePreparatoria"])}
+                    readOnly={readOnly}
+                    basePath={basePath}
+                    tipoContratacion={
+                      (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
+                      undefined
+                    }
+                  />
+                )
               ) : (
                 <Card className="border border-slate-200 shadow-sm">
                   <CardContent className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
                     <Info className="h-8 w-8 text-slate-400" />
                     <p className="text-sm font-semibold text-slate-700">
-                      Fase preparatoria disponible solo para Concurso Abierto, Acto Único Apertura
-                      Única
+                      {isGestionFlow ? "Fase inicial" : "Fase preparatoria"} disponible solo para
+                      Concurso Abierto, Acto Único Apertura Única
                     </p>
                     <p className="max-w-md text-sm text-slate-500">
-                      Este flujo de carga de datos de la fase preparatoria aplica únicamente a esa
+                      Este flujo de carga de datos de la{" "}
+                      {isGestionFlow ? "fase inicial" : "fase preparatoria"} aplica únicamente a esa
                       modalidad. La modalidad actual es{" "}
                       <span className="font-medium text-slate-600">{modalidadLabel}</span>.
                     </p>

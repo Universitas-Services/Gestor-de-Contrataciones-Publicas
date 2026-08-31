@@ -10,22 +10,37 @@ type LocalizedDecimalInputProps = Omit<
 > & {
   fractionDigits?: number;
   outputMode?: "formatted" | "raw";
-  value?: string | number;
+  /** Si el valor supera este máximo, se ajusta automáticamente al máximo. */
+  max?: number;
+  /** Permite campo vacío (null/undefined/""). Sin esto, vacío se trata como 0. */
+  allowEmpty?: boolean;
+  value?: string | number | null;
   onValueChange?: (formattedValue: string) => void;
 };
 
-function extractDigits(value: string | number | undefined, fractionDigits: number) {
-  if (value === undefined || value === null) return "0";
+function extractDigits(
+  value: string | number | null | undefined,
+  fractionDigits: number,
+  allowEmpty = false
+) {
+  if (value === undefined || value === null || value === "") {
+    return allowEmpty ? "" : "0";
+  }
 
   if (typeof value === "number") {
+    if (!Number.isFinite(value)) return allowEmpty ? "" : "0";
     return value.toFixed(fractionDigits).replace(/\D/g, "");
   }
 
   const digits = value.replace(/\D/g, "");
-  return digits || "0";
+  return digits || (allowEmpty ? "" : "0");
 }
 
 function formatFromDigits(digits: string, fractionDigits: number) {
+  if (digits === "") {
+    return { formatted: "", raw: "", numeric: Number.NaN };
+  }
+
   const normalized = digits.replace(/^0+/, "") || "0";
   const padded = normalized.padStart(Math.max(1, fractionDigits + 1), "0");
   const integerPart =
@@ -36,6 +51,7 @@ function formatFromDigits(digits: string, fractionDigits: number) {
     return {
       formatted: integerFormatted,
       raw: integerPart,
+      numeric: Number(integerPart),
     };
   }
 
@@ -44,7 +60,18 @@ function formatFromDigits(digits: string, fractionDigits: number) {
   return {
     formatted: `${integerFormatted},${decimalPart}`,
     raw: `${integerPart},${decimalPart}`,
+    numeric: Number(`${integerPart}.${decimalPart}`),
   };
+}
+
+function clampDigitsToMax(digits: string, fractionDigits: number, max: number | undefined) {
+  if (digits === "") return digits;
+  if (max === undefined || !Number.isFinite(max)) return digits;
+
+  const { numeric } = formatFromDigits(digits, fractionDigits);
+  if (numeric <= max) return digits;
+
+  return extractDigits(max, fractionDigits);
 }
 
 const LocalizedDecimalInput = React.forwardRef<HTMLInputElement, LocalizedDecimalInputProps>(
@@ -54,6 +81,8 @@ const LocalizedDecimalInput = React.forwardRef<HTMLInputElement, LocalizedDecima
       value,
       fractionDigits = 2,
       outputMode = "formatted",
+      max,
+      allowEmpty = false,
       onBlur,
       onFocus,
       onClick,
@@ -65,17 +94,25 @@ const LocalizedDecimalInput = React.forwardRef<HTMLInputElement, LocalizedDecima
     ref
   ) => {
     const inputRef = React.useRef<HTMLInputElement>(null);
-    const [displayValue, setDisplayValue] = React.useState(
-      () => formatFromDigits(extractDigits(value, fractionDigits), fractionDigits).formatted
-    );
+    const [displayValue, setDisplayValue] = React.useState(() => {
+      const digits = clampDigitsToMax(
+        extractDigits(value, fractionDigits, allowEmpty),
+        fractionDigits,
+        max
+      );
+      return formatFromDigits(digits, fractionDigits).formatted;
+    });
 
     React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
 
     React.useEffect(() => {
-      setDisplayValue(
-        formatFromDigits(extractDigits(value, fractionDigits), fractionDigits).formatted
+      const digits = clampDigitsToMax(
+        extractDigits(value, fractionDigits, allowEmpty),
+        fractionDigits,
+        max
       );
-    }, [fractionDigits, value]);
+      setDisplayValue(formatFromDigits(digits, fractionDigits).formatted);
+    }, [allowEmpty, fractionDigits, max, value]);
 
     const moveCaretToEnd = React.useCallback(() => {
       requestAnimationFrame(() => {
@@ -88,16 +125,22 @@ const LocalizedDecimalInput = React.forwardRef<HTMLInputElement, LocalizedDecima
 
     const commitDigits = React.useCallback(
       (digits: string) => {
-        const { formatted, raw } = formatFromDigits(digits, fractionDigits);
+        if (allowEmpty && digits === "") {
+          setDisplayValue("");
+          onValueChange?.("");
+          return;
+        }
+        const clamped = clampDigitsToMax(digits, fractionDigits, max);
+        const { formatted, raw } = formatFromDigits(clamped, fractionDigits);
         setDisplayValue(formatted);
         onValueChange?.(outputMode === "raw" ? raw : formatted);
         moveCaretToEnd();
       },
-      [fractionDigits, moveCaretToEnd, onValueChange, outputMode]
+      [allowEmpty, fractionDigits, max, moveCaretToEnd, onValueChange, outputMode]
     );
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      commitDigits(extractDigits(event.target.value, fractionDigits));
+      commitDigits(extractDigits(event.target.value, fractionDigits, allowEmpty));
     };
 
     const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
@@ -115,7 +158,7 @@ const LocalizedDecimalInput = React.forwardRef<HTMLInputElement, LocalizedDecima
       if (event.defaultPrevented || props.readOnly || props.disabled) return;
 
       event.preventDefault();
-      commitDigits(extractDigits(event.clipboardData.getData("text"), fractionDigits));
+      commitDigits(extractDigits(event.clipboardData.getData("text"), fractionDigits, allowEmpty));
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {

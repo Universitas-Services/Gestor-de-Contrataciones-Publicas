@@ -25,13 +25,36 @@ import {
 import { useNavigationGuard } from "@/components/shared/NavigationGuardContext";
 
 /** Subrutas bajo /{modulo}/[id] que muestran una tercera miga */
-const EXPEDIENTE_ID_SUB_ROUTES = new Set(["contrato", "informe", "fase-1", "editar"]);
+const EXPEDIENTE_ID_SUB_ROUTES = new Set([
+  "contrato",
+  "informe",
+  "fase-1",
+  "actividades-previas",
+  "especificaciones-tecnicas",
+  "llamado",
+  "aspectos-generales",
+  "modelo-contrato",
+  "calificacion-legal",
+  "calificacion-financiera",
+  "calificacion-tecnica",
+  "evaluacion-tecnica-economica",
+  "editar",
+]);
 const EXPEDIENTE_ROOT_SEGMENTS = new Set(["elaboracion-expediente", "gestion-expedientes"]);
 
 const EXPEDIENTE_SUB_ROUTE_LABELS: Record<string, string> = {
   contrato: "Elaboración del contrato",
   informe: "Informe de recomendación",
   "fase-1": "Fase preparatoria",
+  "actividades-previas": "Actividades previas",
+  "especificaciones-tecnicas": "Especificaciones técnicas",
+  llamado: "Llamado público",
+  "aspectos-generales": "Aspectos generales del pliego",
+  "modelo-contrato": "Modelo de contrato",
+  "calificacion-legal": "Calificación legal",
+  "calificacion-financiera": "Calificación financiera",
+  "calificacion-tecnica": "Calificación técnica",
+  "evaluacion-tecnica-economica": "Evaluación técnica y económica",
   editar: "Editar expediente",
 };
 
@@ -90,6 +113,9 @@ function formatSegment(segment: string, index: number, segments: string[]): stri
   }
 
   if (EXPEDIENTE_SUB_ROUTE_LABELS[segment]) {
+    if (segment === "fase-1" && segments[0] === "gestion-expedientes") {
+      return "Fase inicial";
+    }
     return EXPEDIENTE_SUB_ROUTE_LABELS[segment];
   }
 
@@ -139,10 +165,19 @@ function resolveSegmentHref(segments: string[], index: number): string {
     href = `/elaboracion-expediente/${expedienteId}?tab=fase-4`;
   }
 
-  // Desde el formulario de fase preparatoria, "Detalle de expediente" abre el tab Fase 1
+  // Desde el formulario de fase preparatoria o actividades previas, "Detalle" abre el tab Fase 1
   if (
     EXPEDIENTE_ROOT_SEGMENTS.has(root ?? "") &&
-    subRoute === "fase-1" &&
+    (subRoute === "fase-1" ||
+      subRoute === "actividades-previas" ||
+      subRoute === "especificaciones-tecnicas" ||
+      subRoute === "llamado" ||
+      subRoute === "aspectos-generales" ||
+      subRoute === "modelo-contrato" ||
+      subRoute === "calificacion-legal" ||
+      subRoute === "calificacion-financiera" ||
+      subRoute === "calificacion-tecnica" ||
+      subRoute === "evaluacion-tecnica-economica") &&
     index === 1 &&
     expedienteId
   ) {

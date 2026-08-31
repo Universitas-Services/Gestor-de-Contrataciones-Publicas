@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getAdminEnteOnboardingRedirect,
   getOnboardingRedirect,
+  getPostAuthRedirect,
   resolveProtectedRouteRedirect,
 } from "@/lib/auth/onboardingGuard";
 import type { SessionPayload } from "@/types/auth.types";
@@ -73,5 +74,15 @@ describe("onboardingGuard", () => {
     );
 
     expect(redirect).toBe("/admin_ente/cambiar-contrasena");
+  });
+
+  it("envía a dashboard cuando el onboarding ya está completo", () => {
+    expect(getPostAuthRedirect(baseSession())).toBe("/admin_ente/dashboard");
+  });
+
+  it("prioriza onboarding pendiente sobre el dashboard", () => {
+    expect(getPostAuthRedirect(baseSession({ datosConfirmados: false }))).toBe(
+      "/admin_ente/completar-ente"
+    );
   });
 });

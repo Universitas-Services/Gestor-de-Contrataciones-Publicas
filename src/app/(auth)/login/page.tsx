@@ -1,13 +1,21 @@
 import LoginForm from "@/components/login-form";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/auth";
+import { getPostAuthRedirect } from "@/lib/auth/onboardingGuard";
 
 export const metadata: Metadata = {
   title: "Iniciar Sesión",
   description: "Sistema de Contrataciones Públicas",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const user = await getCurrentUser();
+  if (user) {
+    redirect(getPostAuthRedirect(user));
+  }
+
   return (
     <div className="flex min-h-screen">
       {/* Panel izquierdo - Logo y color */}

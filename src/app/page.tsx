@@ -1,19 +1,13 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth";
-import { getOnboardingRedirect } from "@/lib/auth/onboardingGuard";
-import { getDashboardRoute } from "@/lib/constants/routes";
+import { getPostAuthRedirect } from "@/lib/auth/onboardingGuard";
 
 export default async function HomePage() {
   // Verificar si el usuario tiene sesión activa
   const user = await getCurrentUser();
 
   if (user) {
-    const onboardingRedirect = getOnboardingRedirect(user);
-    if (onboardingRedirect) {
-      redirect(onboardingRedirect);
-    }
-
-    redirect(getDashboardRoute(user.role));
+    redirect(getPostAuthRedirect(user));
   }
 
   // Si no hay sesión, redirigir a login

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { resolveProtectedRouteRedirect } from "@/lib/auth/onboardingGuard";
+import { getPostAuthRedirect, resolveProtectedRouteRedirect } from "@/lib/auth/onboardingGuard";
 import { getSessionFromRequest } from "@/lib/auth/session";
 import { SESSION_CONSTANTS } from "@/types/auth.types";
-import { isPublicRoute, isRouteAllowedForRole } from "@/lib/constants/routes";
+import {
+  getDashboardRoute,
+  isAuthEntryRoute,
+  isPublicRoute,
+  isRouteAllowedForRole,
+} from "@/lib/constants/routes";
 
 /**
  * Proxy de Next.js 16 - Guardian del servidor
@@ -12,7 +17,16 @@ import { isPublicRoute, isRouteAllowedForRole } from "@/lib/constants/routes";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Permitir rutas públicas
+  // Login y home: si ya hay sesión activa, redirigir al destino del usuario
+  if (isAuthEntryRoute(pathname)) {
+    const session = await getSessionFromRequest(request);
+    if (session) {
+      return NextResponse.redirect(new URL(getPostAuthRedirect(session), request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Permitir otras rutas públicas
   if (isPublicRoute(pathname)) {
     return NextResponse.next();
   }
@@ -58,13 +72,6 @@ export async function proxy(request: NextRequest) {
       headers: requestHeaders,
     },
   });
-}
-
-/**
- * Helper para obtener ruta de dashboard
- */
-function getDashboardRoute(role: string): string {
-  return `/${role.toLowerCase()}/dashboard`;
 }
 
 /**

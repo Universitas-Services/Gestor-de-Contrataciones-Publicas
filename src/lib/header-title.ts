@@ -220,6 +220,42 @@ function resolveExpedienteTitle(pathname: string) {
   }
 
   if (pathname.startsWith("/gestion-expedientes/")) {
+    if (pathname.endsWith("/actividades-previas")) {
+      return "Elaboración de Actividades Previas";
+    }
+
+    if (pathname.endsWith("/especificaciones-tecnicas")) {
+      return "Especificaciones Técnicas y Garantías de Idoneidad";
+    }
+
+    if (pathname.endsWith("/llamado")) {
+      return "Configuración del llamado Público";
+    }
+
+    if (pathname.endsWith("/aspectos-generales")) {
+      return "Configuración de aspectos generales del pliego";
+    }
+
+    if (pathname.endsWith("/modelo-contrato")) {
+      return "Configuración del Modelo de Contrato";
+    }
+
+    if (pathname.endsWith("/calificacion-legal")) {
+      return "Calificación Legal (Contenido de Sobres)";
+    }
+
+    if (pathname.endsWith("/calificacion-financiera")) {
+      return "Matriz calificación financiera";
+    }
+
+    if (pathname.endsWith("/calificacion-tecnica")) {
+      return "Matriz calificación técnica";
+    }
+
+    if (pathname.endsWith("/evaluacion-tecnica-economica")) {
+      return "Matriz evaluación técnica y económica";
+    }
+
     if (pathname.endsWith("/nuevo") || pathname === "/gestion-expedientes/nuevo") {
       return null;
     }
