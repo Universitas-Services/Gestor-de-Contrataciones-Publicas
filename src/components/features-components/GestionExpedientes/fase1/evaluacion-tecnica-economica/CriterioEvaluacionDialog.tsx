@@ -30,7 +30,7 @@ type CriterioUnion = CriterioEvalTecnica | CriterioEvalEconomica;
 function isDraftValid(lado: EvaluacionLado, criterio: CriterioUnion): string | null {
   if (lado === "tecnica") {
     const c = criterio as CriterioEvalTecnica;
-    if (!c.criterioEvaluacionTecnicaAuAu.trim()) {
+    if (!c.criterioEvaluacionTecnicaAuAu?.trim()) {
       return "Indique el nombre del criterio técnico.";
     }
     if (!(c.puntuacionCriterioEvaluacionTecnicaAuAu > 0)) {
@@ -39,11 +39,11 @@ function isDraftValid(lado: EvaluacionLado, criterio: CriterioUnion): string | n
     if (c.puntuacionCriterioEvaluacionTecnicaAuAu > PUNTUACION_CRITERIO_MAX) {
       return EVALUACION_TE_CRITERIO_MAX_MESSAGE;
     }
-    if (c.rangos.length < 1) {
+    if ((c.rangos ?? []).length < 1) {
       return "Agregue al menos un rango de evaluación.";
     }
-    for (const rango of c.rangos) {
-      if (!rango.rangoCriterioEvaluacionTecnicaAuAu.trim()) {
+    for (const rango of c.rangos ?? []) {
+      if (!rango.rangoCriterioEvaluacionTecnicaAuAu?.trim()) {
         return "Complete el texto de cada escala / rango.";
       }
       if (
@@ -57,7 +57,7 @@ function isDraftValid(lado: EvaluacionLado, criterio: CriterioUnion): string | n
   }
 
   const c = criterio as CriterioEvalEconomica;
-  if (!c.criterioEvaluacionEconomicaAuAu.trim()) {
+  if (!c.criterioEvaluacionEconomicaAuAu?.trim()) {
     return "Indique el nombre del criterio económico.";
   }
   if (!(c.puntuacionCriterioEvaluacionEconomicaAuAu > 0)) {
@@ -66,11 +66,11 @@ function isDraftValid(lado: EvaluacionLado, criterio: CriterioUnion): string | n
   if (c.puntuacionCriterioEvaluacionEconomicaAuAu > PUNTUACION_CRITERIO_MAX) {
     return EVALUACION_TE_CRITERIO_MAX_MESSAGE;
   }
-  if (c.rangos.length < 1) {
+  if ((c.rangos ?? []).length < 1) {
     return "Agregue al menos un rango de evaluación.";
   }
-  for (const rango of c.rangos) {
-    if (!rango.rangoCriterioEvaluacionEconomicaAuAu.trim()) {
+  for (const rango of c.rangos ?? []) {
+    if (!rango.rangoCriterioEvaluacionEconomicaAuAu?.trim()) {
       return "Complete el texto de cada escala / rango.";
     }
     if (
@@ -112,8 +112,8 @@ export function CriterioEvaluacionDialog({
   onOpenChange,
   onSave,
 }: CriterioEvaluacionDialogProps) {
-  const [draft, setDraft] = useState<CriterioUnion>(
-    lado === "tecnica" ? createEmptyCriterioTecnica : createEmptyCriterioEconomica
+  const [draft, setDraft] = useState<CriterioUnion>(() =>
+    lado === "tecnica" ? createEmptyCriterioTecnica() : createEmptyCriterioEconomica()
   );
 
   useEffect(() => {

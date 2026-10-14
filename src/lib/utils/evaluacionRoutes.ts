@@ -23,6 +23,15 @@ export function evaluacionPath(
   return `${basePath}/${expedienteId}/evaluacion/${evaluacionId}/${step}`;
 }
 
+/** Hub de evaluación (Concurso Abierto · Apertura Única). */
+export function evaluacionHubPath(
+  basePath: string,
+  expedienteId: string,
+  evaluacionId: string
+): string {
+  return `${basePath}/${expedienteId}/evaluacion/${evaluacionId}`;
+}
+
 export function expedienteTabPath(basePath: string, expedienteId: string, tab: string): string {
   return `${basePath}/${expedienteId}?tab=${tab}`;
 }

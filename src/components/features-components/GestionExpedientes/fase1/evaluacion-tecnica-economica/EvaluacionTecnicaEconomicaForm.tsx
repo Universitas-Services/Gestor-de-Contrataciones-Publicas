@@ -16,15 +16,11 @@ import {
   EVALUACION_TE_SUCCESS_DESCRIPTION,
   EVALUACION_TE_SUCCESS_TITLE,
   EVALUACION_TE_WIZARD_TITLE,
-  TOTAL_PUNTOS_OBJETIVO,
   createDefaultEvaluacionTecnicaEconomicaValues,
-  getEvaluacionTecnicaEconomicaFormStorageKey,
-  roundPts,
   type CriterioEvalEconomica,
   type CriterioEvalTecnica,
   type EvaluacionLado,
   type EvaluacionTecnicaEconomicaFormValues,
-  type EvaluacionTecnicaEconomicaStoredForm,
 } from "@/lib/constants/evaluacionTecnicaEconomica";
 import {
   canSubmitEvaluacionTecnicaEconomica,
@@ -34,7 +30,18 @@ import {
   getTotalTecnica,
 } from "@/lib/schemas/evaluacionTecnicaEconomicaSchema";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import {
+  ensureMicromoduloEditable,
+  evaluacionTecnicaEconomicaFromResponse,
+  evaluacionTecnicaEconomicaToApi,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerEvaluacionTecnicaEconomica,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -64,64 +71,18 @@ export interface EvaluacionTecnicaEconomicaFormProps {
 
 type CriterioUnion = CriterioEvalTecnica | CriterioEvalEconomica;
 
-function loadStored(expedienteId: string): EvaluacionTecnicaEconomicaStoredForm {
-  const defaults = createDefaultEvaluacionTecnicaEconomicaValues();
-  if (typeof window === "undefined") {
-    return { values: defaults, status: "draft" };
-  }
-  try {
-    const raw = window.localStorage.getItem(
-      getEvaluacionTecnicaEconomicaFormStorageKey(expedienteId)
-    );
-    if (!raw) return { values: defaults, status: "draft" };
-    const parsed = JSON.parse(raw) as Partial<EvaluacionTecnicaEconomicaStoredForm>;
-    const incoming = parsed.values;
-    return {
-      values: {
-        ...defaults,
-        ...(incoming ?? {}),
-        criteriosTecnicos: Array.isArray(incoming?.criteriosTecnicos)
-          ? incoming.criteriosTecnicos
-          : [],
-        criteriosEconomicos: Array.isArray(incoming?.criteriosEconomicos)
-          ? incoming.criteriosEconomicos
-          : [],
-        puntuacionMinimaEvaluacionTecnicaAuAu:
-          typeof incoming?.puntuacionMinimaEvaluacionTecnicaAuAu === "number"
-            ? incoming.puntuacionMinimaEvaluacionTecnicaAuAu
-            : defaults.puntuacionMinimaEvaluacionTecnicaAuAu,
-        puntuacionMinimaEvaluacionEconomicaAuAu:
-          typeof incoming?.puntuacionMinimaEvaluacionEconomicaAuAu === "number"
-            ? incoming.puntuacionMinimaEvaluacionEconomicaAuAu
-            : defaults.puntuacionMinimaEvaluacionEconomicaAuAu,
-      },
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return { values: defaults, status: "draft" };
-  }
-}
-
-function persist(expedienteId: string, payload: EvaluacionTecnicaEconomicaStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getEvaluacionTecnicaEconomicaFormStorageKey(expedienteId),
-    JSON.stringify(payload)
-  );
-}
-
 export function EvaluacionTecnicaEconomicaForm({
   expedienteId,
   readOnly = false,
   basePath = "/gestion-expedientes",
 }: EvaluacionTecnicaEconomicaFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
 
   const [hydrated, setHydrated] = useState(false);
   const [values, setValues] = useState<EvaluacionTecnicaEconomicaFormValues>(
     createDefaultEvaluacionTecnicaEconomicaValues
   );
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
   const [activeTab, setActiveTab] = useState<EvaluacionLado>("tecnica");
   const [isSaving, setIsSaving] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
@@ -131,12 +92,29 @@ export function EvaluacionTecnicaEconomicaForm({
   const [editingCriterio, setEditingCriterio] = useState<CriterioUnion | null>(null);
 
   useEffect(() => {
-    setValues(loadStored(expedienteId).values);
-    setHydrated(true);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await obtenerEvaluacionTecnicaEconomica(expedienteId);
+        if (cancelled) return;
+
+        setEstado(response.estado);
+        setValues(evaluacionTecnicaEconomicaFromResponse(response as Record<string, unknown>));
+      } catch {
+        if (!cancelled) setValues(createDefaultEvaluacionTecnicaEconomicaValues());
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [expedienteId]);
 
   const goToPanel = useCallback(() => {
-    router.push(expedienteFase1TabPath(basePath, expedienteId));
+    router.push(expedienteFase1TabPath(basePath, expedienteId, "configuracion-pliego"));
   }, [basePath, expedienteId, router]);
 
   const totalTecnica = useMemo(() => getTotalTecnica(values), [values]);
@@ -145,51 +123,18 @@ export function EvaluacionTecnicaEconomicaForm({
   const canSubmit = useMemo(() => canSubmitEvaluacionTecnicaEconomica(values), [values]);
   const issues = useMemo(() => getEvaluacionTecnicaEconomicaIssues(values), [values]);
 
-  const clampUmbral = (lado: EvaluacionLado, value: number) => {
-    const capped = Math.min(Math.max(0, value), TOTAL_PUNTOS_OBJETIVO);
-    const sectionTotal = lado === "tecnica" ? totalTecnica : totalEconomica;
-    if (sectionTotal <= 0) return capped;
-    return Math.min(capped, sectionTotal);
-  };
-
   const setCriteriosTecnicos = (criteriosTecnicos: CriterioEvalTecnica[]) => {
-    setValues((prev) => {
-      const nextTotal = roundPts(
-        criteriosTecnicos.reduce(
-          (acc, c) => acc + (Number(c.puntuacionCriterioEvaluacionTecnicaAuAu) || 0),
-          0
-        )
-      );
-      const umbral =
-        nextTotal > 0
-          ? Math.min(prev.puntuacionMinimaEvaluacionTecnicaAuAu, nextTotal)
-          : prev.puntuacionMinimaEvaluacionTecnicaAuAu;
-      return {
-        ...prev,
-        criteriosTecnicos,
-        puntuacionMinimaEvaluacionTecnicaAuAu: umbral,
-      };
-    });
+    setValues((prev) => ({
+      ...prev,
+      criteriosTecnicos,
+    }));
   };
 
   const setCriteriosEconomicos = (criteriosEconomicos: CriterioEvalEconomica[]) => {
-    setValues((prev) => {
-      const nextTotal = roundPts(
-        criteriosEconomicos.reduce(
-          (acc, c) => acc + (Number(c.puntuacionCriterioEvaluacionEconomicaAuAu) || 0),
-          0
-        )
-      );
-      const umbral =
-        nextTotal > 0
-          ? Math.min(prev.puntuacionMinimaEvaluacionEconomicaAuAu, nextTotal)
-          : prev.puntuacionMinimaEvaluacionEconomicaAuAu;
-      return {
-        ...prev,
-        criteriosEconomicos,
-        puntuacionMinimaEvaluacionEconomicaAuAu: umbral,
-      };
-    });
+    setValues((prev) => ({
+      ...prev,
+      criteriosEconomicos,
+    }));
   };
 
   const openCreate = (lado: EvaluacionLado) => {
@@ -235,25 +180,49 @@ export function EvaluacionTecnicaEconomicaForm({
     toast.success("Criterio económico agregado.");
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      persist(expedienteId, { values, status: "draft" });
-      saveMicromoduleDraft("evaluacion-tecnica-economica");
+      // Reabrir solo al guardar (no al abrir el formulario).
+      await ensureMicromoduloEditable(expedienteId, "evaluacion-tecnica-economica", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const apiPayload = evaluacionTecnicaEconomicaToApi(values);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "evaluacion-tecnica-economica",
+        apiPayload as unknown as Record<string, unknown>
+      );
       toast.success("Borrador de evaluación técnica y económica guardado.");
+      goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (readOnly || !canSubmit) return;
     setIsSaving(true);
     try {
-      persist(expedienteId, { values, status: "completed" });
-      completeMicromodule("evaluacion-tecnica-economica");
+      await ensureMicromoduloEditable(expedienteId, "evaluacion-tecnica-economica", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const apiPayload = evaluacionTecnicaEconomicaToApi(values);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "evaluacion-tecnica-economica",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      await completarMicromodulo(
+        expedienteId,
+        "evaluacion-tecnica-economica",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      setEstado("COMPLETADO");
       setSuccessOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -323,15 +292,6 @@ export function EvaluacionTecnicaEconomicaForm({
                         puntuacionMinimaEvaluacionTecnicaAuAu: value,
                       }))
                     }
-                    onUmbralBlur={() =>
-                      setValues((prev) => ({
-                        ...prev,
-                        puntuacionMinimaEvaluacionTecnicaAuAu: clampUmbral(
-                          "tecnica",
-                          prev.puntuacionMinimaEvaluacionTecnicaAuAu
-                        ),
-                      }))
-                    }
                     onAdd={() => openCreate("tecnica")}
                     onEdit={(id) => openEdit("tecnica", id)}
                     onRemove={(id) =>
@@ -356,15 +316,6 @@ export function EvaluacionTecnicaEconomicaForm({
                       setValues((prev) => ({
                         ...prev,
                         puntuacionMinimaEvaluacionEconomicaAuAu: value,
-                      }))
-                    }
-                    onUmbralBlur={() =>
-                      setValues((prev) => ({
-                        ...prev,
-                        puntuacionMinimaEvaluacionEconomicaAuAu: clampUmbral(
-                          "economica",
-                          prev.puntuacionMinimaEvaluacionEconomicaAuAu
-                        ),
                       }))
                     }
                     onAdd={() => openCreate("economica")}

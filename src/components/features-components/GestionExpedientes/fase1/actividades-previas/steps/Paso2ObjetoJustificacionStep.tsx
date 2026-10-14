@@ -178,6 +178,7 @@ export function Paso2ObjetoJustificacionStep({
                 <Input
                   {...field}
                   disabled={readOnly}
+                  maxLength={100}
                   placeholder="Justifique detalladamente..."
                   className={`h-10 ${inputClass}`}
                 />

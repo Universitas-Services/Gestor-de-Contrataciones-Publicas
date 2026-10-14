@@ -32,7 +32,6 @@ interface EvaluacionTabPanelProps {
   criteriosEconomicos?: CriterioEvalEconomica[];
   readOnly?: boolean;
   onUmbralChange: (value: number) => void;
-  onUmbralBlur: () => void;
   onAdd: () => void;
   onEdit: (id: string) => void;
   onRemove: (id: string) => void;
@@ -49,7 +48,6 @@ export function EvaluacionTabPanel({
   criteriosEconomicos = [],
   readOnly = false,
   onUmbralChange,
-  onUmbralBlur,
   onAdd,
   onEdit,
   onRemove,
@@ -97,7 +95,6 @@ export function EvaluacionTabPanel({
               const next = parseLocalized(raw);
               onUmbralChange(Math.min(Math.max(0, next), TOTAL_PUNTOS_OBJETIVO));
             }}
-            onBlur={onUmbralBlur}
           />
           <span className="text-sm font-medium text-muted-foreground">pts mínimos</span>
         </div>

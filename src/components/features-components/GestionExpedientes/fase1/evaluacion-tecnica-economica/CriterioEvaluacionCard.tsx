@@ -69,14 +69,14 @@ export function CriterioEvaluacionFormFields({
     const patch = (partial: Partial<CriterioEvalTecnica>) => onChange({ ...c, ...partial });
 
     const patchRango = (rangoId: string, next: RangoEvalTecnica) => {
-      patch({ rangos: c.rangos.map((r) => (r.id === rangoId ? next : r)) });
+      patch({ rangos: (c.rangos ?? []).map((r) => (r.id === rangoId ? next : r)) });
     };
 
     return (
       <div className="space-y-5">
         <FieldBlock label={copy.nombre.label} legal={copy.nombre.legal}>
           <Input
-            value={c.criterioEvaluacionTecnicaAuAu}
+            value={c.criterioEvaluacionTecnicaAuAu ?? ""}
             maxLength={CRITERIO_NOMBRE_MAX}
             disabled={readOnly}
             placeholder="Nombre del criterio técnico…"
@@ -105,7 +105,7 @@ export function CriterioEvaluacionFormFields({
 
         <FieldBlock label={copy.descripcion.label} legal={copy.descripcion.legal}>
           <Textarea
-            value={c.descCriterioEvaluacionTecnicaAuAu}
+            value={c.descCriterioEvaluacionTecnicaAuAu ?? ""}
             maxLength={CRITERIO_DESC_MAX}
             disabled={readOnly}
             rows={3}
@@ -114,7 +114,7 @@ export function CriterioEvaluacionFormFields({
             onChange={(e) => patch({ descCriterioEvaluacionTecnicaAuAu: e.target.value })}
           />
           <p className="text-[10px] text-muted-foreground">
-            {c.descCriterioEvaluacionTecnicaAuAu.length}/{CRITERIO_DESC_MAX}
+            {(c.descCriterioEvaluacionTecnicaAuAu ?? "").length}/{CRITERIO_DESC_MAX}
           </p>
         </FieldBlock>
 
@@ -123,23 +123,24 @@ export function CriterioEvaluacionFormFields({
           copyRango={copy.rango}
           readOnly={readOnly}
           maxPadre={c.puntuacionCriterioEvaluacionTecnicaAuAu}
-          rows={c.rangos.map((r) => ({
+          rows={(c.rangos ?? []).map((r) => ({
             id: r.id,
-            texto: r.rangoCriterioEvaluacionTecnicaAuAu,
-            puntaje: r.puntuacionRangoCriterioEvaluacionTecnicaAuAu,
+            texto: r.rangoCriterioEvaluacionTecnicaAuAu ?? "",
+            puntaje: r.puntuacionRangoCriterioEvaluacionTecnicaAuAu ?? 0,
           }))}
-          onAdd={() => patch({ rangos: [...c.rangos, createEmptyRangoTecnica()] })}
+          onAdd={() => patch({ rangos: [...(c.rangos ?? []), createEmptyRangoTecnica()] })}
           onRemove={(id) => {
-            if (c.rangos.length <= 1) return;
-            patch({ rangos: c.rangos.filter((r) => r.id !== id) });
+            const rangos = c.rangos ?? [];
+            if (rangos.length <= 1) return;
+            patch({ rangos: rangos.filter((r) => r.id !== id) });
           }}
           onTextoChange={(id, value) => {
-            const found = c.rangos.find((r) => r.id === id);
+            const found = (c.rangos ?? []).find((r) => r.id === id);
             if (!found) return;
             patchRango(id, { ...found, rangoCriterioEvaluacionTecnicaAuAu: value });
           }}
           onPuntajeChange={(id, value) => {
-            const found = c.rangos.find((r) => r.id === id);
+            const found = (c.rangos ?? []).find((r) => r.id === id);
             if (!found) return;
             patchRango(id, {
               ...found,
@@ -155,14 +156,14 @@ export function CriterioEvaluacionFormFields({
   const patch = (partial: Partial<CriterioEvalEconomica>) => onChange({ ...c, ...partial });
 
   const patchRango = (rangoId: string, next: RangoEvalEconomica) => {
-    patch({ rangos: c.rangos.map((r) => (r.id === rangoId ? next : r)) });
+    patch({ rangos: (c.rangos ?? []).map((r) => (r.id === rangoId ? next : r)) });
   };
 
   return (
     <div className="space-y-5">
       <FieldBlock label={copy.nombre.label} legal={copy.nombre.legal}>
         <Input
-          value={c.criterioEvaluacionEconomicaAuAu}
+          value={c.criterioEvaluacionEconomicaAuAu ?? ""}
           maxLength={CRITERIO_NOMBRE_MAX}
           disabled={readOnly}
           placeholder="Nombre del criterio económico…"
@@ -191,7 +192,7 @@ export function CriterioEvaluacionFormFields({
 
       <FieldBlock label={copy.descripcion.label} legal={copy.descripcion.legal}>
         <Textarea
-          value={c.descCriterioEvaluacionEconomicaAuAu}
+          value={c.descCriterioEvaluacionEconomicaAuAu ?? ""}
           maxLength={CRITERIO_DESC_MAX}
           disabled={readOnly}
           rows={3}
@@ -200,7 +201,7 @@ export function CriterioEvaluacionFormFields({
           onChange={(e) => patch({ descCriterioEvaluacionEconomicaAuAu: e.target.value })}
         />
         <p className="text-[10px] text-muted-foreground">
-          {c.descCriterioEvaluacionEconomicaAuAu.length}/{CRITERIO_DESC_MAX}
+          {(c.descCriterioEvaluacionEconomicaAuAu ?? "").length}/{CRITERIO_DESC_MAX}
         </p>
       </FieldBlock>
 
@@ -209,23 +210,24 @@ export function CriterioEvaluacionFormFields({
         copyRango={copy.rango}
         readOnly={readOnly}
         maxPadre={c.puntuacionCriterioEvaluacionEconomicaAuAu}
-        rows={c.rangos.map((r) => ({
+        rows={(c.rangos ?? []).map((r) => ({
           id: r.id,
-          texto: r.rangoCriterioEvaluacionEconomicaAuAu,
-          puntaje: r.puntuacionRangoCriterioEvaluacionEconomicaAuAu,
+          texto: r.rangoCriterioEvaluacionEconomicaAuAu ?? "",
+          puntaje: r.puntuacionRangoCriterioEvaluacionEconomicaAuAu ?? 0,
         }))}
-        onAdd={() => patch({ rangos: [...c.rangos, createEmptyRangoEconomica()] })}
+        onAdd={() => patch({ rangos: [...(c.rangos ?? []), createEmptyRangoEconomica()] })}
         onRemove={(id) => {
-          if (c.rangos.length <= 1) return;
-          patch({ rangos: c.rangos.filter((r) => r.id !== id) });
+          const rangos = c.rangos ?? [];
+          if (rangos.length <= 1) return;
+          patch({ rangos: rangos.filter((r) => r.id !== id) });
         }}
         onTextoChange={(id, value) => {
-          const found = c.rangos.find((r) => r.id === id);
+          const found = (c.rangos ?? []).find((r) => r.id === id);
           if (!found) return;
           patchRango(id, { ...found, rangoCriterioEvaluacionEconomicaAuAu: value });
         }}
         onPuntajeChange={(id, value) => {
-          const found = c.rangos.find((r) => r.id === id);
+          const found = (c.rangos ?? []).find((r) => r.id === id);
           if (!found) return;
           patchRango(id, {
             ...found,

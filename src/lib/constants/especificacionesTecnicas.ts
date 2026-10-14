@@ -83,6 +83,7 @@ export interface EspecificacionesTecnicasStoredMeta {
   fileSize: number;
   mimeType: string;
   uploadedAt: string;
+  url?: string;
 }
 
 export function getEspecificacionesTecnicasStorageKey(expedienteId: string): string {

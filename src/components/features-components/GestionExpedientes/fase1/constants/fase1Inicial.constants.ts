@@ -6,8 +6,6 @@ import type {
   MicromoduleId,
 } from "../types/fase1Inicial.types";
 
-export const FASE1_INICIAL_STORAGE_PREFIX = "fase1-inicial-state";
-
 /**
  * Secuencia de desbloqueo (Fase 1):
  * 1. Solo Actividades Previas disponible → al completar genera documento Actividades Previas
@@ -144,10 +142,6 @@ export function createInitialFase1InicialState(): Fase1InicialState {
     documents,
     phaseComplete: false,
   };
-}
-
-export function getStorageKey(expedienteId: string): string {
-  return `${FASE1_INICIAL_STORAGE_PREFIX}:${expedienteId}`;
 }
 
 export function getMicromodulesForSubTab(subTab: "preparatoria" | "configuracion-pliego") {

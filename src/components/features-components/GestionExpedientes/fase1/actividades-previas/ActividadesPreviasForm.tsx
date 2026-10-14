@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,12 +19,20 @@ import {
   buildActividadesPreviasFormSchema,
   type ActividadesPreviasFormInputValues,
 } from "@/lib/schemas/actividadesPreviasSchema";
+import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
 import {
-  expedienteFase1TabPath,
-  getActividadesPreviasFormStorageKey,
-} from "@/lib/utils/fase1InicialRoutes";
+  actividadesPreviasFromApi,
+  actividadesPreviasToApi,
+  ensureMicromoduloEditable,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerActividadesPrevias,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import { cn } from "@/lib/utils";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -39,11 +47,7 @@ import { Paso1IdentificacionStep } from "./steps/Paso1IdentificacionStep";
 import { Paso2ObjetoJustificacionStep } from "./steps/Paso2ObjetoJustificacionStep";
 import { Paso3LogisticaStep } from "./steps/Paso3LogisticaStep";
 import { Paso4PromocionStep } from "./steps/Paso4PromocionStep";
-
-interface StoredActividadesPreviasForm {
-  values: ActividadesPreviasFormInputValues;
-  currentStep: number;
-}
+import { Paso5GarantiasAnticiposStep } from "./steps/Paso5GarantiasAnticiposStep";
 
 export interface ActividadesPreviasFormProps {
   expedienteId: string;
@@ -58,34 +62,8 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function loadStoredForm(
-  expedienteId: string,
-  defaults: ActividadesPreviasFormInputValues
-): { values: ActividadesPreviasFormInputValues; currentStep: number } {
-  if (typeof window === "undefined") {
-    return { values: defaults, currentStep: 1 };
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getActividadesPreviasFormStorageKey(expedienteId));
-    if (!raw) return { values: defaults, currentStep: 1 };
-    const parsed = JSON.parse(raw) as StoredActividadesPreviasForm;
-    if (!parsed?.values) return { values: defaults, currentStep: 1 };
-    return {
-      values: { ...defaults, ...parsed.values },
-      currentStep: parsed.currentStep ?? 1,
-    };
-  } catch {
-    return { values: defaults, currentStep: 1 };
-  }
-}
-
-function persistForm(expedienteId: string, payload: StoredActividadesPreviasForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getActividadesPreviasFormStorageKey(expedienteId),
-    JSON.stringify(payload)
-  );
+function getStepStorageKey(expedienteId: string): string {
+  return `actividades-previas-step:${expedienteId}`;
 }
 
 export function ActividadesPreviasForm({
@@ -96,7 +74,6 @@ export function ActividadesPreviasForm({
   basePath = "/gestion-expedientes",
 }: ActividadesPreviasFormProps) {
   const router = useRouter();
-  const { completeMicromodule } = useFase1InicialState(expedienteId);
   const defaultValues = useMemo(
     () => createActividadesPreviasDefaultValues(direccionEnteDefault),
     [direccionEnteDefault]
@@ -110,7 +87,7 @@ export function ActividadesPreviasForm({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const skipPersistRef = useRef(false);
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
 
   const form = useForm<ActividadesPreviasFormInputValues>({
     resolver: zodResolver(formSchema) as unknown as Resolver<ActividadesPreviasFormInputValues>,
@@ -120,18 +97,36 @@ export function ActividadesPreviasForm({
   });
 
   useEffect(() => {
-    const stored = loadStoredForm(expedienteId, defaultValues);
-    form.reset(stored.values);
-    setCurrentStep(stored.currentStep);
-    setHydrated(true);
-  }, [defaultValues, expedienteId, form]);
+    let cancelled = false;
 
-  const values = form.watch();
+    void (async () => {
+      try {
+        const response = await obtenerActividadesPrevias(expedienteId);
+        if (cancelled) return;
 
-  useEffect(() => {
-    if (!hydrated || skipPersistRef.current) return;
-    persistForm(expedienteId, { values, currentStep });
-  }, [currentStep, expedienteId, hydrated, values]);
+        setEstado(response.estado);
+        form.reset(
+          actividadesPreviasFromApi(response as Record<string, unknown>, direccionEnteDefault)
+        );
+
+        const storedStep = sessionStorage.getItem(getStepStorageKey(expedienteId));
+        if (storedStep) {
+          const step = Number(storedStep);
+          if (step >= 1 && step <= ACTIVIDADES_PREVIAS_STEPS.length) {
+            setCurrentStep(step);
+          }
+        }
+      } catch {
+        if (!cancelled) form.reset(defaultValues);
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultValues, direccionEnteDefault, expedienteId, form]);
 
   const totalSteps = ACTIVIDADES_PREVIAS_STEPS.length;
   const isLastStep = currentStep === totalSteps;
@@ -145,9 +140,17 @@ export function ActividadesPreviasForm({
     router.push(expedienteFase1TabPath(basePath, expedienteId));
   }, [basePath, expedienteId, router]);
 
+  const persistDraft = async () => {
+    await ensureMicromoduloEditable(expedienteId, "actividades-previas", estado);
+    if (estado === "COMPLETADO") setEstado("BORRADOR");
+    const payload = actividadesPreviasToApi(form.getValues());
+    await guardarBorradorMicromodulo(expedienteId, "actividades-previas", payload);
+  };
+
   const handleBack = () => {
     if (currentStep <= 1) return;
     setCurrentStep((prev) => prev - 1);
+    sessionStorage.setItem(getStepStorageKey(expedienteId), String(currentStep - 1));
     scrollToTop();
   };
 
@@ -174,18 +177,33 @@ export function ActividadesPreviasForm({
           return;
         }
 
-        skipPersistRef.current = true;
-        persistForm(expedienteId, { values: form.getValues(), currentStep: totalSteps });
-        completeMicromodule("actividades-previas");
+        await persistDraft();
+        await completarMicromodulo(expedienteId, "actividades-previas");
+        sessionStorage.removeItem(getStepStorageKey(expedienteId));
         setIsConfirmOpen(true);
+      } catch (error) {
+        toast.error(formatMicromoduloErrorMessage(error));
       } finally {
         setIsSaving(false);
       }
       return;
     }
 
-    setCurrentStep((prev) => prev + 1);
-    scrollToTop();
+    setIsSaving(true);
+    try {
+      // Completado: no PUT/reabrir al avanzar pasos; solo al guardar/finalizar.
+      if (estado !== "COMPLETADO") {
+        await persistDraft();
+      }
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      sessionStorage.setItem(getStepStorageKey(expedienteId), String(nextStep));
+      scrollToTop();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderCurrentStep = () => {
@@ -204,10 +222,20 @@ export function ActividadesPreviasForm({
         return <Paso3LogisticaStep form={form} readOnly={readOnly} />;
       case 4:
         return <Paso4PromocionStep form={form} readOnly={readOnly} />;
+      case 5:
+        return <Paso5GarantiasAnticiposStep form={form} readOnly={readOnly} />;
       default:
         return <Paso1IdentificacionStep form={form} readOnly={readOnly} />;
     }
   };
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Cargando actividades previas…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full">

@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import {
-  getClausulasBibliotecaEnteStorageKey,
-  getModeloContratoFormStorageKey,
   MODELO_CONTRATO_CONFIRM_DESCRIPTION,
   MODELO_CONTRATO_CONFIRM_TITLE,
   MODELO_CONTRATO_DRAFT_LABEL,
@@ -17,13 +15,26 @@ import {
   MODELO_CONTRATO_WIZARD_DESCRIPTION,
   MODELO_CONTRATO_WIZARD_TITLE,
   type ClausulaBase,
-  type ClausulaBibliotecaItem,
   type ClausulaEnModelo,
-  type ModeloContratoStoredForm,
 } from "@/lib/constants/modeloContrato";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
-import { listarClausulasGenericas } from "@/services/clausulasModeloService";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import {
+  ensureMicromoduloEditable,
+  modeloContratoClausesFromResponse,
+  modeloContratoToApi,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import { crearClausulaEnte, eliminarClausulaEnte } from "@/services/bibliotecaClausulasService";
+import {
+  listarClausulasEnteModelo,
+  listarClausulasGenericasModelo,
+} from "@/services/clausulasModeloService";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerModeloContrato,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,57 +78,19 @@ function sortByOrder(clauses: ClausulaEnModelo[]): ClausulaEnModelo[] {
   return [...clauses].sort((a, b) => a.order - b.order);
 }
 
-function loadStoredForm(expedienteId: string): ModeloContratoStoredForm {
-  if (typeof window === "undefined") {
-    return { clauses: [], status: "draft" };
-  }
-  try {
-    const raw = window.localStorage.getItem(getModeloContratoFormStorageKey(expedienteId));
-    if (!raw) return { clauses: [], status: "draft" };
-    const parsed = JSON.parse(raw) as ModeloContratoStoredForm;
-    return {
-      clauses: Array.isArray(parsed.clauses) ? parsed.clauses : [],
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return { clauses: [], status: "draft" };
-  }
+function normalizeHtml(html: string): string {
+  return html.replace(/\s+/g, " ").trim();
 }
 
-function persistForm(expedienteId: string, payload: ModeloContratoStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getModeloContratoFormStorageKey(expedienteId),
-    JSON.stringify(payload)
+function wasEdited(
+  original: ClausulaBase | ClausulaEnModelo | null,
+  payload: ClausulaEditorSavePayload
+): boolean {
+  if (!original) return true;
+  return (
+    original.titulo.trim() !== payload.titulo.trim() ||
+    normalizeHtml(original.cuerpoHtml) !== normalizeHtml(payload.cuerpoHtml)
   );
-}
-
-function loadBiblioteca(enteId: string): ClausulaBibliotecaItem[] {
-  if (typeof window === "undefined" || !enteId) return [];
-  try {
-    const raw = window.localStorage.getItem(getClausulasBibliotecaEnteStorageKey(enteId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as ClausulaBibliotecaItem[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistBiblioteca(enteId: string, items: ClausulaBibliotecaItem[]) {
-  if (typeof window === "undefined" || !enteId) return;
-  window.localStorage.setItem(getClausulasBibliotecaEnteStorageKey(enteId), JSON.stringify(items));
-}
-
-function bibliotecaToBase(item: ClausulaBibliotecaItem): ClausulaBase {
-  return {
-    id: item.id,
-    titulo: item.titulo,
-    cuerpoHtml: item.cuerpoHtml,
-    basamentoLegal: item.basamentoLegal,
-    kind: "facultativa",
-    origen: "biblioteca",
-  };
 }
 
 export function ModeloContratoForm({
@@ -127,12 +100,12 @@ export function ModeloContratoForm({
   basePath = "/gestion-expedientes",
 }: ModeloContratoFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
 
   const [hydrated, setHydrated] = useState(false);
   const [genericas, setGenericas] = useState<ClausulaBase[]>([]);
-  const [biblioteca, setBiblioteca] = useState<ClausulaBibliotecaItem[]>([]);
+  const [biblioteca, setBiblioteca] = useState<ClausulaBase[]>([]);
   const [clauses, setClauses] = useState<ClausulaEnModelo[]>([]);
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
   const [filter, setFilter] = useState<RepoFilter>("todas");
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
@@ -142,19 +115,60 @@ export function ModeloContratoForm({
   const [successOpen, setSuccessOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const refreshBiblioteca = useCallback(async () => {
+    if (!enteId) {
+      setBiblioteca([]);
+      return;
+    }
+    try {
+      const items = await listarClausulasEnteModelo(enteId);
+      setBiblioteca(items);
+    } catch {
+      /* keep current */
+    }
+  }, [enteId]);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [seed, stored, biblio] = await Promise.all([
-        listarClausulasGenericas(),
-        Promise.resolve(loadStoredForm(expedienteId)),
-        Promise.resolve(loadBiblioteca(enteId)),
-      ]);
-      if (cancelled) return;
-      setGenericas(seed);
-      setBiblioteca(biblio);
-      setClauses(reindexOrders(sortByOrder(stored.clauses)));
-      setHydrated(true);
+      try {
+        const [seed, modeloResponse, biblio] = await Promise.all([
+          listarClausulasGenericasModelo(),
+          obtenerModeloContrato(expedienteId),
+          enteId ? listarClausulasEnteModelo(enteId) : Promise.resolve([] as ClausulaBase[]),
+        ]);
+        if (cancelled) return;
+
+        setEstado(modeloResponse.estado);
+        setGenericas(seed);
+        setBiblioteca(biblio);
+        setClauses(
+          reindexOrders(
+            sortByOrder(
+              modeloContratoClausesFromResponse(modeloResponse as Record<string, unknown>)
+            )
+          )
+        );
+      } catch {
+        if (!cancelled) {
+          try {
+            const [seed, biblio] = await Promise.all([
+              listarClausulasGenericasModelo().catch(() => [] as ClausulaBase[]),
+              enteId
+                ? listarClausulasEnteModelo(enteId).catch(() => [] as ClausulaBase[])
+                : Promise.resolve([] as ClausulaBase[]),
+            ]);
+            setGenericas(seed);
+            setBiblioteca(biblio);
+          } catch {
+            setGenericas([]);
+            setBiblioteca([]);
+          }
+          setClauses([]);
+        }
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
     })();
     return () => {
       cancelled = true;
@@ -170,26 +184,24 @@ export function ModeloContratoForm({
   }, [clauses]);
 
   const repoClauses = useMemo(() => {
-    const fromBiblioteca = biblioteca.map(bibliotecaToBase);
     let pool: ClausulaBase[] = [];
     if (filter === "generica") pool = genericas;
-    else if (filter === "biblioteca") pool = fromBiblioteca;
-    else pool = [...genericas, ...fromBiblioteca];
+    else if (filter === "biblioteca") pool = biblioteca;
+    else pool = [...genericas, ...biblioteca];
 
     const q = search.trim().toLowerCase();
     if (!q) return pool;
     return pool.filter(
       (c) =>
-        c.titulo.toLowerCase().includes(q) || (c.basamentoLegal?.toLowerCase().includes(q) ?? false)
+        c.titulo.toLowerCase().includes(q) ||
+        c.cuerpoHtml.toLowerCase().includes(q) ||
+        (c.basamentoLegal?.toLowerCase().includes(q) ?? false)
     );
   }, [biblioteca, filter, genericas, search]);
 
   const findRepoClause = useCallback(
     (clauseId: string): ClausulaBase | undefined => {
-      return (
-        genericas.find((c) => c.id === clauseId) ??
-        biblioteca.map(bibliotecaToBase).find((c) => c.id === clauseId)
-      );
+      return genericas.find((c) => c.id === clauseId) ?? biblioteca.find((c) => c.id === clauseId);
     },
     [biblioteca, genericas]
   );
@@ -232,17 +244,21 @@ export function ModeloContratoForm({
       const reordered = orderedInstanceIds
         .map((id) => byId.get(id))
         .filter((c): c is ClausulaEnModelo => Boolean(c));
-      // Respeta el orden del array (posición tras el drag); recalcula PRIMERA, SEGUNDA…
       return reindexOrders(reordered);
     });
   };
 
-  const handleRemoveFromBiblioteca = (clauseId: string) => {
-    if (!enteId) return;
-    const nextBiblio = biblioteca.filter((item) => item.id !== clauseId);
-    setBiblioteca(nextBiblio);
-    persistBiblioteca(enteId, nextBiblio);
-    toast.success("Cláusula eliminada de la Biblioteca del Ente.");
+  const handleRemoveFromBiblioteca = async (clauseId: string) => {
+    if (!enteId || readOnly) return;
+    try {
+      await eliminarClausulaEnte(enteId, clauseId);
+      setBiblioteca((prev) => prev.filter((item) => item.id !== clauseId));
+      toast.success("Cláusula eliminada de la Biblioteca del Ente.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Error al eliminar la cláusula del ente"
+      );
+    }
   };
 
   const openCreate = () => {
@@ -272,92 +288,161 @@ export function ModeloContratoForm({
     setEditorOpen(true);
   };
 
-  const handleEditorSave = (payload: ClausulaEditorSavePayload) => {
-    if (editorMode === "create" && editingClause) {
-      setClauses((prev) =>
-        reindexOrders([
-          ...sortByOrder(prev),
-          {
-            id: editingClause.id,
-            instanceId:
-              "instanceId" in editingClause && editingClause.instanceId
-                ? editingClause.instanceId
-                : createId(),
-            titulo: payload.titulo,
-            cuerpoHtml: payload.cuerpoHtml,
-            basamentoLegal: editingClause.basamentoLegal,
-            variablesSugeridas: editingClause.variablesSugeridas,
-            origen: "custom",
-            kind: "facultativa",
-            order: prev.length + 1,
-          },
-        ])
-      );
-    } else if (editorMode === "review" && editingClause) {
-      if (addedSourceIds.has(editingClause.id)) {
+  /**
+   * Mismas métricas que normativas:
+   * - Global/ente intacta → solo al modelo
+   * - Global/ente editada, create, o saveToBiblioteca → POST ente (la global nunca se muta)
+   */
+  const handleEditorSave = async (payload: ClausulaEditorSavePayload) => {
+    if (readOnly || !editingClause) return;
+
+    const edited = wasEdited(editingClause, payload);
+    const isCreate = editorMode === "create";
+    const origen = editingClause.origen;
+
+    const needsPost =
+      isCreate ||
+      payload.saveToBiblioteca ||
+      (edited && (origen === "generica" || origen === "biblioteca" || origen === "custom"));
+
+    let resolvedId = editingClause.id;
+    let resolvedOrigen = editingClause.origen;
+    let postedBase: ClausulaBase | null = null;
+
+    if (needsPost) {
+      if (!enteId) {
+        toast.error("No hay un ente asociado para guardar la cláusula en la biblioteca.");
+        return;
+      }
+      try {
+        const created = await crearClausulaEnte(enteId, {
+          titulo: payload.titulo,
+          cuerpo: payload.cuerpoHtml,
+        });
+        resolvedId = created.id;
+        resolvedOrigen = "biblioteca";
+        postedBase = {
+          id: created.id,
+          titulo: created.titulo ?? payload.titulo,
+          cuerpoHtml: created.cuerpo ?? payload.cuerpoHtml,
+          basamentoLegal: editingClause.basamentoLegal,
+          kind: "facultativa",
+          origen: "biblioteca",
+          variablesSugeridas: editingClause.variablesSugeridas,
+        };
+        await refreshBiblioteca();
+        toast.success("Cláusula guardada en la Biblioteca del Ente.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Error al guardar la cláusula del ente"
+        );
+        return;
+      }
+    }
+
+    if (editorMode === "create") {
+      const idForModel = postedBase?.id ?? resolvedId;
+      if (addedSourceIds.has(idForModel)) {
         toast.error("Esta cláusula ya está en el modelo.");
       } else {
         setClauses((prev) =>
           reindexOrders([
             ...sortByOrder(prev),
             {
-              ...editingClause,
+              id: idForModel,
+              instanceId:
+                "instanceId" in editingClause && editingClause.instanceId
+                  ? editingClause.instanceId
+                  : createId(),
               titulo: payload.titulo,
               cuerpoHtml: payload.cuerpoHtml,
+              basamentoLegal: editingClause.basamentoLegal,
+              variablesSugeridas: editingClause.variablesSugeridas,
+              origen: "biblioteca",
+              kind: "facultativa",
+              order: prev.length + 1,
+            },
+          ])
+        );
+      }
+    } else if (editorMode === "review") {
+      const idForModel = postedBase?.id ?? editingClause.id;
+      if (addedSourceIds.has(idForModel)) {
+        toast.error("Esta cláusula ya está en el modelo.");
+      } else {
+        setClauses((prev) =>
+          reindexOrders([
+            ...sortByOrder(prev),
+            {
+              ...(postedBase ?? editingClause),
+              id: idForModel,
+              titulo: payload.titulo,
+              cuerpoHtml: payload.cuerpoHtml,
+              origen: resolvedOrigen,
               instanceId: createId(),
               order: prev.length + 1,
             },
           ])
         );
       }
-    } else if (editorMode === "edit" && editingClause && "instanceId" in editingClause) {
+    } else if (editorMode === "edit" && "instanceId" in editingClause) {
       setClauses((prev) =>
         prev.map((c) =>
           c.instanceId === editingClause.instanceId
-            ? { ...c, titulo: payload.titulo, cuerpoHtml: payload.cuerpoHtml }
+            ? {
+                ...c,
+                id: resolvedId,
+                titulo: payload.titulo,
+                cuerpoHtml: payload.cuerpoHtml,
+                origen: resolvedOrigen,
+              }
             : c
         )
       );
-    }
-
-    if (payload.saveToBiblioteca && enteId) {
-      const item: ClausulaBibliotecaItem = {
-        id: createId(),
-        titulo: payload.titulo,
-        cuerpoHtml: payload.cuerpoHtml,
-        basamentoLegal: editingClause?.basamentoLegal,
-        savedAt: new Date().toISOString(),
-      };
-      const nextBiblio = [item, ...biblioteca];
-      setBiblioteca(nextBiblio);
-      persistBiblioteca(enteId, nextBiblio);
-      toast.success("Cláusula guardada en la Biblioteca del Ente.");
     }
 
     setEditorOpen(false);
     setEditingClause(null);
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      persistForm(expedienteId, { clauses, status: "draft" });
-      saveMicromoduleDraft("modelo-contrato");
+      await ensureMicromoduloEditable(expedienteId, "modelo-contrato", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "modelo-contrato",
+        modeloContratoToApi(clauses) as unknown as Record<string, unknown>
+      );
       toast.success("Borrador del modelo de contrato guardado.");
+      goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleConfirmGenerate = () => {
+  const handleConfirmGenerate = async () => {
     if (readOnly) return;
+    if (clauses.length === 0) {
+      toast.error("Agregue al menos una cláusula al modelo antes de completar.");
+      setConfirmOpen(false);
+      return;
+    }
     setIsSaving(true);
     try {
-      persistForm(expedienteId, { clauses, status: "completed" });
-      completeMicromodule("modelo-contrato");
+      const payload = modeloContratoToApi(clauses) as unknown as Record<string, unknown>;
+      await ensureMicromoduloEditable(expedienteId, "modelo-contrato", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      await guardarBorradorMicromodulo(expedienteId, "modelo-contrato", payload);
+      await completarMicromodulo(expedienteId, "modelo-contrato", payload);
       setConfirmOpen(false);
       setSuccessOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -372,8 +457,8 @@ export function ModeloContratoForm({
   }
 
   return (
-    <div className="flex w-full flex-col">
-      <div className="flex items-start gap-3 border-b border-border bg-card px-4 py-4 md:px-6">
+    <div className="flex w-full flex-col overflow-hidden">
+      <div className="flex shrink-0 items-start gap-3 border-b border-border bg-card px-4 py-4 md:px-6">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-navy">
           <FileSignature className="h-5 w-5" />
         </div>
@@ -387,7 +472,7 @@ export function ModeloContratoForm({
         </div>
       </div>
 
-      <div className="flex min-h-[calc(100vh-220px)] flex-col md:flex-row">
+      <div className="flex h-[calc(100vh-13rem)] max-h-[calc(100vh-13rem)] min-h-[28rem] flex-col overflow-hidden md:flex-row">
         <ClausulasRepositorioPanel
           clauses={repoClauses}
           filter={filter}
@@ -398,11 +483,11 @@ export function ModeloContratoForm({
           onSearchChange={setSearch}
           onAdd={handleAdd}
           onReview={openReview}
-          onRemoveFromBiblioteca={handleRemoveFromBiblioteca}
+          onRemoveFromBiblioteca={(id) => void handleRemoveFromBiblioteca(id)}
           onCreateCustom={openCreate}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <ModeloContratoDocumentoPanel
             clauses={clauses}
             expedienteLabel={expedienteId.slice(0, 8).toUpperCase()}
@@ -416,7 +501,7 @@ export function ModeloContratoForm({
 
           <Separator />
 
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-card px-4 py-3 md:px-6">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-card px-4 py-3 md:px-6">
             {readOnly ? (
               <Button
                 type="button"
@@ -432,14 +517,14 @@ export function ModeloContratoForm({
                   type="button"
                   variant="outline"
                   disabled={isSaving}
-                  onClick={handleSaveDraft}
+                  onClick={() => void handleSaveDraft()}
                   className="border-border text-muted-foreground hover:bg-muted"
                 >
                   {MODELO_CONTRATO_DRAFT_LABEL}
                 </Button>
                 <Button
                   type="button"
-                  disabled={isSaving}
+                  disabled={isSaving || clauses.length === 0}
                   onClick={() => setConfirmOpen(true)}
                   className="bg-navy text-white hover:bg-navy-hover"
                 >
@@ -453,10 +538,7 @@ export function ModeloContratoForm({
 
       <ClausulaEditorDialog
         open={editorOpen}
-        onOpenChange={(open) => {
-          setEditorOpen(open);
-          if (!open) setEditingClause(null);
-        }}
+        onOpenChange={setEditorOpen}
         mode={editorMode}
         clause={editingClause}
         readOnly={readOnly}
@@ -464,7 +546,7 @@ export function ModeloContratoForm({
       />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent className="border-border bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{MODELO_CONTRATO_CONFIRM_TITLE}</AlertDialogTitle>
             <AlertDialogDescription>{MODELO_CONTRATO_CONFIRM_DESCRIPTION}</AlertDialogDescription>
@@ -473,53 +555,38 @@ export function ModeloContratoForm({
             <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               disabled={isSaving}
-              onClick={(event) => {
-                event.preventDefault();
-                handleConfirmGenerate();
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmGenerate();
               }}
               className="bg-navy text-white hover:bg-navy-hover"
             >
-              Confirmar y generar
+              {isSaving ? "Generando…" : "Confirmar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={successOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSuccessOpen(false);
-            goToPanel();
-          }
-        }}
-      >
-        <AlertDialogContent className="max-w-[340px] rounded-xl border-border bg-card p-6 shadow-lg">
-          <AlertDialogTitle className="sr-only">{MODELO_CONTRATO_SUCCESS_TITLE}</AlertDialogTitle>
-          <AlertDialogDescription className="sr-only">
-            {MODELO_CONTRATO_SUCCESS_DESCRIPTION}
-          </AlertDialogDescription>
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-              <CheckCircle2 className="h-7 w-7 text-success" strokeWidth={2} />
-            </div>
-            <h2 className="text-lg font-bold text-color-titulos">
+      <AlertDialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" />
               {MODELO_CONTRATO_SUCCESS_TITLE}
-            </h2>
-            <p className="mt-2 max-w-[280px] text-xs leading-relaxed text-muted-foreground">
-              {MODELO_CONTRATO_SUCCESS_DESCRIPTION}
-            </p>
-            <Button
-              type="button"
+            </AlertDialogTitle>
+            <AlertDialogDescription>{MODELO_CONTRATO_SUCCESS_DESCRIPTION}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
               onClick={() => {
                 setSuccessOpen(false);
                 goToPanel();
               }}
-              className="mt-5 w-full bg-navy text-white hover:bg-navy-hover"
+              className="bg-navy text-white hover:bg-navy-hover"
             >
               Volver al panel
-            </Button>
-          </div>
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

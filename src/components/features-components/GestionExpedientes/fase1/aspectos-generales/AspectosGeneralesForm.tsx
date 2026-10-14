@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Scale } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,17 +17,26 @@ import {
   ASPECTOS_GENERALES_WIZARD_DESCRIPTION,
   ASPECTOS_GENERALES_WIZARD_TITLE,
   createAspectosGeneralesDefaultValues,
-  getAspectosGeneralesFormStorageKey,
   getAspectosGeneralesStepFields,
-  type AspectosGeneralesStoredForm,
 } from "@/lib/constants/aspectosGenerales";
 import {
   aspectosGeneralesFormSchema,
   type AspectosGeneralesFormInputValues,
 } from "@/lib/schemas/aspectosGeneralesSchema";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import {
+  aspectosGeneralesFromApi,
+  aspectosGeneralesToApi,
+  ensureMicromoduloEditable,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerAspectosGenerales,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import { cn } from "@/lib/utils";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -47,6 +56,7 @@ import { Paso4GarantiasAnticiposStep } from "./steps/Paso4GarantiasAnticiposStep
 
 export interface AspectosGeneralesFormProps {
   expedienteId: string;
+  enteId?: string;
   readOnly?: boolean;
   basePath?: string;
 }
@@ -56,57 +66,24 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function loadStoredForm(
-  expedienteId: string,
-  defaults: AspectosGeneralesFormInputValues
-): AspectosGeneralesStoredForm {
-  if (typeof window === "undefined") {
-    return { values: defaults, currentStep: 1, status: "draft" };
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getAspectosGeneralesFormStorageKey(expedienteId));
-    if (!raw) return { values: defaults, currentStep: 1, status: "draft" };
-    const parsed = JSON.parse(raw) as AspectosGeneralesStoredForm;
-    if (!parsed?.values) return { values: defaults, currentStep: 1, status: "draft" };
-    return {
-      values: {
-        ...defaults,
-        ...parsed.values,
-        normativaLegalAuAu: Array.isArray(parsed.values.normativaLegalAuAu)
-          ? parsed.values.normativaLegalAuAu
-          : defaults.normativaLegalAuAu,
-      },
-      currentStep: parsed.currentStep ?? 1,
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return { values: defaults, currentStep: 1, status: "draft" };
-  }
-}
-
-function persistForm(expedienteId: string, payload: AspectosGeneralesStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getAspectosGeneralesFormStorageKey(expedienteId),
-    JSON.stringify(payload)
-  );
+function getStepStorageKey(expedienteId: string): string {
+  return `aspectos-generales-step:${expedienteId}`;
 }
 
 export function AspectosGeneralesForm({
   expedienteId,
+  enteId,
   readOnly = false,
   basePath = "/gestion-expedientes",
 }: AspectosGeneralesFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
   const defaultValues = useMemo(() => createAspectosGeneralesDefaultValues(), []);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [hydrated, setHydrated] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const skipPersistRef = useRef(false);
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
 
   const form = useForm<AspectosGeneralesFormInputValues>({
     resolver: zodResolver(
@@ -118,23 +95,36 @@ export function AspectosGeneralesForm({
   });
 
   useEffect(() => {
-    const stored = loadStoredForm(expedienteId, defaultValues);
-    form.reset(stored.values);
-    setCurrentStep(stored.currentStep);
-    setHydrated(true);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await obtenerAspectosGenerales(expedienteId);
+        if (cancelled) return;
+
+        setEstado(response.estado);
+        form.reset(aspectosGeneralesFromApi(response as Record<string, unknown>));
+
+        const storedStep = sessionStorage.getItem(getStepStorageKey(expedienteId));
+        if (storedStep) {
+          const step = Number(storedStep);
+          if (step >= 1 && step <= ASPECTOS_GENERALES_STEPS.length) {
+            setCurrentStep(step);
+          }
+        }
+      } catch {
+        if (!cancelled) form.reset(defaultValues);
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [defaultValues, expedienteId, form]);
 
   const values = form.watch();
-
-  useEffect(() => {
-    if (!hydrated || skipPersistRef.current) return;
-    persistForm(expedienteId, {
-      values,
-      currentStep,
-      status: "draft",
-    });
-  }, [currentStep, expedienteId, hydrated, values]);
-
   const totalSteps = ASPECTOS_GENERALES_STEPS.length;
   const isLastStep = currentStep === totalSteps;
   const canSubmit = hydrated && !readOnly && aspectosGeneralesFormSchema.safeParse(values).success;
@@ -151,22 +141,25 @@ export function AspectosGeneralesForm({
   const handleBack = () => {
     if (currentStep <= 1) return;
     setCurrentStep((prev) => prev - 1);
+    sessionStorage.setItem(getStepStorageKey(expedienteId), String(currentStep - 1));
     scrollToTop();
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      skipPersistRef.current = true;
-      persistForm(expedienteId, {
-        values: form.getValues(),
-        currentStep,
-        status: "draft",
-      });
-      saveMicromoduleDraft("aspectos-generales-pliego");
+      await ensureMicromoduloEditable(expedienteId, "aspectos-generales", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "aspectos-generales",
+        aspectosGeneralesToApi(form.getValues())
+      );
       toast.success("Borrador de aspectos generales guardado.");
       goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -186,8 +179,34 @@ export function AspectosGeneralesForm({
     const isValid = await validateCurrentStep();
     if (!isValid) return;
 
-    setCurrentStep((prev) => prev + 1);
-    scrollToTop();
+    // Completado: solo navegar. No PUT/reabrir hasta Guardar borrador o Finalizar.
+    if (estado === "COMPLETADO") {
+      const nextStep = currentStep + 1;
+      if (!isLastStep) {
+        setCurrentStep(nextStep);
+        sessionStorage.setItem(getStepStorageKey(expedienteId), String(nextStep));
+        scrollToTop();
+      }
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await ensureMicromoduloEditable(expedienteId, "aspectos-generales", estado);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "aspectos-generales",
+        aspectosGeneralesToApi(form.getValues())
+      );
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      sessionStorage.setItem(getStepStorageKey(expedienteId), String(nextStep));
+      scrollToTop();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -200,14 +219,18 @@ export function AspectosGeneralesForm({
         return;
       }
 
-      skipPersistRef.current = true;
-      persistForm(expedienteId, {
-        values: form.getValues(),
-        currentStep: totalSteps,
-        status: "completed",
-      });
-      completeMicromodule("aspectos-generales-pliego");
+      await ensureMicromoduloEditable(expedienteId, "aspectos-generales", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "aspectos-generales",
+        aspectosGeneralesToApi(form.getValues())
+      );
+      await completarMicromodulo(expedienteId, "aspectos-generales");
+      sessionStorage.removeItem(getStepStorageKey(expedienteId));
       setIsConfirmOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -216,7 +239,7 @@ export function AspectosGeneralesForm({
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
-        return <Paso1RegimenLegalStep form={form} readOnly={readOnly} />;
+        return <Paso1RegimenLegalStep form={form} readOnly={readOnly} enteId={enteId} />;
       case 2:
         return <Paso2CondicionesOfertaStep form={form} readOnly={readOnly} />;
       case 3:
@@ -224,9 +247,17 @@ export function AspectosGeneralesForm({
       case 4:
         return <Paso4GarantiasAnticiposStep form={form} readOnly={readOnly} />;
       default:
-        return <Paso1RegimenLegalStep form={form} readOnly={readOnly} />;
+        return <Paso1RegimenLegalStep form={form} readOnly={readOnly} enteId={enteId} />;
     }
   };
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Cargando aspectos generales…
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -283,7 +314,7 @@ export function AspectosGeneralesForm({
                           type="button"
                           variant="outline"
                           disabled={isSaving || isConfirmOpen}
-                          onClick={handleSaveDraft}
+                          onClick={() => void handleSaveDraft()}
                           className="border-border text-muted-foreground hover:bg-muted"
                         >
                           {ASPECTOS_GENERALES_DRAFT_LABEL}

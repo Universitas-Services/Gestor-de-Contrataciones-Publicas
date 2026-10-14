@@ -14,19 +14,30 @@ import {
   CALIFICACION_LEGAL_SUCCESS_TITLE,
   CALIFICACION_LEGAL_WIZARD_TITLE,
   createEmptyCalificacionLegalForm,
-  getCalificacionLegalFormStorageKey,
   getRecaudosBySobre,
   RECAUDOS_CALIFICACION_LEGAL,
   type CalificacionLegalStoredForm,
+  type RecaudoArchivoMeta,
   type RecaudoPersonalizadoItem,
 } from "@/lib/constants/calificacionLegal";
-import { getAspectosGeneralesFormStorageKey } from "@/lib/constants/aspectosGenerales";
 import { getCalificacionLegalValidationIssues } from "@/lib/schemas/calificacionLegalSchema";
+import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
 import {
-  expedienteFase1TabPath,
-  getActividadesPreviasFormStorageKey,
-} from "@/lib/utils/fase1InicialRoutes";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+  actividadesPreviasFromApi,
+  calificacionLegalFromResponse,
+  calificacionLegalToApi,
+  ensureMicromoduloEditable,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerActividadesPrevias,
+  obtenerCalificacionLegal,
+  subirModeloRecaudoLegal,
+} from "@/services/fase1MicromodulosService";
+import { obtenerDocumentoEjemploPorCodigo } from "@/services/documentoEjemploService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -62,72 +73,6 @@ const sobreTabTriggerClassName = [
   "focus-visible:ring-0 focus-visible:ring-offset-0",
 ].join(" ");
 
-function readJsonFlag(storageKey: string, field: string): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw) as { values?: Record<string, unknown> };
-    return parsed.values?.[field] === true;
-  } catch {
-    return false;
-  }
-}
-
-function loadStoredForm(expedienteId: string): CalificacionLegalStoredForm {
-  const empty = createEmptyCalificacionLegalForm();
-  if (typeof window === "undefined") return empty;
-  try {
-    const raw = window.localStorage.getItem(getCalificacionLegalFormStorageKey(expedienteId));
-    if (!raw) return empty;
-    const parsed = JSON.parse(raw) as Partial<CalificacionLegalStoredForm>;
-    const exigidos = { ...empty.exigidos, ...(parsed.exigidos ?? {}) };
-
-    // Default antiguo dejaba todos en false (NO marcado). Migrar a sin selección.
-    const allLegacyNo = RECAUDOS_CALIFICACION_LEGAL.every((r) => exigidos[r.id] === false);
-    if (allLegacyNo) {
-      for (const recaudo of RECAUDOS_CALIFICACION_LEGAL) {
-        exigidos[recaudo.id] = undefined;
-      }
-    }
-
-    return {
-      ...empty,
-      ...parsed,
-      exigidos,
-      sustitutos: { ...empty.sustitutos, ...(parsed.sustitutos ?? {}) },
-      personalizados: Array.isArray(parsed.personalizados) ? parsed.personalizados : [],
-      indOtroSobre1:
-        parsed.indOtroSobre1 === true || parsed.indOtroSobre1 === false
-          ? parsed.indOtroSobre1
-          : undefined,
-      indOtroSobre2:
-        parsed.indOtroSobre2 === true || parsed.indOtroSobre2 === false
-          ? parsed.indOtroSobre2
-          : undefined,
-      modeloOtroSobre1:
-        parsed.modeloOtroSobre1 === true || parsed.modeloOtroSobre1 === false
-          ? parsed.modeloOtroSobre1
-          : undefined,
-      modeloOtroSobre2:
-        parsed.modeloOtroSobre2 === true || parsed.modeloOtroSobre2 === false
-          ? parsed.modeloOtroSobre2
-          : undefined,
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return empty;
-  }
-}
-
-function persistForm(expedienteId: string, form: CalificacionLegalStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getCalificacionLegalFormStorageKey(expedienteId),
-    JSON.stringify(form)
-  );
-}
-
 function applyAutoFlags(
   form: CalificacionLegalStoredForm,
   flags: { van: boolean; fianza: boolean }
@@ -150,10 +95,10 @@ export function CalificacionLegalForm({
   basePath = "/gestion-expedientes",
 }: CalificacionLegalFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
 
   const [hydrated, setHydrated] = useState(false);
   const [form, setForm] = useState<CalificacionLegalStoredForm>(createEmptyCalificacionLegalForm);
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
   const [autoVan, setAutoVan] = useState(false);
   const [autoFianza, setAutoFianza] = useState(false);
   const [activeTab, setActiveTab] = useState("sobre-1");
@@ -161,21 +106,54 @@ export function CalificacionLegalForm({
   const [successOpen, setSuccessOpen] = useState(false);
   const [modeloOpen, setModeloOpen] = useState(false);
   const [modeloPayload, setModeloPayload] = useState<ModeloPreviewPayload | null>(null);
+  const [modeloLoading, setModeloLoading] = useState(false);
 
   useEffect(() => {
-    const van = readJsonFlag(getActividadesPreviasFormStorageKey(expedienteId), "requiereVanAuAu");
-    const fianza = readJsonFlag(
-      getAspectosGeneralesFormStorageKey(expedienteId),
-      "requiereGarantiaLaboralAuAu"
-    );
-    setAutoVan(van);
-    setAutoFianza(fianza);
-    setForm(applyAutoFlags(loadStoredForm(expedienteId), { van, fianza }));
-    setHydrated(true);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [legalResponse, actividadesResponse] = await Promise.all([
+          obtenerCalificacionLegal(expedienteId),
+          obtenerActividadesPrevias(expedienteId),
+        ]);
+        if (cancelled) return;
+
+        setEstado(legalResponse.estado);
+
+        const actividadesMapped = actividadesPreviasFromApi(
+          actividadesResponse as Record<string, unknown>
+        );
+        const van = actividadesMapped.requiereVanAuAu === true;
+        const fianza = actividadesMapped.requiereGarantiaLaboralAuAu === true;
+
+        setAutoVan(van);
+        setAutoFianza(fianza);
+
+        const fromApi = calificacionLegalFromResponse(legalResponse as Record<string, unknown>);
+        setForm(
+          applyAutoFlags(
+            {
+              ...fromApi,
+              status: legalResponse.estado === "COMPLETADO" ? "completed" : "draft",
+            },
+            { van, fianza }
+          )
+        );
+      } catch {
+        if (!cancelled) setForm(createEmptyCalificacionLegalForm());
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [expedienteId]);
 
   const goToPanel = useCallback(() => {
-    router.push(expedienteFase1TabPath(basePath, expedienteId));
+    router.push(expedienteFase1TabPath(basePath, expedienteId, "configuracion-pliego"));
   }, [basePath, expedienteId, router]);
 
   const validationIssues = useMemo(() => getCalificacionLegalValidationIssues(form), [form]);
@@ -293,38 +271,132 @@ export function CalificacionLegalForm({
     return next;
   };
 
-  const handleSaveDraft = () => {
+  const uploadModeloArchivo = async (file: File): Promise<RecaudoArchivoMeta> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const result = await subirModeloRecaudoLegal(expedienteId, formData);
+    return {
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/octet-stream",
+      uploadedAt: new Date().toISOString(),
+      previewUrl: result.archivoModeloUrl,
+    };
+  };
+
+  const handleArchivoOtroChange = async (sobre: 1 | 2, meta: RecaudoArchivoMeta | null) => {
+    if (meta && meta.previewUrl?.startsWith("blob:")) {
+      try {
+        const response = await fetch(meta.previewUrl);
+        const blob = await response.blob();
+        const file = new File([blob], meta.fileName, { type: meta.mimeType });
+        const uploaded = await uploadModeloArchivo(file);
+        updateForm((prev) =>
+          sobre === 1
+            ? { ...prev, archivoOtroSobre1: uploaded }
+            : { ...prev, archivoOtroSobre2: uploaded }
+        );
+        return;
+      } catch (error) {
+        toast.error(formatMicromoduloErrorMessage(error));
+        return;
+      }
+    }
+
+    updateForm((prev) =>
+      sobre === 1 ? { ...prev, archivoOtroSobre1: meta } : { ...prev, archivoOtroSobre2: meta }
+    );
+  };
+
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      const payload = { ...form, status: "draft" as const };
-      persistForm(expedienteId, payload);
-      setForm(payload);
-      saveMicromoduleDraft("calificacion-legal");
+      // Reabrir solo al guardar (no al abrir el formulario).
+      await ensureMicromoduloEditable(expedienteId, "calificacion-legal", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const flushed = flushPendingPersonalizados(form);
+      const nextForm = { ...flushed, status: "draft" as const };
+      const apiPayload = calificacionLegalToApi(nextForm);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "calificacion-legal",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      setForm(nextForm);
       toast.success("Borrador de calificación legal guardado.");
+      goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleConfigurar = () => {
+  const handleConfigurar = async () => {
     if (readOnly || !canSubmit) return;
     setIsSaving(true);
     try {
+      await ensureMicromoduloEditable(expedienteId, "calificacion-legal", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
       const flushed = flushPendingPersonalizados(form);
-      const payload = { ...flushed, status: "completed" as const };
-      persistForm(expedienteId, payload);
-      setForm(payload);
-      completeMicromodule("calificacion-legal");
+      const nextForm = { ...flushed, status: "completed" as const };
+      const apiPayload = calificacionLegalToApi(nextForm);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "calificacion-legal",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      await completarMicromodulo(
+        expedienteId,
+        "calificacion-legal",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      setForm(nextForm);
       setSuccessOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const openModelo = (payload: ModeloPreviewPayload) => {
-    setModeloPayload(payload);
+  const openModelo = async (payload: ModeloPreviewPayload) => {
+    // Recaudos personalizados: ya traen previewSrc local / subido
+    if (payload.previewSrc) {
+      setModeloPayload(payload);
+      setModeloOpen(true);
+      setModeloLoading(false);
+      return;
+    }
+
+    const codigo = payload.modelCodigo?.trim();
+    if (!codigo) {
+      toast.error("Este recaudo no tiene código de modelo asociado.");
+      return;
+    }
+
+    setModeloPayload({ title: payload.title, modelCodigo: codigo });
     setModeloOpen(true);
+    setModeloLoading(true);
+
+    try {
+      const doc = await obtenerDocumentoEjemploPorCodigo(codigo);
+      setModeloPayload({
+        title: payload.title || doc.nombre,
+        modelCodigo: codigo,
+        previewSrc: doc.url,
+        fileName: doc.nombre,
+      });
+    } catch (error) {
+      setModeloOpen(false);
+      setModeloPayload(null);
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo cargar el modelo del recaudo"
+      );
+    } finally {
+      setModeloLoading(false);
+    }
   };
 
   if (!hydrated) {
@@ -416,13 +488,7 @@ export function CalificacionLegalForm({
                   }
             )
           }
-          onArchivoChange={(meta) =>
-            updateForm((prev) =>
-              sobre === 1
-                ? { ...prev, archivoOtroSobre1: meta }
-                : { ...prev, archivoOtroSobre2: meta }
-            )
-          }
+          onArchivoChange={(meta) => void handleArchivoOtroChange(sobre, meta)}
           onAdd={() => handleAddPersonalizado(sobre)}
         />
       </div>
@@ -531,9 +597,13 @@ export function CalificacionLegalForm({
         open={modeloOpen}
         onOpenChange={(open) => {
           setModeloOpen(open);
-          if (!open) setModeloPayload(null);
+          if (!open) {
+            setModeloPayload(null);
+            setModeloLoading(false);
+          }
         }}
         payload={modeloPayload}
+        isLoadingPreview={modeloLoading}
       />
 
       <AlertDialog

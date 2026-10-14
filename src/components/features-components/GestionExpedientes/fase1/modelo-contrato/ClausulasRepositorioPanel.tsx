@@ -29,8 +29,8 @@ interface ClausulasRepositorioPanelProps {
 
 const FILTERS: { id: RepoFilter; label: string }[] = [
   { id: "todas", label: "Todas" },
-  { id: "generica", label: "Genéricas" },
-  { id: "biblioteca", label: "Biblioteca" },
+  { id: "generica", label: "Globales" },
+  { id: "biblioteca", label: "Del ente" },
 ];
 
 export function ClausulasRepositorioPanel({
@@ -47,7 +47,7 @@ export function ClausulasRepositorioPanel({
   onCreateCustom,
 }: ClausulasRepositorioPanelProps) {
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col border-r border-border bg-card md:w-[34%] md:min-w-[320px]">
+    <aside className="flex h-[min(42vh,22rem)] min-h-0 w-full shrink-0 flex-col overflow-hidden border-r border-border bg-card md:h-full md:w-[34%] md:min-w-[320px] md:max-h-none">
       <div className="shrink-0 space-y-3 border-b border-border bg-muted/40 p-4">
         <h2 className="flex items-center gap-2 text-[14px] font-bold text-color-titulos">
           {MODELO_CONTRATO_REPO_TITLE}
@@ -82,7 +82,7 @@ export function ClausulasRepositorioPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
         {clauses.length === 0 ? (
           <p className="py-8 text-center text-xs italic text-muted-foreground">
             No hay cláusulas en este filtro.

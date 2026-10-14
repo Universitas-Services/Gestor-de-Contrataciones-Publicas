@@ -7,11 +7,11 @@ import {
   ACTIVIDADES_PREVIAS_STEP_SECTIONS,
 } from "@/lib/constants/actividadesPrevias";
 import type { ActividadesPreviasFormInputValues } from "@/lib/schemas/actividadesPreviasSchema";
-import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Fase1SectionHeader } from "@/components/features-components/ElaboracionExpediente/fase-1/Fase1SectionHeader";
 import { ActividadesPreviasFieldCopy } from "../ActividadesPreviasFieldCopy";
 import { FormCallout } from "../FormCallout";
+import { PuntajeEnteroInput } from "../PuntajeEnteroInput";
 import { SiNoToggleField } from "../SiNoToggleField";
 import { VanPuntajeInput } from "../VanPuntajeInput";
 
@@ -145,11 +145,11 @@ export function Paso4PromocionStep({ form, readOnly = false }: Paso4PromocionSte
                   <FormItem className="mt-4 rounded-lg bg-slate-50 p-4">
                     <ActividadesPreviasFieldCopy fieldKey="puntuacionBonoLocalAuAu" />
                     <FormControl>
-                      <LocalizedDecimalInput
+                      <PuntajeEnteroInput
                         value={field.value ?? ""}
-                        onValueChange={field.onChange}
+                        onChange={field.onChange}
                         disabled={readOnly}
-                        placeholder="Ej: 2,50"
+                        placeholder="Ej: 5"
                         className={`max-w-xs ${inputClass}`}
                       />
                     </FormControl>
@@ -191,11 +191,11 @@ export function Paso4PromocionStep({ form, readOnly = false }: Paso4PromocionSte
                   <FormItem className="mt-4 rounded-lg bg-slate-50 p-4">
                     <ActividadesPreviasFieldCopy fieldKey="puntuacionBonoSujetoAuAu" />
                     <FormControl>
-                      <LocalizedDecimalInput
+                      <PuntajeEnteroInput
                         value={field.value ?? ""}
-                        onValueChange={field.onChange}
+                        onChange={field.onChange}
                         disabled={readOnly}
-                        placeholder="Ej: 3,00"
+                        placeholder="Ej: 5"
                         className={`max-w-xs ${inputClass}`}
                       />
                     </FormControl>

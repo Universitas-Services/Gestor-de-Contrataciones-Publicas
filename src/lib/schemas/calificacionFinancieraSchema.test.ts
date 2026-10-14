@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CALIFICACION_FINANCIERA_SUMA_EXCEDIDA,
+  CALIFICACION_FINANCIERA_SUMA_EXACTA,
   createDefaultCalificacionFinancieraValues,
   getTotalPuntajeMaximoActivos,
   SNC_DEFAULTS,
@@ -25,6 +25,16 @@ function withSncPuntajes(
   };
 }
 
+/** Escala el máximo del bloque a 100 (único criterio activo). */
+function withPuntajeMaximoTotal(block: TresRangosValues, max = 100): TresRangosValues {
+  return {
+    ...block,
+    puntajeMaximo: max,
+    puntajeMedio: Math.floor(max / 2),
+    puntajeMinimo: 0,
+  };
+}
+
 function withActive(
   patch: Partial<CalificacionFinancieraFormValues>
 ): CalificacionFinancieraFormValues {
@@ -43,6 +53,10 @@ function withActive(
       patch.puntajeMaximoDescapitalAuAu !== undefined
         ? patch.puntajeMaximoDescapitalAuAu
         : SNC_DEFAULTS.descapitalPuntaje,
+    puntuacionMinimaCalifFinancieraAuAu:
+      patch.puntuacionMinimaCalifFinancieraAuAu !== undefined
+        ? patch.puntuacionMinimaCalifFinancieraAuAu
+        : SNC_DEFAULTS.puntuacionMinima,
   };
 }
 
@@ -70,6 +84,7 @@ describe("Calificación financiera — defaults SNC", () => {
   it("defaults de formulario dejan puntajes vacíos y rangos SNC", () => {
     const values = createDefaultCalificacionFinancieraValues();
     expect(values.puntajeMaximoDescapitalAuAu).toBeNull();
+    expect(values.puntuacionMinimaCalifFinancieraAuAu).toBe(0);
     expect(values.solvencia.puntajeMaximo).toBeNull();
     expect(values.solvencia.rangoMaximo).toBe(SNC_DEFAULTS.solvencia.rangoMaximo);
     expect(values.rotacion.rangoMaximo).toBe(SNC_DEFAULTS.rotacion.rangoMaximo);
@@ -139,12 +154,21 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     expect(canSubmitCalificacionFinanciera(values)).toBe(false);
   });
 
-  it("descapitalización SÍ + puntaje válido habilita submit", () => {
+  it("descapitalización SÍ + puntaje 100 habilita submit", () => {
+    const values = withActive({
+      criterioCalifFinanDescapitalAuAu: true,
+      puntajeMaximoDescapitalAuAu: 100,
+    });
+    expect(canSubmitCalificacionFinanciera(values)).toBe(true);
+  });
+
+  it("descapitalización SÍ + puntaje < 100 (único activo) bloquea", () => {
     const values = withActive({
       criterioCalifFinanDescapitalAuAu: true,
       puntajeMaximoDescapitalAuAu: 20,
     });
-    expect(canSubmitCalificacionFinanciera(values)).toBe(true);
+    expect(getTotalPuntajeMaximoActivos(values)).toBe(20);
+    expect(canSubmitCalificacionFinanciera(values)).toBe(false);
   });
 
   it("descapitalización SÍ + puntaje fuera de 0–100 bloquea", () => {
@@ -160,13 +184,26 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     ["rotacion", "criterioCalifFinanRotacionAuAu"],
     ["rendimiento", "criterioCalifFinanRendimientoAuAu"],
     ["rentabilidad", "criterioCalifFinanRentabilidadAuAu"],
-  ] as const)("%s SÍ con rangos SNC y puntajes completos habilita submit", (_key, toggle) => {
-    const values = withActive({ [toggle]: true });
+  ] as const)("%s SÍ con rangos SNC y máximo 100 habilita submit", (key, toggle) => {
+    const base = createDefaultCalificacionFinancieraValues()[key];
+    const values = withActive({
+      [toggle]: true,
+      [key]: withPuntajeMaximoTotal(withSncPuntajes(base, SNC_DEFAULTS[key]), 100),
+    });
     expect(canSubmitCalificacionFinanciera(values)).toBe(true);
   });
 
-  it("endeudamiento SÍ con rangos SNC y puntajes completos habilita submit", () => {
-    const values = withActive({ criterioCalifFinanEndeudamientoAuAu: true });
+  it("endeudamiento SÍ con rangos SNC y máximo 100 habilita submit", () => {
+    const values = withActive({
+      criterioCalifFinanEndeudamientoAuAu: true,
+      endeudamiento: withPuntajeMaximoTotal(
+        withSncPuntajes(
+          createDefaultCalificacionFinancieraValues().endeudamiento,
+          SNC_DEFAULTS.endeudamiento
+        ),
+        100
+      ),
+    });
     expect(canSubmitCalificacionFinanciera(values)).toBe(true);
   });
 
@@ -174,9 +211,12 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     const values = withActive({
       criterioCalifFinanSolvenciaAuAu: true,
       solvencia: breakAscendente(
-        withSncPuntajes(
-          createDefaultCalificacionFinancieraValues().solvencia,
-          SNC_DEFAULTS.solvencia
+        withPuntajeMaximoTotal(
+          withSncPuntajes(
+            createDefaultCalificacionFinancieraValues().solvencia,
+            SNC_DEFAULTS.solvencia
+          ),
+          100
         )
       ),
     });
@@ -188,7 +228,13 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     const values = withActive({
       criterioCalifFinanRotacionAuAu: true,
       rotacion: invertMedioAscendente(
-        withSncPuntajes(createDefaultCalificacionFinancieraValues().rotacion, SNC_DEFAULTS.rotacion)
+        withPuntajeMaximoTotal(
+          withSncPuntajes(
+            createDefaultCalificacionFinancieraValues().rotacion,
+            SNC_DEFAULTS.rotacion
+          ),
+          100
+        )
       ),
     });
     expect(canSubmitCalificacionFinanciera(values)).toBe(false);
@@ -198,9 +244,12 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     const values = withActive({
       criterioCalifFinanRendimientoAuAu: true,
       rendimiento: breakPuntajes(
-        withSncPuntajes(
-          createDefaultCalificacionFinancieraValues().rendimiento,
-          SNC_DEFAULTS.rendimiento
+        withPuntajeMaximoTotal(
+          withSncPuntajes(
+            createDefaultCalificacionFinancieraValues().rendimiento,
+            SNC_DEFAULTS.rendimiento
+          ),
+          100
         )
       ),
     });
@@ -212,9 +261,12 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     const values = withActive({
       criterioCalifFinanEndeudamientoAuAu: true,
       endeudamiento: breakInverso(
-        withSncPuntajes(
-          createDefaultCalificacionFinancieraValues().endeudamiento,
-          SNC_DEFAULTS.endeudamiento
+        withPuntajeMaximoTotal(
+          withSncPuntajes(
+            createDefaultCalificacionFinancieraValues().endeudamiento,
+            SNC_DEFAULTS.endeudamiento
+          ),
+          100
         )
       ),
     });
@@ -226,9 +278,12 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     const values = withActive({
       criterioCalifFinanEndeudamientoAuAu: true,
       endeudamiento: {
-        ...withSncPuntajes(
-          createDefaultCalificacionFinancieraValues().endeudamiento,
-          SNC_DEFAULTS.endeudamiento
+        ...withPuntajeMaximoTotal(
+          withSncPuntajes(
+            createDefaultCalificacionFinancieraValues().endeudamiento,
+            SNC_DEFAULTS.endeudamiento
+          ),
+          100
         ),
         rangoMedioHasta: 1.5,
         rangoMinimo: 1.2,
@@ -240,12 +295,15 @@ describe("Calificación financiera — canSubmit / rangos", () => {
   it("un criterio SÍ inválido bloquea aunque otro SÍ sea válido", () => {
     const values = withActive({
       criterioCalifFinanDescapitalAuAu: true,
-      puntajeMaximoDescapitalAuAu: 15,
+      puntajeMaximoDescapitalAuAu: 50,
       criterioCalifFinanSolvenciaAuAu: true,
       solvencia: breakAscendente(
-        withSncPuntajes(
-          createDefaultCalificacionFinancieraValues().solvencia,
-          SNC_DEFAULTS.solvencia
+        withPuntajeMaximoTotal(
+          withSncPuntajes(
+            createDefaultCalificacionFinancieraValues().solvencia,
+            SNC_DEFAULTS.solvencia
+          ),
+          50
         )
       ),
     });
@@ -255,7 +313,7 @@ describe("Calificación financiera — canSubmit / rangos", () => {
   it("criterios en NO/neutro no exigen validación de rangos", () => {
     const values = withActive({
       criterioCalifFinanDescapitalAuAu: true,
-      puntajeMaximoDescapitalAuAu: 10,
+      puntajeMaximoDescapitalAuAu: 100,
       criterioCalifFinanSolvenciaAuAu: false,
       solvencia: breakAscendente(
         withSncPuntajes(
@@ -277,7 +335,7 @@ describe("Calificación financiera — canSubmit / rangos", () => {
   it("puntuación mínima inválida bloquea aunque haya criterio OK", () => {
     const values = withActive({
       criterioCalifFinanDescapitalAuAu: true,
-      puntajeMaximoDescapitalAuAu: 10,
+      puntajeMaximoDescapitalAuAu: 100,
       puntuacionMinimaCalifFinancieraAuAu: 0,
     });
     expect(canSubmitCalificacionFinanciera(values)).toBe(false);
@@ -306,9 +364,35 @@ describe("Calificación financiera — canSubmit / rangos", () => {
     });
     expect(getTotalPuntajeMaximoActivos(values)).toBe(110);
     expect(canSubmitCalificacionFinanciera(values)).toBe(false);
-    expect(getCalificacionFinancieraIssues(values)).toContain(
-      CALIFICACION_FINANCIERA_SUMA_EXCEDIDA
-    );
+    expect(
+      getCalificacionFinancieraIssues(values).some((m) =>
+        m.includes(CALIFICACION_FINANCIERA_SUMA_EXACTA)
+      )
+    ).toBe(true);
+  });
+
+  it("suma de máximos activos < 100 bloquea submit", () => {
+    const values = withActive({
+      criterioCalifFinanDescapitalAuAu: true,
+      puntajeMaximoDescapitalAuAu: 40,
+      criterioCalifFinanSolvenciaAuAu: true,
+      solvencia: {
+        ...withSncPuntajes(
+          createDefaultCalificacionFinancieraValues().solvencia,
+          SNC_DEFAULTS.solvencia
+        ),
+        puntajeMaximo: 40,
+        puntajeMedio: 20,
+        puntajeMinimo: 0,
+      },
+    });
+    expect(getTotalPuntajeMaximoActivos(values)).toBe(80);
+    expect(canSubmitCalificacionFinanciera(values)).toBe(false);
+    expect(
+      getCalificacionFinancieraIssues(values).some((m) =>
+        m.includes(CALIFICACION_FINANCIERA_SUMA_EXACTA)
+      )
+    ).toBe(true);
   });
 
   it("suma de máximos activos = 100 habilita submit", () => {

@@ -40,15 +40,14 @@ export const CALIFICACION_FINANCIERA_ALERT =
 export const CALIFICACION_FINANCIERA_DRAFT_LABEL = "Guardar borrador";
 export const CALIFICACION_FINANCIERA_SUBMIT_LABEL = "Guardar Calificación Financiera";
 export const CALIFICACION_FINANCIERA_SUBMIT_HINT =
-  "¿Están todos los criterios necesarios? Confirma tu selección antes de guardar.";
+  "La suma de los puntajes máximos de los criterios activos debe ser exactamente 100 puntos.";
 
 export const CALIFICACION_FINANCIERA_SUCCESS_TITLE = "Calificación financiera guardada";
 export const CALIFICACION_FINANCIERA_SUCCESS_DESCRIPTION =
   "La matriz de calificación financiera ha sido configurada exitosamente.";
 
-export function getCalificacionFinancieraFormStorageKey(expedienteId: string): string {
-  return `calificacion-financiera-form:${expedienteId}`;
-}
+export const CALIFICACION_FINANCIERA_PUNTUACION_MINIMA_HINT =
+  "Valor sugerido SNC: 60 puntos sobre una base de 100.";
 
 export const SNC_DEFAULTS = {
   descapitalPuntaje: 20,
@@ -101,7 +100,7 @@ export const SNC_DEFAULTS = {
 } as const;
 
 /** Rangos SNC como sugerencia; puntajes vacíos para que el usuario los asigne. */
-function createEmptyTresRangos(snc: (typeof SNC_DEFAULTS)["solvencia"]): TresRangosValues {
+function createEmptyTresRangos(snc: TresRangosValues): TresRangosValues {
   return {
     rangoMaximo: snc.rangoMaximo,
     rangoMedioDesde: snc.rangoMedioDesde,
@@ -115,8 +114,8 @@ function createEmptyTresRangos(snc: (typeof SNC_DEFAULTS)["solvencia"]): TresRan
 
 export const TOTAL_PUNTAJE_MAXIMO = 100;
 
-export const CALIFICACION_FINANCIERA_SUMA_EXCEDIDA =
-  "La suma de los puntajes máximos de los criterios activos no puede superar 100 puntos.";
+export const CALIFICACION_FINANCIERA_SUMA_EXACTA =
+  "La suma de los puntajes máximos de los criterios activos debe ser exactamente 100 puntos.";
 
 export function getTotalPuntajeMaximoActivos(values: CalificacionFinancieraFormValues): number {
   let total = 0;
@@ -155,7 +154,7 @@ export function createDefaultCalificacionFinancieraValues(): CalificacionFinanci
     rentabilidad: createEmptyTresRangos(SNC_DEFAULTS.rentabilidad),
     criterioCalifFinanEndeudamientoAuAu: undefined,
     endeudamiento: createEmptyTresRangos(SNC_DEFAULTS.endeudamiento),
-    puntuacionMinimaCalifFinancieraAuAu: SNC_DEFAULTS.puntuacionMinima,
+    puntuacionMinimaCalifFinancieraAuAu: 0,
   };
 }
 

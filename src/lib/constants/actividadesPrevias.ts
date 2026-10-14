@@ -11,6 +11,7 @@ export const ACTIVIDADES_PREVIAS_STEPS = [
   { id: 2, label: "Objeto y Justificación" },
   { id: 3, label: "Logística de Ejecución" },
   { id: 4, label: "Promoción Económica" },
+  { id: 5, label: "Garantías y Anticipos" },
 ] as const;
 
 export const ACTIVIDADES_PREVIAS_STEP_SECTIONS = {
@@ -33,6 +34,11 @@ export const ACTIVIDADES_PREVIAS_STEP_SECTIONS = {
     title: "Medidas de promoción económica",
     description:
       "Configure los mecanismos de preferencia e incentivos legales destinados a promover la participación local, el Valor Agregado Nacional y las PyMIS.",
+  },
+  5: {
+    title: "Garantías y anticipos del contrato",
+    description:
+      "Defina las condiciones financieras del contrato, incluyendo la fianza laboral, la póliza de responsabilidad civil y el otorgamiento de anticipo contractual.",
   },
 } as const;
 
@@ -187,6 +193,46 @@ export const ACTIVIDADES_PREVIAS_FIELD_COPY = {
     legal:
       "Artículo 11 de la Ley de Contrataciones Públicas; Norma 34 de las Normas de Control Interno de la SUNAI 2025.",
   },
+  requiereGarantiaLaboralAuAu: {
+    label:
+      "¿Se exigirá la Garantía Laboral para asegurar las obligaciones laborales y de seguridad social, conforme al Art. 124 de la LCP?",
+    legal: "Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
+  },
+  porcentajeGarantiaLaboralAuAu: {
+    label:
+      "Indique el porcentaje (%) de la Garantía Laboral (calculado sobre el costo de la mano de obra), de conformidad con el Art. 124 de la LCP y los criterios de suficiencia de las Normas SUNAI.",
+    legal: "Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
+  },
+  retencionFianzaLaboralAuAu: {
+    label:
+      "¿Se admitirá la constitución de la Garantía Laboral mediante la modalidad de retención (5%) sobre los pagos o valuaciones realizados?",
+    legal: "Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
+  },
+  polizaResponsabilidadCivilAuAu: {
+    label:
+      "¿Se exigirá la constitución de una Póliza de Responsabilidad Civil General para cubrir daños a personas, bienes o instalaciones, conforme al Art. 125 de la LCP y el análisis de riesgos de la SUNAI?",
+    legal: "Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
+  },
+  porcentajeResponsabilidadCivilAuAu: {
+    label:
+      "Indique el porcentaje (%) para determinar la suma asegurada, calculado sobre el monto total estimado (con IVA), según la magnitud del riesgo de la ejecución.",
+    legal: "Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI",
+  },
+  montoResponsabilidadCivilBsAuAu: {
+    label:
+      "Indique el monto total de la Suma Asegurada (Bs.) que deberá reflejar la póliza para considerarse suficiente ante los riesgos identificados.",
+    legal: "Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI",
+  },
+  anticipoContratoAuAu: {
+    label:
+      "¿Desea otorgar un Anticipo Contractual (máximo 50%) para facilitar el inicio de la ejecución, conforme al Art. 122 de la LCP y los criterios de control de las Normas SUNAI?",
+    legal: "Artículos 122 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
+  },
+  porcentajeAnticipoAuAu: {
+    label:
+      "Indique el porcentaje (%) de anticipo que se otorgará sobre el monto total del contrato (sin IVA).",
+    legal: "Máximo 50%",
+  },
 } as const;
 
 export function createActividadesPreviasDefaultValues(
@@ -219,6 +265,14 @@ export function createActividadesPreviasDefaultValues(
     puntuacionBonoLocalAuAu: "",
     indBonoSujetoAuAu: undefined,
     puntuacionBonoSujetoAuAu: "",
+    requiereGarantiaLaboralAuAu: undefined,
+    porcentajeGarantiaLaboralAuAu: "",
+    retencionFianzaLaboralAuAu: undefined,
+    polizaResponsabilidadCivilAuAu: undefined,
+    porcentajeResponsabilidadCivilAuAu: "",
+    montoResponsabilidadCivilBsAuAu: "",
+    anticipoContratoAuAu: undefined,
+    porcentajeAnticipoAuAu: "",
   };
 }
 
@@ -281,6 +335,23 @@ export function getActividadesPreviasStepFields(
         if (values.requiereVanAuAu === true) fields.push("puntajeVanAuAu");
         if (values.indPrefLocalAuAu === true) fields.push("puntuacionBonoLocalAuAu");
         if (values.indBonoSujetoAuAu === true) fields.push("puntuacionBonoSujetoAuAu");
+      }
+      return fields;
+    }
+    case 5: {
+      const fields: (keyof ActividadesPreviasFormInputValues)[] = [
+        "requiereGarantiaLaboralAuAu",
+        "polizaResponsabilidadCivilAuAu",
+        "anticipoContratoAuAu",
+      ];
+      if (values.requiereGarantiaLaboralAuAu === true) {
+        fields.push("porcentajeGarantiaLaboralAuAu", "retencionFianzaLaboralAuAu");
+      }
+      if (values.polizaResponsabilidadCivilAuAu === true) {
+        fields.push("porcentajeResponsabilidadCivilAuAu", "montoResponsabilidadCivilBsAuAu");
+      }
+      if (values.anticipoContratoAuAu === true) {
+        fields.push("porcentajeAnticipoAuAu");
       }
       return fields;
     }

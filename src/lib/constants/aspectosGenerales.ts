@@ -137,46 +137,6 @@ export const ASPECTOS_GENERALES_FIELD_COPY = {
       "¿Se admitirá la constitución de la Garantía de Fiel Cumplimiento mediante la modalidad de retención (10%) sobre los pagos o valuaciones realizados?",
     legal: "Artículos 123 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
   },
-  requiereGarantiaLaboralAuAu: {
-    label:
-      "¿Se exigirá la Garantía Laboral para asegurar las obligaciones laborales y de seguridad social, conforme al Art. 124 de la LCP?",
-    legal: "Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
-  },
-  porcentajeGarantiaLaboralAuAu: {
-    label:
-      "Indique el porcentaje (%) de la Garantía Laboral (calculado sobre el costo de la mano de obra), de conformidad con el Art. 124 de la LCP y los criterios de suficiencia de las Normas SUNAI.",
-    legal: "Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
-  },
-  retencionFianzaLaboralAuAu: {
-    label:
-      "¿Se admitirá la constitución de la Garantía Laboral mediante la modalidad de retención (5%) sobre los pagos o valuaciones realizados?",
-    legal: "Artículos 124 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
-  },
-  polizaResponsabilidadCivilAuAu: {
-    label:
-      "¿Se exigirá la constitución de una Póliza de Responsabilidad Civil General para cubrir daños a personas, bienes o instalaciones, conforme al Art. 125 de la LCP y el análisis de riesgos de la SUNAI?",
-    legal: "Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
-  },
-  porcentajeResponsabilidadCivilAuAu: {
-    label:
-      "Indique el porcentaje (%) para determinar la suma asegurada, calculado sobre el monto total estimado (con IVA), según la magnitud del riesgo de la ejecución.",
-    legal: "Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI",
-  },
-  montoResponsabilidadCivilBsAuAu: {
-    label:
-      "Indique el monto total de la Suma Asegurada (Bs.) que deberá reflejar la póliza para considerarse suficiente ante los riesgos identificados.",
-    legal: "Artículos 125 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI",
-  },
-  anticipoContratoAuAu: {
-    label:
-      "¿Desea otorgar un Anticipo Contractual (máximo 50%) para facilitar el inicio de la ejecución, conforme al Art. 122 de la LCP y los criterios de control de las Normas SUNAI?",
-    legal: "Artículos 122 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI.",
-  },
-  porcentajeAnticipoAuAu: {
-    label:
-      "Indique el porcentaje (%) de anticipo que se otorgará sobre el monto total del contrato (sin IVA).",
-    legal: "Máximo 50%",
-  },
   anticipoEspecialAuAu: {
     label:
       "¿Desea otorgar un Anticipo Especial, conforme al Art. 129 de la LCP y los criterios de control de las Normas SUNAI?",
@@ -188,10 +148,6 @@ export const ASPECTOS_GENERALES_FIELD_COPY = {
     legal: "Máximo 20%",
   },
 } as const;
-
-export function getAspectosGeneralesFormStorageKey(expedienteId: string): string {
-  return `aspectos-generales-form:${expedienteId}`;
-}
 
 export function createAspectosGeneralesDefaultValues(): AspectosGeneralesFormInputValues {
   return {
@@ -211,14 +167,6 @@ export function createAspectosGeneralesDefaultValues(): AspectosGeneralesFormInp
     porcentajeMantenimientoOfertaAuAu: "",
     porcentajeFielCumplimientoAuAu: "",
     retencionFielCumplimientoAuAu: undefined,
-    requiereGarantiaLaboralAuAu: undefined,
-    porcentajeGarantiaLaboralAuAu: "",
-    retencionFianzaLaboralAuAu: undefined,
-    polizaResponsabilidadCivilAuAu: undefined,
-    porcentajeResponsabilidadCivilAuAu: "",
-    montoResponsabilidadCivilBsAuAu: "",
-    anticipoContratoAuAu: undefined,
-    porcentajeAnticipoAuAu: "",
     anticipoEspecialAuAu: undefined,
     porcentajeAnticipoEspecialAuAu: "",
   };
@@ -274,20 +222,8 @@ export function getAspectosGeneralesStepFields(
       "porcentajeMantenimientoOfertaAuAu",
       "porcentajeFielCumplimientoAuAu",
       "retencionFielCumplimientoAuAu",
-      "requiereGarantiaLaboralAuAu",
-      "polizaResponsabilidadCivilAuAu",
-      "anticipoContratoAuAu",
       "anticipoEspecialAuAu",
     ];
-    if (values.requiereGarantiaLaboralAuAu === true) {
-      fields.push("porcentajeGarantiaLaboralAuAu", "retencionFianzaLaboralAuAu");
-    }
-    if (values.polizaResponsabilidadCivilAuAu === true) {
-      fields.push("porcentajeResponsabilidadCivilAuAu", "montoResponsabilidadCivilBsAuAu");
-    }
-    if (values.anticipoContratoAuAu === true) {
-      fields.push("porcentajeAnticipoAuAu");
-    }
     if (values.anticipoEspecialAuAu === true) {
       fields.push("porcentajeAnticipoEspecialAuAu");
     }

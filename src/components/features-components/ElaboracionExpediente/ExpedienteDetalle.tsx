@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,7 @@ import { Fase1Panel } from "./fase-1/Fase1Panel";
 import { Fase1InicialPanel } from "@/components/features-components/GestionExpedientes/fase1/Fase1InicialPanel";
 import { Fase2Panel } from "@/components/features-components/GestionExpedientes/fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
+import { Fase3GestionPanel } from "@/components/features-components/GestionExpedientes/fase3/Fase3GestionPanel";
 import { Fase4Panel } from "./fase4/Fase4Panel";
 import { EditarFichaModal } from "@/components/features-components/GestionExpedientes/EditarFichaModal";
 import { MontoEstimadoCard } from "@/components/features-components/GestionExpedientes/MontoEstimadoCard";
@@ -128,10 +129,10 @@ const FASES_ELABORACION = [
 
 const FASES_GESTION = [
   "Fase 0: Ficha Técnica",
-  "Fase 1: Inicial",
-  "Fase 2: Gestión participantes",
-  "Fase 3: Análisis y recomendaciones",
-  "Fase 4: Decisión y formalización",
+  "Fase 1: Preparatoria",
+  "Fase 2: Gestión participantes (Registro y análisis)",
+  "Fase 3: Adjudicación e informes",
+  "Fase 4: Formalización",
 ];
 
 const EVENT_COLOR_VARS: Record<string, string> = {
@@ -302,16 +303,34 @@ export function ExpedienteDetalle({
     };
   }, [data.codigoNomenclatura, setOverrideTitle]);
 
+  const tabParam = searchParams.get("tab");
+  const queryString = searchParams.toString();
+
   useEffect(() => {
-    setActiveTab(resolveTabFromParam(searchParams.get("tab"), initialTab));
-  }, [searchParams, initialTab]);
+    setActiveTab(resolveTabFromParam(tabParam, initialTab));
+  }, [tabParam, initialTab]);
+
+  const replaceExpedienteQuery = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(queryString);
+      mutate(params);
+      const nextQuery = params.toString();
+      if (nextQuery === queryString) return;
+      const href = nextQuery ? `${basePath}/${data.id}?${nextQuery}` : `${basePath}/${data.id}`;
+      router.replace(href, { scroll: false });
+    },
+    [basePath, data.id, queryString, router]
+  );
 
   useEffect(() => {
     if (fasesPosterioresBloqueadas && (activeTab === "fase-3" || activeTab === "fase-4")) {
       setActiveTab("fase-2");
-      router.replace(`${basePath}/${data.id}?tab=fase-2`, { scroll: false });
+      replaceExpedienteQuery((params) => {
+        params.set("tab", "fase-2");
+        params.delete("fase1Sub");
+      });
     }
-  }, [fasesPosterioresBloqueadas, activeTab, basePath, data.id, router]);
+  }, [fasesPosterioresBloqueadas, activeTab, replaceExpedienteQuery]);
 
   const handleTabChange = (value: string) => {
     const tab = value as Fase1TabValue;
@@ -321,8 +340,12 @@ export function ExpedienteDetalle({
       );
       return;
     }
+    if (tab === activeTab && tabParam === tab) return;
     setActiveTab(tab);
-    router.replace(`${basePath}/${data.id}?tab=${tab}`, { scroll: false });
+    replaceExpedienteQuery((params) => {
+      params.set("tab", tab);
+      if (tab !== "fase-1") params.delete("fase1Sub");
+    });
   };
 
   // Estado del cronograma (editable)
@@ -885,7 +908,6 @@ export function ExpedienteDetalle({
                 isGestionFlow ? (
                   <Fase1InicialPanel
                     expedienteId={data.id}
-                    fase1Creada={Boolean(data["fasePreparatoria"])}
                     readOnly={readOnly}
                     basePath={basePath}
                   />
@@ -932,9 +954,17 @@ export function ExpedienteDetalle({
               />
             </TabsContent>
 
-            {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
+            {/* ── TabsContent: Fase 3 ── */}
             <TabsContent value="fase-3" className="mt-6">
-              <Fase3Panel expedienteId={data.id} readOnly={readOnly} />
+              {basePath === "/gestion-expedientes" ? (
+                <Fase3GestionPanel
+                  expedienteId={data.id}
+                  readOnly={readOnly}
+                  tipoObjetoContratacion={data.modalidad?.tipoContratacion ?? null}
+                />
+              ) : (
+                <Fase3Panel expedienteId={data.id} readOnly={readOnly} />
+              )}
             </TabsContent>
 
             {/* ── TabsContent: Fase 4 — Decisión y formalización ── */}

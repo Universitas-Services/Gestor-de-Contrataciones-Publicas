@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 export interface EspecificacionesUploadZoneProps {
   value: EspecificacionesTecnicasStoredMeta | null;
   onChange: (meta: EspecificacionesTecnicasStoredMeta | null) => void;
+  onFileSelected?: (file: File) => void;
   disabled?: boolean;
 }
 
@@ -45,6 +46,7 @@ function toStoredMeta(file: File): EspecificacionesTecnicasStoredMeta {
 export function EspecificacionesUploadZone({
   value,
   onChange,
+  onFileSelected,
   disabled = false,
 }: EspecificacionesUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -65,8 +67,9 @@ export function EspecificacionesUploadZone({
       }
 
       onChange(toStoredMeta(file));
+      onFileSelected?.(file);
     },
-    [disabled, onChange]
+    [disabled, onChange, onFileSelected]
   );
 
   const handleOpenPicker = () => {

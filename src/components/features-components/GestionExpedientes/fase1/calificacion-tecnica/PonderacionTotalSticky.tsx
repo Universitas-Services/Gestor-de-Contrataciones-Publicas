@@ -57,11 +57,7 @@ export function PonderacionTotalSticky({
         ? `Excede por ${remaining} puntos.`
         : `Faltan ${remaining} puntos para completar la matriz.`;
 
-  const clampUmbral = (value: number) => {
-    const cappedByHundred = Math.min(Math.max(0, value), TOTAL_PUNTOS_OBJETIVO);
-    if (total <= 0) return cappedByHundred;
-    return Math.min(cappedByHundred, total);
-  };
+  const clampUmbral = (value: number) => Math.min(Math.max(0, value), TOTAL_PUNTOS_OBJETIVO);
 
   return (
     <div className="w-full space-y-4">
@@ -128,11 +124,7 @@ export function PonderacionTotalSticky({
             disabled={readOnly}
             placeholder="Ej: 75"
             className="h-10 w-28"
-            onValueChange={(raw) => {
-              const next = parseLocalized(raw);
-              onUmbralChange(Math.min(Math.max(0, next), TOTAL_PUNTOS_OBJETIVO));
-            }}
-            onBlur={() => onUmbralChange(clampUmbral(umbral))}
+            onValueChange={(raw) => onUmbralChange(clampUmbral(parseLocalized(raw)))}
           />
           <span className="text-sm font-medium text-muted-foreground">pts mínimos</span>
         </div>

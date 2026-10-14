@@ -95,18 +95,14 @@ export function PresupuestoBaseSection({
   const isSheetOpen = createModalOpen ?? internalSheetOpen;
   const setIsSheetOpen = onCreateModalOpenChange ?? setInternalSheetOpen;
 
-  const applyPresupuestoItems = useCallback(
-    (response: ListarPresupuestoItemsResponse) => {
-      setItems(response.items);
-      setMeta(response.meta);
-      setTotales(response.totales);
-      setPage((currentPage) =>
-        currentPage === response.meta.page ? currentPage : response.meta.page
-      );
-      onItemsChange?.(response.meta.total > 0);
-    },
-    [onItemsChange]
-  );
+  const applyPresupuestoItems = useCallback((response: ListarPresupuestoItemsResponse) => {
+    setItems(response.items);
+    setMeta(response.meta);
+    setTotales(response.totales);
+    setPage((currentPage) =>
+      currentPage === response.meta.page ? currentPage : response.meta.page
+    );
+  }, []);
 
   const reloadPresupuestoItems = useCallback(
     async (targetPage = page) => {
@@ -121,7 +117,6 @@ export function PresupuestoBaseSection({
         setItems([]);
         setMeta(DEFAULT_META);
         setTotales(DEFAULT_TOTALS);
-        onItemsChange?.(false);
         toast.error(
           error instanceof Error
             ? error.message
@@ -131,7 +126,7 @@ export function PresupuestoBaseSection({
         setLoading(false);
       }
     },
-    [applyPresupuestoItems, expedienteId, limit, onItemsChange, page]
+    [applyPresupuestoItems, expedienteId, limit, page]
   );
 
   useEffect(() => {
@@ -183,6 +178,7 @@ export function PresupuestoBaseSection({
         toast.success("Item agregado al presupuesto base.");
       }
       await reloadPresupuestoItems();
+      onItemsChange?.(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar el item.");
       throw error;
@@ -200,6 +196,7 @@ export function PresupuestoBaseSection({
       setItemToDelete(null);
       toast.success("Producto eliminado");
       await reloadPresupuestoItems();
+      onItemsChange?.(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo eliminar el producto.");
     } finally {

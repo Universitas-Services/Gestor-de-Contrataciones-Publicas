@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChartPie } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChartPie } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import {
   CALIFICACION_FINANCIERA_ALERT,
   CALIFICACION_FINANCIERA_DRAFT_LABEL,
+  CALIFICACION_FINANCIERA_PUNTUACION_MINIMA_HINT,
   CALIFICACION_FINANCIERA_SUBMIT_HINT,
   CALIFICACION_FINANCIERA_SUBMIT_LABEL,
   CALIFICACION_FINANCIERA_SUCCESS_DESCRIPTION,
@@ -15,10 +16,10 @@ import {
   CALIFICACION_FINANCIERA_WIZARD_TITLE,
   CRITERIOS_FINANCIEROS_META,
   SNC_DEFAULTS,
+  TOTAL_PUNTAJE_MAXIMO,
   createDefaultCalificacionFinancieraValues,
-  getCalificacionFinancieraFormStorageKey,
+  getTotalPuntajeMaximoActivos,
   type CalificacionFinancieraFormValues,
-  type CalificacionFinancieraStoredForm,
   type TresRangosValues,
 } from "@/lib/constants/calificacionFinanciera";
 import {
@@ -26,7 +27,18 @@ import {
   getCalificacionFinancieraIssues,
 } from "@/lib/schemas/calificacionFinancieraSchema";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import {
+  calificacionFinancieraFromResponse,
+  calificacionFinancieraToApi,
+  ensureMicromoduloEditable,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerCalificacionFinanciera,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import { LocalizedDecimalInput } from "@/components/localized-decimal-input";
 import {
   AlertDialog,
@@ -35,9 +47,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { CriterioDescapitalizacionPanel } from "./CriterioDescapitalizacionPanel";
 import { CriterioFinancieroCard } from "./CriterioFinancieroCard";
 import { CriterioTresRangosPanel } from "./CriterioTresRangosPanel";
@@ -48,7 +62,8 @@ export interface CalificacionFinancieraFormProps {
   basePath?: string;
 }
 
-function parseLocalized(raw: string): number {
+function parseOptionalUmbral(raw: string): number {
+  if (!raw.trim()) return 0;
   const normalized = raw.replace(/\./g, "").replace(",", ".");
   const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
@@ -57,10 +72,7 @@ function parseLocalized(raw: string): number {
 function clearLegacySncPuntajes(
   values: CalificacionFinancieraFormValues
 ): CalificacionFinancieraFormValues {
-  const clearIfSnc = (
-    block: TresRangosValues,
-    snc: (typeof SNC_DEFAULTS)["solvencia"]
-  ): TresRangosValues => {
+  const clearIfSnc = (block: TresRangosValues, snc: TresRangosValues): TresRangosValues => {
     const matchesLegacy =
       block.puntajeMaximo === snc.puntajeMaximo &&
       block.puntajeMedio === snc.puntajeMedio &&
@@ -83,94 +95,58 @@ function clearLegacySncPuntajes(
   };
 }
 
-function loadStored(expedienteId: string): CalificacionFinancieraStoredForm {
-  const defaults = createDefaultCalificacionFinancieraValues();
-  if (typeof window === "undefined") {
-    return { values: defaults, status: "draft" };
-  }
-  try {
-    const raw = window.localStorage.getItem(getCalificacionFinancieraFormStorageKey(expedienteId));
-    if (!raw) return { values: defaults, status: "draft" };
-    const parsed = JSON.parse(raw) as Partial<CalificacionFinancieraStoredForm>;
-    const incoming = parsed.values ?? {};
-
-    const toggleKeys = [
-      "criterioCalifFinanDescapitalAuAu",
-      "criterioCalifFinanSolvenciaAuAu",
-      "criterioCalifFinanRotacionAuAu",
-      "criterioCalifFinanRendimientoAuAu",
-      "criterioCalifFinanRentabilidadAuAu",
-      "criterioCalifFinanEndeudamientoAuAu",
-    ] as const;
-
-    // Defaults antiguos preseleccionaban todos en NO o todos en SÍ. Migrar a neutro.
-    const allLegacyUniform =
-      parsed.status !== "completed" &&
-      (toggleKeys.every((key) => incoming[key] === false) ||
-        toggleKeys.every((key) => incoming[key] === true));
-
-    const togglesOverride = allLegacyUniform
-      ? Object.fromEntries(toggleKeys.map((key) => [key, undefined]))
-      : {};
-
-    const merged: CalificacionFinancieraFormValues = {
-      ...defaults,
-      ...incoming,
-      ...togglesOverride,
-      solvencia: { ...defaults.solvencia, ...(incoming.solvencia ?? {}) },
-      rotacion: { ...defaults.rotacion, ...(incoming.rotacion ?? {}) },
-      rendimiento: { ...defaults.rendimiento, ...(incoming.rendimiento ?? {}) },
-      rentabilidad: { ...defaults.rentabilidad, ...(incoming.rentabilidad ?? {}) },
-      endeudamiento: { ...defaults.endeudamiento, ...(incoming.endeudamiento ?? {}) },
-    };
-
-    // Borradores con puntajes SNC prellenados (legado) → vaciar puntajes; conservar rangos.
-    const values = parsed.status === "completed" ? merged : clearLegacySncPuntajes(merged);
-
-    return {
-      values,
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return { values: defaults, status: "draft" };
-  }
-}
-
-function persist(expedienteId: string, payload: CalificacionFinancieraStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getCalificacionFinancieraFormStorageKey(expedienteId),
-    JSON.stringify(payload)
-  );
-}
-
 export function CalificacionFinancieraForm({
   expedienteId,
   readOnly = false,
   basePath = "/gestion-expedientes",
 }: CalificacionFinancieraFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
 
   const [hydrated, setHydrated] = useState(false);
   const [values, setValues] = useState<CalificacionFinancieraFormValues>(
     createDefaultCalificacionFinancieraValues
   );
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
 
   useEffect(() => {
-    const stored = loadStored(expedienteId);
-    setValues(stored.values);
-    setHydrated(true);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await obtenerCalificacionFinanciera(expedienteId);
+        if (cancelled) return;
+
+        setEstado(response.estado);
+        const fromApi = calificacionFinancieraFromResponse(response as Record<string, unknown>);
+        setValues(response.estado === "COMPLETADO" ? fromApi : clearLegacySncPuntajes(fromApi));
+      } catch {
+        if (!cancelled) setValues(createDefaultCalificacionFinancieraValues());
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [expedienteId]);
 
   const goToPanel = useCallback(() => {
-    router.push(expedienteFase1TabPath(basePath, expedienteId));
+    router.push(expedienteFase1TabPath(basePath, expedienteId, "configuracion-pliego"));
   }, [basePath, expedienteId, router]);
 
   const issues = useMemo(() => getCalificacionFinancieraIssues(values), [values]);
   const canSubmit = useMemo(() => canSubmitCalificacionFinanciera(values), [values]);
+  const totalPuntajeMaximo = useMemo(() => getTotalPuntajeMaximoActivos(values), [values]);
+  const totalState =
+    totalPuntajeMaximo === TOTAL_PUNTAJE_MAXIMO
+      ? "perfect"
+      : totalPuntajeMaximo > TOTAL_PUNTAJE_MAXIMO
+        ? "exceeded"
+        : "incomplete";
+  const totalRemaining = Math.abs(TOTAL_PUNTAJE_MAXIMO - totalPuntajeMaximo);
 
   const patchValues = (partial: Partial<CalificacionFinancieraFormValues>) => {
     setValues((prev) => ({ ...prev, ...partial }));
@@ -183,25 +159,49 @@ export function CalificacionFinancieraForm({
     setValues((prev) => ({ ...prev, [key]: next }));
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      persist(expedienteId, { values, status: "draft" });
-      saveMicromoduleDraft("calificacion-financiera");
+      // Reabrir solo al guardar (no al abrir el formulario).
+      await ensureMicromoduloEditable(expedienteId, "calificacion-financiera", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const apiPayload = calificacionFinancieraToApi(values);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "calificacion-financiera",
+        apiPayload as unknown as Record<string, unknown>
+      );
       toast.success("Borrador de calificación financiera guardado.");
+      goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (readOnly || !canSubmit) return;
     setIsSaving(true);
     try {
-      persist(expedienteId, { values, status: "completed" });
-      completeMicromodule("calificacion-financiera");
+      await ensureMicromoduloEditable(expedienteId, "calificacion-financiera", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const apiPayload = calificacionFinancieraToApi(values);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "calificacion-financiera",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      await completarMicromodulo(
+        expedienteId,
+        "calificacion-financiera",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      setEstado("COMPLETADO");
       setSuccessOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -322,6 +322,64 @@ export function CalificacionFinancieraForm({
               })}
 
               <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-4">
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Suma de puntajes máximos (criterios activos)
+                    </p>
+                    <p className="text-2xl font-black leading-none text-color-titulos">
+                      {totalPuntajeMaximo.toLocaleString("es-VE", { maximumFractionDigits: 2 })}{" "}
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        / {TOTAL_PUNTAJE_MAXIMO} pts
+                      </span>
+                    </p>
+                  </div>
+                  <Badge
+                    className={cn(
+                      "shrink-0 text-[11px] font-bold",
+                      totalState === "perfect"
+                        ? "border-0 bg-success-bg text-success-text"
+                        : totalState === "exceeded"
+                          ? "border-0 bg-destructive/10 text-destructive"
+                          : "border-0 bg-doc-warning-bg text-amber-dark"
+                    )}
+                  >
+                    {totalState === "perfect" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        ¡Exacto!
+                      </span>
+                    ) : totalState === "exceeded" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Excede por {totalRemaining}
+                      </span>
+                    ) : (
+                      `Faltan ${totalRemaining}`
+                    )}
+                  </Badge>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-300",
+                      totalState === "perfect"
+                        ? "bg-success"
+                        : totalState === "exceeded"
+                          ? "bg-destructive"
+                          : "bg-amber-dark"
+                    )}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, (totalPuntajeMaximo / TOTAL_PUNTAJE_MAXIMO) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {CALIFICACION_FINANCIERA_SUBMIT_HINT}
+                </p>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-4">
                 <Label className="text-sm font-bold text-color-titulos">
                   Indique la puntuación mínima aprobatoria (sobre una base de 100 puntos) que el
                   oferente debe alcanzar en la Calificación Financiera para ser APTO y proceder a la
@@ -330,15 +388,21 @@ export function CalificacionFinancieraForm({
                 <p className="text-[11px] italic leading-relaxed text-muted-foreground">
                   Artículo 67 RLCP; art. 16 Normas de Control Interno SUNAI.
                 </p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {CALIFICACION_FINANCIERA_PUNTUACION_MINIMA_HINT}
+                </p>
                 <LocalizedDecimalInput
                   value={values.puntuacionMinimaCalifFinancieraAuAu}
                   fractionDigits={0}
                   max={100}
+                  allowEmpty
                   outputMode="raw"
                   disabled={readOnly}
                   className="h-10 w-28"
                   onValueChange={(raw) =>
-                    patchValues({ puntuacionMinimaCalifFinancieraAuAu: parseLocalized(raw) || 1 })
+                    patchValues({
+                      puntuacionMinimaCalifFinancieraAuAu: parseOptionalUmbral(raw),
+                    })
                   }
                 />
               </div>

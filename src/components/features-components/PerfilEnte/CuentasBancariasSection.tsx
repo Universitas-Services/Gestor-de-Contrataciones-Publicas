@@ -14,20 +14,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  createCuentaBancariaId,
-  getCuentasBancariasEnteStorageKey,
-  loadCuentasBancariasEnte,
   type CuentaBancariaEnte,
   type CuentaBancariaEnteFormValues,
 } from "@/lib/constants/cuentasBancariasEnte";
 import type { CuentaBancariaEnteFormSchemaValues } from "@/lib/schemas/cuentasBancariasEnteSchema";
+import {
+  cuentaBancariaFormToApi,
+  cuentaBancariaFromApi,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  actualizarCuentaBancariaEnte,
+  crearCuentaBancariaEnte,
+  eliminarCuentaBancariaEnte,
+  listarCuentasBancariasEnte,
+} from "@/services/enteService";
 import { CuentaBancariaModal } from "./CuentaBancariaModal";
 import { CuentasBancariasTable } from "./CuentasBancariasTable";
-
-function persistCuentas(enteId: string, cuentas: CuentaBancariaEnte[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(getCuentasBancariasEnteStorageKey(enteId), JSON.stringify(cuentas));
-}
 
 export interface CuentasBancariasSectionProps {
   enteId: string;
@@ -46,18 +48,18 @@ export function CuentasBancariasSection({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    setCuentas(loadCuentasBancariasEnte(enteId));
-    setHydrated(true);
+  const refresh = useCallback(async () => {
+    try {
+      const items = await listarCuentasBancariasEnte(enteId);
+      setCuentas(items.map(cuentaBancariaFromApi));
+    } catch {
+      setCuentas([]);
+    }
   }, [enteId]);
 
-  const commit = useCallback(
-    (next: CuentaBancariaEnte[]) => {
-      setCuentas(next);
-      persistCuentas(enteId, next);
-    },
-    [enteId]
-  );
+  useEffect(() => {
+    void refresh().finally(() => setHydrated(true));
+  }, [refresh]);
 
   const handleAdd = () => {
     if (readOnly) return;
@@ -76,39 +78,32 @@ export function CuentasBancariasSection({
     setIsSaving(true);
     try {
       if (editing) {
-        const next = cuentas.map((c) =>
-          c.id === editing.id
-            ? {
-                ...c,
-                ...values,
-              }
-            : c
-        );
-        commit(next);
+        await actualizarCuentaBancariaEnte(enteId, editing.id, cuentaBancariaFormToApi(values));
         toast.success("Cuenta bancaria actualizada.");
       } else {
-        const nueva: CuentaBancariaEnte = {
-          id: createCuentaBancariaId(),
-          ...values,
-          createdAt: new Date().toISOString(),
-        };
-        commit([nueva, ...cuentas]);
+        await crearCuentaBancariaEnte(enteId, cuentaBancariaFormToApi(values));
         toast.success("Cuenta bancaria registrada.");
       }
+      await refresh();
       setModalOpen(false);
       setEditing(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar la cuenta.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (readOnly || !toDelete) return;
     setIsDeleting(true);
     try {
-      commit(cuentas.filter((c) => c.id !== toDelete.id));
+      await eliminarCuentaBancariaEnte(enteId, toDelete.id);
+      await refresh();
       toast.success("Cuenta bancaria eliminada.");
       setToDelete(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al eliminar la cuenta.");
     } finally {
       setIsDeleting(false);
     }
@@ -171,7 +166,7 @@ export function CuentasBancariasSection({
             <Button
               type="button"
               disabled={isDeleting}
-              onClick={handleConfirmDelete}
+              onClick={() => void handleConfirmDelete()}
               className="bg-red-600 text-white hover:bg-red-700"
             >
               {isDeleting ? "Eliminando…" : "Sí"}

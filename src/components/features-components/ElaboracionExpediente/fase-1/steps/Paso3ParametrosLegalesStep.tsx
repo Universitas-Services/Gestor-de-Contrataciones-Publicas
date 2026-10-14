@@ -291,7 +291,11 @@ export function Paso3ParametrosLegalesStep({
         />
       </div>
 
-      <NormativasLegalesModal open={normativasModalOpen} onOpenChange={setNormativasModalOpen} />
+      <NormativasLegalesModal
+        open={normativasModalOpen}
+        onOpenChange={setNormativasModalOpen}
+        onSelect={(texto) => setDraftNormativa(texto)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   ESPECIFICACIONES_TECNICAS_SUCCESS_DESCRIPTION,
@@ -10,11 +11,16 @@ import {
   ESPECIFICACIONES_TECNICAS_SUCCESS_TITLE,
   ESPECIFICACIONES_TECNICAS_WIZARD_SUBTITLE,
   ESPECIFICACIONES_TECNICAS_WIZARD_TITLE,
-  getEspecificacionesTecnicasStorageKey,
   type EspecificacionesTecnicasStoredMeta,
 } from "@/lib/constants/especificacionesTecnicas";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import { especificacionesTecnicasFromApi } from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  eliminarEspecificacionesTecnicas,
+  obtenerEspecificacionesTecnicas,
+  subirEspecificacionesTecnicas,
+} from "@/services/fase1MicromodulosService";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -33,63 +39,107 @@ export interface EspecificacionesTecnicasFormProps {
   basePath?: string;
 }
 
-function loadStoredMeta(expedienteId: string): EspecificacionesTecnicasStoredMeta | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(getEspecificacionesTecnicasStorageKey(expedienteId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as EspecificacionesTecnicasStoredMeta;
-    if (!parsed?.fileName) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function persistMeta(expedienteId: string, meta: EspecificacionesTecnicasStoredMeta | null) {
-  if (typeof window === "undefined") return;
-  const key = getEspecificacionesTecnicasStorageKey(expedienteId);
-  if (!meta) {
-    window.localStorage.removeItem(key);
-    return;
-  }
-  window.localStorage.setItem(key, JSON.stringify(meta));
-}
-
 export function EspecificacionesTecnicasForm({
   expedienteId,
   readOnly = false,
   basePath = "/gestion-expedientes",
 }: EspecificacionesTecnicasFormProps) {
   const router = useRouter();
-  const { completeMicromodule } = useFase1InicialState(expedienteId);
   const [fileMeta, setFileMeta] = useState<EspecificacionesTecnicasStoredMeta | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setFileMeta(loadStoredMeta(expedienteId));
-    setHydrated(true);
+    let cancelled = false;
+
+    void obtenerEspecificacionesTecnicas(expedienteId)
+      .then((response) => {
+        if (cancelled) return;
+        setFileMeta(especificacionesTecnicasFromApi(response));
+      })
+      .catch(() => {
+        if (!cancelled) setFileMeta(null);
+      })
+      .finally(() => {
+        if (!cancelled) setHydrated(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [expedienteId]);
 
   const goToPanel = () => {
     router.push(expedienteFase1TabPath(basePath, expedienteId));
   };
 
-  const handleSave = () => {
+  const handleMetaChange = async (meta: EspecificacionesTecnicasStoredMeta | null) => {
+    if (readOnly) return;
+
+    if (!meta) {
+      if (fileMeta?.url && !pendingFile) {
+        try {
+          await eliminarEspecificacionesTecnicas(expedienteId);
+        } catch (error) {
+          toast.error(formatMicromoduloErrorMessage(error));
+          return;
+        }
+      }
+      setFileMeta(null);
+      setPendingFile(null);
+      return;
+    }
+
+    setFileMeta(meta);
+  };
+
+  const handleFileSelected = (file: File) => {
+    setPendingFile(file);
+    setFileMeta({
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/octet-stream",
+      uploadedAt: new Date().toISOString(),
+    });
+  };
+
+  const handleSave = async () => {
     if (readOnly || !fileMeta) return;
     setIsSaving(true);
     try {
-      persistMeta(expedienteId, fileMeta);
-      completeMicromodule("especificaciones-tecnicas");
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+        const response = await subirEspecificacionesTecnicas(expedienteId, formData);
+        setFileMeta(
+          especificacionesTecnicasFromApi(response) ?? {
+            fileName: pendingFile.name,
+            fileSize: pendingFile.size,
+            mimeType: pendingFile.type || "application/octet-stream",
+            uploadedAt: new Date().toISOString(),
+          }
+        );
+        setPendingFile(null);
+      }
       setIsConfirmOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
   const canSave = Boolean(fileMeta) && !readOnly && hydrated;
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Cargando especificaciones…
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -118,10 +168,8 @@ export function EspecificacionesTecnicasForm({
                 <div className="self-start md:sticky md:top-24">
                   <EspecificacionesUploadZone
                     value={fileMeta}
-                    onChange={(meta) => {
-                      setFileMeta(meta);
-                      if (!meta) persistMeta(expedienteId, null);
-                    }}
+                    onChange={handleMetaChange}
+                    onFileSelected={handleFileSelected}
                     disabled={readOnly}
                   />
                 </div>
@@ -152,7 +200,7 @@ export function EspecificacionesTecnicasForm({
                   <Button
                     type="button"
                     disabled={!canSave || isSaving || isConfirmOpen}
-                    onClick={handleSave}
+                    onClick={() => void handleSave()}
                     className="bg-navy text-white hover:bg-navy-hover disabled:opacity-50"
                   >
                     {isSaving ? "Guardando..." : "Guardar y continuar"}

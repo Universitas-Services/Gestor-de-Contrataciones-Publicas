@@ -44,7 +44,7 @@ export default async function GestionLlamadoPublicoPage({ params }: Props) {
     <div className="mx-auto flex w-full min-w-0 max-w-full flex-col items-start overflow-x-hidden p-0">
       <LlamadoPublicoForm
         expedienteId={id}
-        enteId={user.enteId}
+        enteId={user.enteId ?? undefined}
         direccionEnteDefault={direccionEnteDefault}
         readOnly={isReadOnlyRole(user.role)}
         basePath="/gestion-expedientes"

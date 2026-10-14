@@ -9,9 +9,10 @@ import {
   LLAMADO_CUENTA_SELECT_EMPTY,
   LLAMADO_CUENTA_SELECT_LABEL,
   LLAMADO_CUENTA_SELECT_PLACEHOLDER,
-  loadCuentasBancariasEnte,
   type CuentaBancariaEnte,
 } from "@/lib/constants/cuentasBancariasEnte";
+import { cuentaBancariaFromApi } from "@/lib/utils/fase1MicromodulosMapper";
+import { listarCuentasBancariasEnte } from "@/services/enteService";
 import {
   LLAMADO_PUBLICO_FIELD_COPY,
   LLAMADO_PUBLICO_SECTIONS,
@@ -118,19 +119,30 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
       queueMicrotask(() => setCuentas([]));
       return;
     }
+
+    let cancelled = false;
+
     const refresh = () => {
-      queueMicrotask(() => setCuentas(loadCuentasBancariasEnte(enteId)));
+      void listarCuentasBancariasEnte(enteId)
+        .then((items) => {
+          if (!cancelled) setCuentas(items.map(cuentaBancariaFromApi));
+        })
+        .catch(() => {
+          if (!cancelled) setCuentas([]);
+        });
     };
+
     refresh();
     window.addEventListener("focus", refresh);
-    window.addEventListener("storage", refresh);
+
     return () => {
+      cancelled = true;
       window.removeEventListener("focus", refresh);
-      window.removeEventListener("storage", refresh);
     };
   }, [enteId]);
 
   const activeSelectedCuentaId = pliegoCosto === true ? selectedCuentaId : "";
+  const paymentFieldsLocked = Boolean(activeSelectedCuentaId) || readOnly;
 
   const handleSelectCuenta = (cuentaId: string) => {
     setSelectedCuentaId(cuentaId);
@@ -333,6 +345,8 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
                           onBlur={field.onBlur}
                           onValueChange={field.onChange}
                           disabled={readOnly}
+                          allowEmpty
+                          outputMode="raw"
                           placeholder={LLAMADO_PUBLICO_FIELD_COPY.costoPliegoBsAuAu.placeholder}
                           className={inputClass}
                         />
@@ -376,7 +390,8 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
               )}
               {activeSelectedCuentaId ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Datos de pago autocompletados. Puede ajustarlos abajo si lo necesita.
+                  Datos de pago tomados de la cuenta del ente. No son editables aquí; para
+                  cambiarlos, seleccione otra cuenta o actualícelos en el Perfil del Ente.
                 </p>
               ) : null}
             </div>
@@ -393,7 +408,7 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
                     {LLAMADO_PUBLICO_FIELD_COPY.bancoPagoPliegoAuAu.description}
                   </FormDescription>
                   <FormControl>
-                    <Input {...field} disabled={readOnly} className={inputClass} />
+                    <Input {...field} disabled={paymentFieldsLocked} className={inputClass} />
                   </FormControl>
                   <FormMessage className={messageClass} />
                 </FormItem>
@@ -419,7 +434,7 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
                           value={field.value}
                           onBlur={field.onBlur}
                           onValueChange={field.onChange}
-                          disabled={readOnly}
+                          disabled={paymentFieldsLocked}
                         />
                       )}
                     />
@@ -451,7 +466,7 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
                           value={field.value}
                           onBlur={field.onBlur}
                           onValueChange={field.onChange}
-                          disabled={readOnly}
+                          disabled={paymentFieldsLocked}
                           inputClassName={inputClass}
                         />
                       )}
@@ -474,7 +489,7 @@ export function LlamadoFormSections({ form, enteId, readOnly = false }: LlamadoF
                     {LLAMADO_PUBLICO_FIELD_COPY.titularPagoPliegoAuAu.description}
                   </FormDescription>
                   <FormControl>
-                    <Input {...field} disabled={readOnly} className={inputClass} />
+                    <Input {...field} disabled={paymentFieldsLocked} className={inputClass} />
                   </FormControl>
                   <FormMessage className={messageClass} />
                 </FormItem>

@@ -16,7 +16,16 @@ export const MODALIDAD_CRS_OPTIONS = [
 export type ModalidadCrsOption = (typeof MODALIDAD_CRS_OPTIONS)[number];
 
 function parseDecimalString(value: string) {
-  const normalized = value.trim().replace(/\./g, "").replace(",", ".");
+  const raw = value.trim();
+  if (!raw) return Number.NaN;
+
+  // US / ISO: "2.5" o "12" (punto decimal, sin miles)
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    return Number(raw);
+  }
+
+  // Formato VE: miles con punto, decimal con coma ("1.500,50" → 1500.5)
+  const normalized = raw.replace(/\./g, "").replace(",", ".");
   return Number(normalized);
 }
 
@@ -94,9 +103,37 @@ export const aspectosGeneralesFormSchema = z
     autoridadAclaratoriasAuAu: requiredText(
       "Indique la autoridad competente encargada de aclaratorias"
     ),
-    normativaLegalAuAu: z
-      .array(z.string().trim().min(1))
-      .min(1, "Agregue al menos una normativa legal complementaria"),
+    normativaLegalAuAu: z.preprocess(
+      (value) => {
+        if (Array.isArray(value)) {
+          return value
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+        if (typeof value === "string" && value.trim()) {
+          const trimmed = value.trim();
+          if (trimmed.startsWith("[")) {
+            try {
+              const parsed = JSON.parse(trimmed) as unknown;
+              if (Array.isArray(parsed)) {
+                return parsed
+                  .filter((item): item is string => typeof item === "string")
+                  .map((item) => item.trim())
+                  .filter(Boolean);
+              }
+            } catch {
+              // texto plano
+            }
+          }
+          return [trimmed];
+        }
+        return [];
+      },
+      z
+        .array(z.string().trim().min(1))
+        .min(1, "Agregue al menos una normativa legal complementaria")
+    ),
 
     diasVigenciaGarantiaExtAuAu: requiredPositiveIntegerString(
       "Indique los días de vigencia de la garantía de mantenimiento"
@@ -139,16 +176,6 @@ export const aspectosGeneralesFormSchema = z
     retencionFielCumplimientoAuAu: requiredBoolean(
       "Indique si se admitirá retención para Fiel Cumplimiento"
     ),
-    requiereGarantiaLaboralAuAu: requiredBoolean("Indique si se exigirá la Garantía Laboral"),
-    porcentajeGarantiaLaboralAuAu: optionalDecimalString(),
-    retencionFianzaLaboralAuAu: z.boolean().optional(),
-    polizaResponsabilidadCivilAuAu: requiredBoolean(
-      "Indique si se exigirá Póliza de Responsabilidad Civil"
-    ),
-    porcentajeResponsabilidadCivilAuAu: optionalDecimalString(),
-    montoResponsabilidadCivilBsAuAu: optionalDecimalString(),
-    anticipoContratoAuAu: requiredBoolean("Indique si desea otorgar un Anticipo Contractual"),
-    porcentajeAnticipoAuAu: optionalDecimalString(),
     anticipoEspecialAuAu: requiredBoolean("Indique si desea otorgar un Anticipo Especial"),
     porcentajeAnticipoEspecialAuAu: optionalDecimalString(),
   })
@@ -167,89 +194,6 @@ export const aspectosGeneralesFormSchema = z
         path: ["nomIdiomaDiferenteAuAu"],
         message: "Especifique el idioma distinto al castellano",
       });
-    }
-
-    if (data.requiereGarantiaLaboralAuAu === true) {
-      const pct = data.porcentajeGarantiaLaboralAuAu?.trim() ?? "";
-      if (!pct) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["porcentajeGarantiaLaboralAuAu"],
-          message: "Indique el porcentaje de la Garantía Laboral",
-        });
-      } else {
-        const num = parseDecimalString(pct);
-        if (Number.isNaN(num) || num < 0 || num > 100) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["porcentajeGarantiaLaboralAuAu"],
-            message: "Debe ser un valor entre 0 y 100",
-          });
-        }
-      }
-
-      if (data.retencionFianzaLaboralAuAu !== true && data.retencionFianzaLaboralAuAu !== false) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["retencionFianzaLaboralAuAu"],
-          message: "Indique si se admitirá retención para la Garantía Laboral",
-        });
-      }
-    }
-
-    if (data.polizaResponsabilidadCivilAuAu === true) {
-      const pct = data.porcentajeResponsabilidadCivilAuAu?.trim() ?? "";
-      if (!pct) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["porcentajeResponsabilidadCivilAuAu"],
-          message: "Indique el porcentaje de la suma asegurada",
-        });
-      } else {
-        const num = parseDecimalString(pct);
-        if (Number.isNaN(num) || num < 0 || num > 100) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["porcentajeResponsabilidadCivilAuAu"],
-            message: "Debe ser un valor entre 0 y 100",
-          });
-        }
-      }
-
-      const monto = data.montoResponsabilidadCivilBsAuAu?.trim() ?? "";
-      if (!monto) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["montoResponsabilidadCivilBsAuAu"],
-          message: "Indique el monto total de la Suma Asegurada",
-        });
-      } else if (Number.isNaN(parseDecimalString(monto)) || parseDecimalString(monto) <= 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["montoResponsabilidadCivilBsAuAu"],
-          message: "Debe ser un monto mayor a cero",
-        });
-      }
-    }
-
-    if (data.anticipoContratoAuAu === true) {
-      const pct = data.porcentajeAnticipoAuAu?.trim() ?? "";
-      if (!pct) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["porcentajeAnticipoAuAu"],
-          message: "Indique el porcentaje de anticipo",
-        });
-      } else {
-        const num = parseDecimalString(pct);
-        if (Number.isNaN(num) || num < 0 || num > 50) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["porcentajeAnticipoAuAu"],
-            message: "El anticipo debe ser un valor entre 0 y 50",
-          });
-        }
-      }
     }
 
     if (data.anticipoEspecialAuAu === true) {
@@ -292,14 +236,6 @@ export type AspectosGeneralesFormInputValues = {
   porcentajeMantenimientoOfertaAuAu: string;
   porcentajeFielCumplimientoAuAu: string;
   retencionFielCumplimientoAuAu: boolean | undefined;
-  requiereGarantiaLaboralAuAu: boolean | undefined;
-  porcentajeGarantiaLaboralAuAu: string;
-  retencionFianzaLaboralAuAu: boolean | undefined;
-  polizaResponsabilidadCivilAuAu: boolean | undefined;
-  porcentajeResponsabilidadCivilAuAu: string;
-  montoResponsabilidadCivilBsAuAu: string;
-  anticipoContratoAuAu: boolean | undefined;
-  porcentajeAnticipoAuAu: string;
   anticipoEspecialAuAu: boolean | undefined;
   porcentajeAnticipoEspecialAuAu: string;
 };

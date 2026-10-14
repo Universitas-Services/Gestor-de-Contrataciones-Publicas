@@ -142,10 +142,6 @@ export const FIELD_COPY = {
   },
 } as const;
 
-export function getEvaluacionTecnicaEconomicaFormStorageKey(expedienteId: string): string {
-  return `evaluacion-tecnica-economica-form:${expedienteId}`;
-}
-
 export function createId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();

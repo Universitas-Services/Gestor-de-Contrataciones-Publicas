@@ -185,13 +185,20 @@ export default function Sobre2Page({
           }
         }
 
-        // oferenteCalificado y motivoDescalificacion están en la raíz
+        // oferenteCalificado y motivoDescalificacion están en la raíz.
+        // Solo se restaura resultadoFinal cuando la decisión fue explícita:
+        // - true  → calificado (pasó por la matriz)
+        // - false + motivoDescalificacion → descalificado intencionalmente
+        // Un false sin motivo es un cálculo automático del backend a partir de
+        // las respuestas; en ese caso se deja null para que el usuario decida.
         if (evaluacionData) {
-          if (
-            evaluacionData.oferenteCalificado !== null &&
-            evaluacionData.oferenteCalificado !== undefined
+          if (evaluacionData.oferenteCalificado === true) {
+            setResultadoFinal("SI");
+          } else if (
+            evaluacionData.oferenteCalificado === false &&
+            evaluacionData.motivoDescalificacion?.trim()
           ) {
-            setResultadoFinal(evaluacionData.oferenteCalificado ? "SI" : "NO");
+            setResultadoFinal("NO");
           }
           if (evaluacionData.motivoDescalificacion) {
             setMotivoDescalificacion(evaluacionData.motivoDescalificacion);
@@ -285,7 +292,7 @@ export default function Sobre2Page({
       await evaluarSobre2Fase3(oferenteId, payload);
 
       // Generar lista de cotejo tras descalificación
-      await generarListaCotejo(id, oferenteId)
+      await generarListaCotejo(id)
         .then(() => toast.success("Lista de cotejo generada correctamente."))
         .catch(() =>
           toast.warning("Descalificación guardada, pero la lista de cotejo no pudo generarse.")

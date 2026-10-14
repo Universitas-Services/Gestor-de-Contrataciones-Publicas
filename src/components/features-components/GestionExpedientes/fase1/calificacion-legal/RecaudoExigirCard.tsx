@@ -3,6 +3,7 @@
 import { FileText } from "lucide-react";
 
 import type { RecaudoDef } from "@/lib/constants/calificacionLegal";
+import { getRecaudoModelCodigo, getSubstituteModelCodigo } from "@/lib/constants/calificacionLegal";
 import { SiNoToggleField } from "@/components/features-components/GestionExpedientes/fase1/actividades-previas/SiNoToggleField";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export function RecaudoExigirCard({
 }: RecaudoExigirCardProps) {
   const disabled = readOnly || locked;
   const showSubstitute = exigido === true && Boolean(recaudo.substitute);
+  const modelCodigo = getRecaudoModelCodigo(recaudo);
 
   return (
     <div
@@ -42,23 +44,21 @@ export function RecaudoExigirCard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 space-y-2">
           <p className="text-sm font-semibold leading-snug text-color-titulos">{recaudo.titulo}</p>
-          {recaudo.modelUrl ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 border-border text-xs text-navy hover:bg-muted"
-              onClick={() =>
-                onVerModelo({
-                  title: recaudo.titulo,
-                  modelUrl: recaudo.modelUrl,
-                })
-              }
-            >
-              <FileText className="mr-1.5 h-3.5 w-3.5" />
-              Ver modelo
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 border-border text-xs text-navy hover:bg-muted"
+            onClick={() =>
+              onVerModelo({
+                title: recaudo.titulo,
+                modelCodigo,
+              })
+            }
+          >
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
+            Ver modelo
+          </Button>
           {locked ? (
             <p className="text-[11px] font-medium text-muted-foreground">
               Activado automáticamente por configuración previa del expediente.
@@ -91,25 +91,21 @@ export function RecaudoExigirCard({
             </p>
           ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {recaudo.substitute.modelUrl ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 border-border text-xs text-navy hover:bg-muted"
-                onClick={() =>
-                  onVerModelo({
-                    title: recaudo.substitute!.pregunta,
-                    modelUrl: recaudo.substitute!.modelUrl,
-                  })
-                }
-              >
-                <FileText className="mr-1.5 h-3.5 w-3.5" />
-                Ver modelo
-              </Button>
-            ) : (
-              <span />
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 border-border text-xs text-navy hover:bg-muted"
+              onClick={() =>
+                onVerModelo({
+                  title: recaudo.substitute!.pregunta,
+                  modelCodigo: getSubstituteModelCodigo(recaudo.substitute!),
+                })
+              }
+            >
+              <FileText className="mr-1.5 h-3.5 w-3.5" />
+              Ver modelo
+            </Button>
             <div className="sm:w-[180px]">
               <SiNoToggleField
                 value={substituteValue}

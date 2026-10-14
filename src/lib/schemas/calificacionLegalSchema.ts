@@ -85,6 +85,16 @@ export function getCalificacionLegalValidationIssues(form: CalificacionLegalStor
     issues.push("Debe exigir al menos un recaudo en el Sobre N° 2.");
   }
 
+  for (const item of form.personalizados) {
+    if (!item.tieneModelo) continue;
+    const url = item.archivo?.previewUrl;
+    if (!url || !url.startsWith("http")) {
+      issues.push(
+        `Suba el archivo modelo del recaudo personalizado: "${item.descripcion.slice(0, 60)}".`
+      );
+    }
+  }
+
   return issues;
 }
 

@@ -15,10 +15,7 @@ import {
   CALIFICACION_TECNICA_SUCCESS_TITLE,
   CALIFICACION_TECNICA_WIZARD_TITLE,
   createDefaultCalificacionTecnicaValues,
-  getCalificacionTecnicaFormStorageKey,
-  roundPts,
   type CalificacionTecnicaFormValues,
-  type CalificacionTecnicaStoredForm,
   type CriterioTecnico,
 } from "@/lib/constants/calificacionTecnica";
 import {
@@ -27,7 +24,18 @@ import {
   getTotalPonderacion,
 } from "@/lib/schemas/calificacionTecnicaSchema";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import {
+  calificacionTecnicaFromResponse,
+  calificacionTecnicaToApi,
+  ensureMicromoduloEditable,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerCalificacionTecnica,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -47,53 +55,18 @@ export interface CalificacionTecnicaFormProps {
   basePath?: string;
 }
 
-function loadStored(expedienteId: string): CalificacionTecnicaStoredForm {
-  const defaults = createDefaultCalificacionTecnicaValues();
-  if (typeof window === "undefined") {
-    return { values: defaults, status: "draft" };
-  }
-  try {
-    const raw = window.localStorage.getItem(getCalificacionTecnicaFormStorageKey(expedienteId));
-    if (!raw) return { values: defaults, status: "draft" };
-    const parsed = JSON.parse(raw) as Partial<CalificacionTecnicaStoredForm>;
-    const incoming = parsed.values;
-    return {
-      values: {
-        ...defaults,
-        ...(incoming ?? {}),
-        criterios: Array.isArray(incoming?.criterios) ? incoming.criterios : [],
-        puntuacionMinimaCalifTecnicaAuAu:
-          typeof incoming?.puntuacionMinimaCalifTecnicaAuAu === "number"
-            ? incoming.puntuacionMinimaCalifTecnicaAuAu
-            : defaults.puntuacionMinimaCalifTecnicaAuAu,
-      },
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return { values: defaults, status: "draft" };
-  }
-}
-
-function persist(expedienteId: string, payload: CalificacionTecnicaStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getCalificacionTecnicaFormStorageKey(expedienteId),
-    JSON.stringify(payload)
-  );
-}
-
 export function CalificacionTecnicaForm({
   expedienteId,
   readOnly = false,
   basePath = "/gestion-expedientes",
 }: CalificacionTecnicaFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
 
   const [hydrated, setHydrated] = useState(false);
   const [values, setValues] = useState<CalificacionTecnicaFormValues>(
     createDefaultCalificacionTecnicaValues
   );
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -101,12 +74,29 @@ export function CalificacionTecnicaForm({
   const [editingCriterio, setEditingCriterio] = useState<CriterioTecnico | null>(null);
 
   useEffect(() => {
-    setValues(loadStored(expedienteId).values);
-    setHydrated(true);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await obtenerCalificacionTecnica(expedienteId);
+        if (cancelled) return;
+
+        setEstado(response.estado);
+        setValues(calificacionTecnicaFromResponse(response as Record<string, unknown>));
+      } catch {
+        if (!cancelled) setValues(createDefaultCalificacionTecnicaValues());
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [expedienteId]);
 
   const goToPanel = useCallback(() => {
-    router.push(expedienteFase1TabPath(basePath, expedienteId));
+    router.push(expedienteFase1TabPath(basePath, expedienteId, "configuracion-pliego"));
   }, [basePath, expedienteId, router]);
 
   const total = useMemo(() => getTotalPonderacion(values), [values]);
@@ -114,22 +104,10 @@ export function CalificacionTecnicaForm({
   const issues = useMemo(() => getCalificacionTecnicaIssues(values), [values]);
 
   const setCriterios = (criterios: CriterioTecnico[]) => {
-    setValues((prev) => {
-      const nextTotal = roundPts(
-        criterios.reduce(
-          (acc, c) => acc + (Number(c.puntuacionCriterioCalificacionTecnicaAuAu) || 0),
-          0
-        )
-      );
-      const umbral =
-        nextTotal > 0
-          ? Math.min(prev.puntuacionMinimaCalifTecnicaAuAu, nextTotal)
-          : prev.puntuacionMinimaCalifTecnicaAuAu;
-      return {
-        criterios,
-        puntuacionMinimaCalifTecnicaAuAu: umbral,
-      };
-    });
+    setValues((prev) => ({
+      ...prev,
+      criterios,
+    }));
   };
 
   const openCreate = () => {
@@ -155,25 +133,49 @@ export function CalificacionTecnicaForm({
     toast.success("Criterio agregado a la matriz.");
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      persist(expedienteId, { values, status: "draft" });
-      saveMicromoduleDraft("calificacion-tecnica");
+      // Reabrir solo al guardar (no al abrir el formulario).
+      await ensureMicromoduloEditable(expedienteId, "calificacion-tecnica", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const apiPayload = calificacionTecnicaToApi(values);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "calificacion-tecnica",
+        apiPayload as unknown as Record<string, unknown>
+      );
       toast.success("Borrador de calificación técnica guardado.");
+      goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (readOnly || !canSubmit) return;
     setIsSaving(true);
     try {
-      persist(expedienteId, { values, status: "completed" });
-      completeMicromodule("calificacion-tecnica");
+      await ensureMicromoduloEditable(expedienteId, "calificacion-tecnica", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      const apiPayload = calificacionTecnicaToApi(values);
+      await guardarBorradorMicromodulo(
+        expedienteId,
+        "calificacion-tecnica",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      await completarMicromodulo(
+        expedienteId,
+        "calificacion-tecnica",
+        apiPayload as unknown as Record<string, unknown>
+      );
+      setEstado("COMPLETADO");
       setSuccessOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }

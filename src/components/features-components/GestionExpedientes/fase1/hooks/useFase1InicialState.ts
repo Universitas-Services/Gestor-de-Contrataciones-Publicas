@@ -2,173 +2,103 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { createInitialFase1InicialState, getStorageKey } from "../constants/fase1Inicial.constants";
-import type {
-  DocumentoMaestroId,
-  Fase1InicialState,
-  MicromoduleId,
-} from "../types/fase1Inicial.types";
-import {
-  applyFase1DocumentRules,
-  canEnablePliego,
-  getDocumentUnlockTooltip,
-  getPliegoMissingRequirements,
-  unlockMicromodulesAfterActividadesPrevias,
-} from "../utils/fase1UnlockLogic";
-
-function isValidState(value: unknown): value is Fase1InicialState {
-  if (!value || typeof value !== "object") return false;
-  const state = value as Fase1InicialState;
-  return Boolean(state.micromodules && state.documents);
-}
-
-function loadState(expedienteId: string): Fase1InicialState {
-  if (typeof window === "undefined") {
-    return createInitialFase1InicialState();
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getStorageKey(expedienteId));
-    if (!raw) return createInitialFase1InicialState();
-    const parsed: unknown = JSON.parse(raw);
-    if (!isValidState(parsed)) return createInitialFase1InicialState();
-    return applyFase1DocumentRules(parsed);
-  } catch {
-    return createInitialFase1InicialState();
-  }
-}
-
-function persistState(expedienteId: string, state: Fase1InicialState) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(getStorageKey(expedienteId), JSON.stringify(state));
-}
+import { createInitialFase1InicialState } from "../constants/fase1Inicial.constants";
+import type { DocumentoMaestroId, Fase1InicialState } from "../types/fase1Inicial.types";
+import { getDocumentUnlockTooltip, getPliegoMissingRequirements } from "../utils/fase1UnlockLogic";
+import { obtenerProgresoFasePreparatoria } from "@/services/fase1MicromodulosService";
+import { generarDocumentoFase1Maestro } from "@/services/generadorDocumentosService";
+import { mapProgresoToFase1State } from "@/lib/utils/fase1MicromodulosMapper";
 
 export function useFase1InicialState(expedienteId: string) {
   const [state, setState] = useState<Fase1InicialState>(() => createInitialFase1InicialState());
   const [hydrated, setHydrated] = useState(false);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const loading = loadedFor !== expedienteId;
+  const [pliegoReady, setPliegoReady] = useState(false);
+  const [pliegoMissingFromApi, setPliegoMissingFromApi] = useState<string[]>([]);
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      setState(loadState(expedienteId));
-      setHydrated(true);
-    });
+  const refreshProgreso = useCallback(async () => {
+    try {
+      const progreso = await obtenerProgresoFasePreparatoria(expedienteId);
+      setState(mapProgresoToFase1State(progreso));
+      setPliegoReady(progreso.pliegoReady);
+      setPliegoMissingFromApi(progreso.pliegoMissing ?? []);
+    } catch {
+      setState(createInitialFase1InicialState());
+      setPliegoReady(false);
+      setPliegoMissingFromApi([]);
+    }
   }, [expedienteId]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    persistState(expedienteId, state);
-  }, [expedienteId, hydrated, state]);
+    let cancelled = false;
 
-  const updateState = useCallback((updater: (prev: Fase1InicialState) => Fase1InicialState) => {
-    setState((prev) => applyFase1DocumentRules(updater(prev)));
-  }, []);
-
-  /**
-   * Marca un micromódulo como COMPLETADO.
-   * Actividades Previas: genera el documento maestro de inmediato y desbloquea el resto.
-   */
-  const completeMicromodule = useCallback(
-    (id: MicromoduleId) => {
-      updateState((prev) => {
-        const micromodules = { ...prev.micromodules, [id]: "completed" as const };
-        let documents = { ...prev.documents };
-
-        if (id === "actividades-previas") {
-          const unlocked = unlockMicromodulesAfterActividadesPrevias(micromodules);
-          documents = { ...documents, "actividades-previas": "generated" };
-          return { ...prev, micromodules: unlocked, documents };
-        }
-
-        return { ...prev, micromodules };
+    void obtenerProgresoFasePreparatoria(expedienteId)
+      .then((progreso) => {
+        if (cancelled) return;
+        setState(mapProgresoToFase1State(progreso));
+        setPliegoReady(progreso.pliegoReady);
+        setPliegoMissingFromApi(progreso.pliegoMissing ?? []);
+        setHydrated(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setState(createInitialFase1InicialState());
+        setPliegoReady(false);
+        setPliegoMissingFromApi([]);
+        setHydrated(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedFor(expedienteId);
       });
-    },
-    [updateState]
-  );
 
-  /** Guarda parcial (BORRADOR) sin habilitar Pliego. */
-  const saveMicromoduleDraft = useCallback(
-    (id: MicromoduleId) => {
-      updateState((prev) => {
-        const current = prev.micromodules[id];
-        if (current === "locked" || current === "completed") return prev;
-        return {
-          ...prev,
-          micromodules: { ...prev.micromodules, [id]: "draft" },
-        };
-      });
-    },
-    [updateState]
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, [expedienteId]);
 
-  /**
-   * Presupuesto base: completed solo si hay ≥1 ítem.
-   * Si se vacía la tabla, vuelve a available (y el Pliego se bloquea de nuevo).
-   */
-  const syncPresupuestoCompletion = useCallback(
-    (hasItems: boolean) => {
-      updateState((prev) => {
-        const current = prev.micromodules["presupuesto-base"];
-        if (current === "locked") return prev;
-
-        const nextStatus = hasItems ? ("completed" as const) : ("available" as const);
-        if (current === nextStatus) return prev;
-
-        return {
-          ...prev,
-          micromodules: {
-            ...prev.micromodules,
-            "presupuesto-base": nextStatus,
-          },
-        };
-      });
-    },
-    [updateState]
-  );
+  const pliegoMissingRequirements = useMemo(() => {
+    if (pliegoMissingFromApi.length > 0) return pliegoMissingFromApi;
+    return getPliegoMissingRequirements(state.micromodules);
+  }, [pliegoMissingFromApi, state.micromodules]);
 
   const generateDocument = useCallback(
-    (id: DocumentoMaestroId) => {
-      updateState((prev) => {
-        if (prev.documents[id] !== "ready") return prev;
-        return {
-          ...prev,
-          documents: { ...prev.documents, [id]: "generated" },
-        };
-      });
+    async (id: DocumentoMaestroId) => {
+      await generarDocumentoFase1Maestro(id, expedienteId);
+      await refreshProgreso();
     },
-    [updateState]
+    [expedienteId, refreshProgreso]
   );
 
+  /** Regenerar = mismo POST de generar (reemplaza archivo en backend). */
   const regenerateDocument = useCallback(
-    (id: DocumentoMaestroId) => {
-      updateState((prev) => {
-        if (prev.documents[id] !== "generated") return prev;
-        return prev;
-      });
+    async (id: DocumentoMaestroId) => {
+      await generarDocumentoFase1Maestro(id, expedienteId);
+      await refreshProgreso();
     },
-    [updateState]
-  );
-
-  const pliegoEnabled = useMemo(() => canEnablePliego(state.micromodules), [state.micromodules]);
-
-  const pliegoMissingRequirements = useMemo(
-    () => getPliegoMissingRequirements(state.micromodules),
-    [state.micromodules]
+    [expedienteId, refreshProgreso]
   );
 
   const getUnlockTooltip = useCallback(
-    (documentId: DocumentoMaestroId) =>
-      getDocumentUnlockTooltip(documentId, state.documents, state.micromodules),
-    [state.documents, state.micromodules]
+    (documentId: DocumentoMaestroId) => {
+      if (documentId === "pliego" && pliegoMissingRequirements.length > 0) {
+        if (pliegoMissingRequirements.length <= 3) {
+          return `Pendiente: ${pliegoMissingRequirements.join(", ")}.`;
+        }
+        return `Complete los ${pliegoMissingRequirements.length} requisitos pendientes para habilitar el Pliego.`;
+      }
+      return getDocumentUnlockTooltip(documentId, state.documents, state.micromodules);
+    },
+    [pliegoMissingRequirements, state.documents, state.micromodules]
   );
 
   return {
     state,
     hydrated,
-    pliegoEnabled,
+    loading,
+    pliegoEnabled: pliegoReady,
     pliegoMissingRequirements,
-    completeMicromodule,
-    saveMicromoduleDraft,
-    syncPresupuestoCompletion,
+    refreshProgreso,
     generateDocument,
     regenerateDocument,
     getUnlockTooltip,

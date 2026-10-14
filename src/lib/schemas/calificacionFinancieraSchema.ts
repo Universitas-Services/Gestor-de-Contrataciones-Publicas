@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  CALIFICACION_FINANCIERA_SUMA_EXCEDIDA,
+  CALIFICACION_FINANCIERA_SUMA_EXACTA,
   TOTAL_PUNTAJE_MAXIMO,
   getTotalPuntajeMaximoActivos,
   type CalificacionFinancieraFormValues,
@@ -164,16 +164,19 @@ export const calificacionFinancieraFormSchema = z
       validateRangosInverso(data.endeudamiento, ctx, "Endeudamiento");
     }
 
-    if (getTotalPuntajeMaximoActivos(data) > TOTAL_PUNTAJE_MAXIMO) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: CALIFICACION_FINANCIERA_SUMA_EXCEDIDA,
-        path: ["puntajeMaximoDescapitalAuAu"],
-      });
+    if (countActiveCriteria(data as CalificacionFinancieraFormValues) >= 1) {
+      const total = getTotalPuntajeMaximoActivos(data as CalificacionFinancieraFormValues);
+      if (total !== TOTAL_PUNTAJE_MAXIMO) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${CALIFICACION_FINANCIERA_SUMA_EXACTA} Suma actual: ${total} puntos.`,
+          path: ["puntajeMaximoDescapitalAuAu"],
+        });
+      }
     }
   });
 
-/** Activación temprana: ≥1 criterio activo válido + puntuación mínima; todos los SÍ válidos. */
+/** Activación: ≥1 criterio activo válido + suma de máximos = 100 + puntuación mínima. */
 export function canSubmitCalificacionFinanciera(values: CalificacionFinancieraFormValues): boolean {
   const minimaOk =
     Number.isInteger(values.puntuacionMinimaCalifFinancieraAuAu) &&
@@ -195,7 +198,7 @@ export function canSubmitCalificacionFinanciera(values: CalificacionFinancieraFo
 
   if (!hasAtLeastOne) return false;
 
-  if (getTotalPuntajeMaximoActivos(values) > TOTAL_PUNTAJE_MAXIMO) return false;
+  if (getTotalPuntajeMaximoActivos(values) !== TOTAL_PUNTAJE_MAXIMO) return false;
 
   return calificacionFinancieraFormSchema.safeParse(values).success;
 }

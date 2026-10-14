@@ -1,3 +1,4 @@
+import type { Fase1InicialSubTab } from "@/components/features-components/GestionExpedientes/fase1/types/fase1Inicial.types";
 import { expedienteTabPath } from "@/lib/utils/evaluacionRoutes";
 
 export function actividadesPreviasPath(basePath: string, expedienteId: string): string {
@@ -36,10 +37,16 @@ export function evaluacionTecnicaEconomicaPath(basePath: string, expedienteId: s
   return `${basePath}/${expedienteId}/evaluacion-tecnica-economica`;
 }
 
-export function expedienteFase1TabPath(basePath: string, expedienteId: string): string {
-  return expedienteTabPath(basePath, expedienteId, "fase-1");
+export function expedienteFase1TabPath(
+  basePath: string,
+  expedienteId: string,
+  subTab: Fase1InicialSubTab = "preparatoria"
+): string {
+  const base = expedienteTabPath(basePath, expedienteId, "fase-1");
+  if (subTab === "preparatoria") return base;
+  return `${base}&fase1Sub=${subTab}`;
 }
 
-export function getActividadesPreviasFormStorageKey(expedienteId: string): string {
-  return `actividades-previas-form:${expedienteId}`;
+export function resolveFase1SubTabParam(value: string | null | undefined): Fase1InicialSubTab {
+  return value === "configuracion-pliego" ? "configuracion-pliego" : "preparatoria";
 }

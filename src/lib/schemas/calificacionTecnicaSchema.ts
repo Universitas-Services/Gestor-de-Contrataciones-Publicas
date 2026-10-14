@@ -42,14 +42,6 @@ export const calificacionTecnicaFormSchema = z
       });
     }
 
-    if (data.puntuacionMinimaCalifTecnicaAuAu > total) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "El umbral aprobatorio no puede superar el total de ponderaciones.",
-        path: ["puntuacionMinimaCalifTecnicaAuAu"],
-      });
-    }
-
     data.criterios.forEach((criterio, cIdx) => {
       const maxPadre = criterio.puntuacionCriterioCalificacionTecnicaAuAu;
       criterio.rangos.forEach((rango, rIdx) => {

@@ -96,10 +96,6 @@ export const LLAMADO_PUBLICO_FIELD_COPY = {
   },
 } as const;
 
-export function getLlamadoPublicoFormStorageKey(expedienteId: string): string {
-  return `llamado-publico-form:${expedienteId}`;
-}
-
 export function createLlamadoPublicoDefaultValues(
   direccionEnteDefault = ""
 ): LlamadoPublicoFormInputValues {

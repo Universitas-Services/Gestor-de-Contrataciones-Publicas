@@ -92,22 +92,6 @@ export const evaluacionTecnicaEconomicaFormSchema = z
       });
     }
 
-    if (data.puntuacionMinimaEvaluacionTecnicaAuAu > totalTecnica) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "El umbral técnico no puede superar el total de la evaluación técnica.",
-        path: ["puntuacionMinimaEvaluacionTecnicaAuAu"],
-      });
-    }
-
-    if (data.puntuacionMinimaEvaluacionEconomicaAuAu > totalEconomica) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "El umbral económico no puede superar el total de la evaluación económica.",
-        path: ["puntuacionMinimaEvaluacionEconomicaAuAu"],
-      });
-    }
-
     data.criteriosTecnicos.forEach((criterio, cIdx) => {
       const maxPadre = criterio.puntuacionCriterioEvaluacionTecnicaAuAu;
       criterio.rangos.forEach((rango, rIdx) => {

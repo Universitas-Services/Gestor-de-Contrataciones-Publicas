@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Megaphone } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -8,23 +8,31 @@ import { useForm, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 
 import {
-  createLlamadoPublicoDefaultValues,
-  getLlamadoPublicoFormStorageKey,
   LLAMADO_PUBLICO_DRAFT_LABEL,
-  LLAMADO_PUBLICO_SUBMIT_DISABLED_TOOLTIP,
   LLAMADO_PUBLICO_SUBMIT_LABEL,
   LLAMADO_PUBLICO_SUCCESS_DESCRIPTION,
   LLAMADO_PUBLICO_SUCCESS_TITLE,
   LLAMADO_PUBLICO_WIZARD_SUBTITLE,
   LLAMADO_PUBLICO_WIZARD_TITLE,
-  type LlamadoPublicoStoredForm,
+  createLlamadoPublicoDefaultValues,
 } from "@/lib/constants/llamadoPublico";
 import {
   llamadoPublicoFormSchema,
   type LlamadoPublicoFormInputValues,
 } from "@/lib/schemas/llamadoPublicoSchema";
 import { expedienteFase1TabPath } from "@/lib/utils/fase1InicialRoutes";
-import { useFase1InicialState } from "@/components/features-components/GestionExpedientes/fase1/hooks/useFase1InicialState";
+import { formatMicromoduloErrorMessage } from "@/lib/utils/fase1ApiError";
+import {
+  ensureMicromoduloEditable,
+  llamadoFromApi,
+  llamadoToApi,
+} from "@/lib/utils/fase1MicromodulosMapper";
+import {
+  completarMicromodulo,
+  guardarBorradorMicromodulo,
+  obtenerLlamado,
+} from "@/services/fase1MicromodulosService";
+import type { EstadoMicromoduloApi } from "@/types/fase1Micromodulos.types";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -35,7 +43,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LlamadoFormSections } from "./LlamadoFormSections";
 
 export interface LlamadoPublicoFormProps {
@@ -46,36 +53,6 @@ export interface LlamadoPublicoFormProps {
   basePath?: string;
 }
 
-function loadStoredForm(
-  expedienteId: string,
-  defaults: LlamadoPublicoFormInputValues
-): LlamadoPublicoStoredForm {
-  if (typeof window === "undefined") {
-    return { values: defaults, status: "draft" };
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getLlamadoPublicoFormStorageKey(expedienteId));
-    if (!raw) return { values: defaults, status: "draft" };
-    const parsed = JSON.parse(raw) as LlamadoPublicoStoredForm;
-    if (!parsed?.values) return { values: defaults, status: "draft" };
-    return {
-      values: { ...defaults, ...parsed.values },
-      status: parsed.status === "completed" ? "completed" : "draft",
-    };
-  } catch {
-    return { values: defaults, status: "draft" };
-  }
-}
-
-function persistForm(expedienteId: string, payload: LlamadoPublicoStoredForm) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    getLlamadoPublicoFormStorageKey(expedienteId),
-    JSON.stringify(payload)
-  );
-}
-
 export function LlamadoPublicoForm({
   expedienteId,
   enteId,
@@ -84,7 +61,6 @@ export function LlamadoPublicoForm({
   basePath = "/gestion-expedientes",
 }: LlamadoPublicoFormProps) {
   const router = useRouter();
-  const { completeMicromodule, saveMicromoduleDraft } = useFase1InicialState(expedienteId);
   const defaultValues = useMemo(
     () => createLlamadoPublicoDefaultValues(direccionEnteDefault),
     [direccionEnteDefault]
@@ -93,6 +69,7 @@ export function LlamadoPublicoForm({
   const [hydrated, setHydrated] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [estado, setEstado] = useState<EstadoMicromoduloApi | undefined>();
 
   const form = useForm<LlamadoPublicoFormInputValues>({
     resolver: zodResolver(
@@ -104,26 +81,45 @@ export function LlamadoPublicoForm({
   });
 
   useEffect(() => {
-    const stored = loadStoredForm(expedienteId, defaultValues);
-    form.reset(stored.values);
-    setHydrated(true);
-  }, [defaultValues, expedienteId, form]);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await obtenerLlamado(expedienteId);
+        if (cancelled) return;
+
+        setEstado(response.estado);
+        form.reset(llamadoFromApi(response as Record<string, unknown>, direccionEnteDefault));
+      } catch {
+        if (!cancelled) form.reset(defaultValues);
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultValues, direccionEnteDefault, expedienteId, form]);
 
   const values = form.watch();
   const canSubmit = hydrated && !readOnly && llamadoPublicoFormSchema.safeParse(values).success;
 
-  const goToPanel = () => {
+  const goToPanel = useCallback(() => {
     router.push(expedienteFase1TabPath(basePath, expedienteId));
-  };
+  }, [basePath, expedienteId, router]);
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (readOnly) return;
     setIsSaving(true);
     try {
-      persistForm(expedienteId, { values: form.getValues(), status: "draft" });
-      saveMicromoduleDraft("llamado");
+      await ensureMicromoduloEditable(expedienteId, "llamado", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      await guardarBorradorMicromodulo(expedienteId, "llamado", llamadoToApi(form.getValues()));
       toast.success("Borrador del llamado guardado.");
       goToPanel();
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -136,13 +132,25 @@ export function LlamadoPublicoForm({
       const isValid = await form.trigger(undefined, { shouldFocus: true });
       if (!isValid) return;
 
-      persistForm(expedienteId, { values: form.getValues(), status: "completed" });
-      completeMicromodule("llamado");
+      await ensureMicromoduloEditable(expedienteId, "llamado", estado);
+      if (estado === "COMPLETADO") setEstado("BORRADOR");
+      await guardarBorradorMicromodulo(expedienteId, "llamado", llamadoToApi(form.getValues()));
+      await completarMicromodulo(expedienteId, "llamado");
       setIsConfirmOpen(true);
+    } catch (error) {
+      toast.error(formatMicromoduloErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Cargando llamado…
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -191,35 +199,18 @@ export function LlamadoPublicoForm({
                           type="button"
                           variant="outline"
                           disabled={isSaving || isConfirmOpen}
-                          onClick={handleSaveDraft}
+                          onClick={() => void handleSaveDraft()}
                           className="border-border text-muted-foreground hover:bg-muted"
                         >
                           {LLAMADO_PUBLICO_DRAFT_LABEL}
                         </Button>
-
-                        <TooltipProvider delayDuration={100}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex">
-                                <Button
-                                  type="submit"
-                                  disabled={!canSubmit || isSaving || isConfirmOpen}
-                                  className="bg-navy text-white hover:bg-navy-hover disabled:opacity-50"
-                                >
-                                  {isSaving ? "Guardando..." : LLAMADO_PUBLICO_SUBMIT_LABEL}
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            {!canSubmit ? (
-                              <TooltipContent
-                                side="top"
-                                className="max-w-[260px] text-center text-xs"
-                              >
-                                {LLAMADO_PUBLICO_SUBMIT_DISABLED_TOOLTIP}
-                              </TooltipContent>
-                            ) : null}
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                          type="submit"
+                          disabled={!canSubmit || isSaving || isConfirmOpen}
+                          className="bg-navy text-white hover:bg-navy-hover disabled:opacity-50"
+                        >
+                          {isSaving ? "Guardando..." : LLAMADO_PUBLICO_SUBMIT_LABEL}
+                        </Button>
                       </>
                     )}
                   </div>

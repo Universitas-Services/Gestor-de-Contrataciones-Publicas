@@ -59,6 +59,31 @@ export const CUENTA_PAGO_PLIEGO_MAX = 20;
 export const TITULAR_PAGO_PLIEGO_MAX = 100;
 export const RIF_PAGO_PLIEGO_MAX = 100;
 
+const NUMERO_CUENTA_SEGMENT_LENGTHS = [4, 4, 2, 10];
+
+/** Dígitos únicos para el API (máx. 20). */
+export function numeroCuentaDigitsOnly(value: string): string {
+  return value.replace(/\D/g, "").slice(0, CUENTA_PAGO_PLIEGO_MAX);
+}
+
+/** Formato visual ####-####-##-########## desde dígitos o valor ya formateado. */
+export function formatNumeroCuentaDisplay(value: string): string {
+  const digits = numeroCuentaDigitsOnly(value);
+  if (!digits) return "";
+
+  const parts: string[] = [];
+  let cursor = 0;
+
+  for (const length of NUMERO_CUENTA_SEGMENT_LENGTHS) {
+    const part = digits.slice(cursor, cursor + length);
+    if (!part) break;
+    parts.push(part);
+    cursor += length;
+  }
+
+  return parts.join("-");
+}
+
 export function getCuentasBancariasEnteStorageKey(enteId: string): string {
   return `ente-cuentas-bancarias:${enteId}`;
 }
@@ -75,33 +100,6 @@ export function createEmptyCuentaBancariaFormValues(): CuentaBancariaEnteFormVal
 
 export function labelTipoCuenta(tipo: TipoCuentaBancaria): string {
   return TIPO_CUENTA_OPTIONS.find((o) => o.value === tipo)?.label ?? tipo;
-}
-
-export function createCuentaBancariaId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `cuenta-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-export function loadCuentasBancariasEnte(enteId: string): CuentaBancariaEnte[] {
-  if (typeof window === "undefined" || !enteId) return [];
-  try {
-    const raw = window.localStorage.getItem(getCuentasBancariasEnteStorageKey(enteId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is CuentaBancariaEnte =>
-        Boolean(item) &&
-        typeof item === "object" &&
-        typeof (item as CuentaBancariaEnte).id === "string" &&
-        typeof (item as CuentaBancariaEnte).bancoPagoPliego === "string" &&
-        typeof (item as CuentaBancariaEnte).cuentaPagoPliego === "string"
-    );
-  } catch {
-    return [];
-  }
 }
 
 export function formatCuentaBancariaOptionLabel(cuenta: CuentaBancariaEnte): string {

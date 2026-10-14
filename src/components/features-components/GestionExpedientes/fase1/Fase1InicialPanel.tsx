@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -15,8 +14,8 @@ import {
   especificacionesTecnicasPath,
   llamadoPublicoPath,
   modeloContratoPath,
+  resolveFase1SubTabParam,
 } from "@/lib/utils/fase1InicialRoutes";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   FASE1_INICIAL_MICROMODULES,
@@ -39,26 +38,54 @@ export interface Fase1InicialPanelProps {
   expedienteId: string;
   readOnly?: boolean;
   basePath?: string;
-  fase1Creada?: boolean;
 }
 
 export function Fase1InicialPanel({
   expedienteId,
   readOnly = false,
   basePath = "/gestion-expedientes",
-  fase1Creada = false,
 }: Fase1InicialPanelProps) {
   const router = useRouter();
-  const [activeSubTab, setActiveSubTab] = useState<Fase1InicialSubTab>("preparatoria");
+  const searchParams = useSearchParams();
+  const fase1SubParam = searchParams.get("fase1Sub");
+  const queryString = searchParams.toString();
+  const [activeSubTab, setActiveSubTab] = useState<Fase1InicialSubTab>(() =>
+    resolveFase1SubTabParam(fase1SubParam)
+  );
   const [activeMicromodule, setActiveMicromodule] = useState<MicromoduleConfig | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [presupuestoModalOpen, setPresupuestoModalOpen] = useState(false);
 
+  useEffect(() => {
+    setActiveSubTab(resolveFase1SubTabParam(fase1SubParam));
+  }, [fase1SubParam]);
+
+  const handleSubTabChange = useCallback(
+    (value: Fase1InicialSubTab) => {
+      const current = resolveFase1SubTabParam(fase1SubParam);
+      const params = new URLSearchParams(queryString);
+      params.set("tab", "fase-1");
+      if (value === "preparatoria") {
+        params.delete("fase1Sub");
+      } else {
+        params.set("fase1Sub", value);
+      }
+      const nextQuery = params.toString();
+      if (value === current && value === activeSubTab && nextQuery === queryString) {
+        return;
+      }
+      setActiveSubTab(value);
+      if (nextQuery === queryString) return;
+      router.replace(`${basePath}/${expedienteId}?${nextQuery}`, { scroll: false });
+    },
+    [activeSubTab, basePath, expedienteId, fase1SubParam, queryString, router]
+  );
+
   const {
     state,
     hydrated,
-    completeMicromodule,
-    syncPresupuestoCompletion,
+    loading,
+    refreshProgreso,
     generateDocument,
     regenerateDocument,
     getUnlockTooltip,
@@ -67,8 +94,9 @@ export function Fase1InicialPanel({
   const preparatoriaModules = useMemo(() => getMicromodulesForSubTab("preparatoria"), []);
   const configuracionModules = useMemo(() => getMicromodulesForSubTab("configuracion-pliego"), []);
 
-  const fase1Href = `${basePath}/${expedienteId}/fase-1`;
-  const wizardLabel = fase1Creada ? "Editar fase de preparación" : "Iniciar fase de preparación";
+  const handlePresupuestoItemsChange = useCallback(() => {
+    void refreshProgreso();
+  }, [refreshProgreso]);
 
   const handleMicromoduleAction = (config: MicromoduleConfig) => {
     const status = state.micromodules[config.id];
@@ -134,7 +162,6 @@ export function Fase1InicialPanel({
 
   const handleSaveMicromodule = () => {
     if (!activeMicromodule || readOnly) return;
-    completeMicromodule(activeMicromodule.id);
     toast.success(`${activeMicromodule.title} guardado correctamente.`);
   };
 
@@ -165,10 +192,9 @@ export function Fase1InicialPanel({
     </div>
   );
 
-  if (!hydrated) {
+  if (!hydrated || loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="ml-auto h-10 w-56" />
         <Skeleton className="h-11 w-full max-w-3xl" />
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
           <Skeleton className="h-[480px] w-full" />
@@ -180,24 +206,7 @@ export function Fase1InicialPanel({
 
   return (
     <div className="space-y-6">
-      {!readOnly ? (
-        <div className="flex justify-end">
-          <Button
-            asChild
-            className="bg-navy font-semibold text-white shadow-sm hover:bg-navy-hover"
-          >
-            <Link href={fase1Href}>{wizardLabel}</Link>
-          </Button>
-        </div>
-      ) : null}
-
-      {state.phaseComplete ? (
-        <p className="text-sm font-semibold text-green-600">
-          Fase inicial completada. Puede avanzar a la Fase 2 cuando el backend lo habilite.
-        </p>
-      ) : null}
-
-      <Fase1SubTabs value={activeSubTab} onChange={setActiveSubTab} />
+      <Fase1SubTabs value={activeSubTab} onChange={handleSubTabChange} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,32%)]">
         <div className="min-w-0">
@@ -208,6 +217,7 @@ export function Fase1InicialPanel({
 
         <div className="sticky top-24 w-full min-w-0 space-y-4 self-start">
           <DocumentosProcedimientoPanel
+            expedienteId={expedienteId}
             documents={state.documents}
             micromodules={state.micromodules}
             readOnly={readOnly}
@@ -227,7 +237,7 @@ export function Fase1InicialPanel({
           expedienteId={expedienteId}
           readOnly={readOnly}
           micromoduleStatus={state.micromodules["presupuesto-base"]}
-          onItemsChange={syncPresupuestoCompletion}
+          onItemsChange={handlePresupuestoItemsChange}
           createModalOpen={presupuestoModalOpen}
           onCreateModalOpenChange={setPresupuestoModalOpen}
         />

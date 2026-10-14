@@ -31,7 +31,7 @@ interface ClausulaEditorDialogProps {
   mode: ClausulaEditorMode;
   clause: ClausulaBase | ClausulaEnModelo | null;
   readOnly?: boolean;
-  onSave: (payload: ClausulaEditorSavePayload) => void;
+  onSave: (payload: ClausulaEditorSavePayload) => void | Promise<void>;
 }
 
 export function ClausulaEditorDialog({
@@ -45,14 +45,13 @@ export function ClausulaEditorDialog({
   const [titulo, setTitulo] = useState("");
   const [cuerpoHtml, setCuerpoHtml] = useState("");
   const [saveToBiblioteca, setSaveToBiblioteca] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    queueMicrotask(() => {
-      setTitulo(clause?.titulo ?? "");
-      setCuerpoHtml(clause?.cuerpoHtml ?? "<p></p>");
-      setSaveToBiblioteca(false);
-    });
+    setTitulo(clause?.titulo ?? "");
+    setCuerpoHtml(clause?.cuerpoHtml ?? "<p></p>");
+    setSaveToBiblioteca(false);
   }, [clause, open]);
 
   const variables = clause?.variablesSugeridas ?? [];
@@ -88,7 +87,7 @@ export function ClausulaEditorDialog({
             <Input
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              disabled={readOnly}
+              disabled={readOnly || saving}
               className="font-semibold uppercase"
             />
           </div>
@@ -118,7 +117,7 @@ export function ClausulaEditorDialog({
               key={editorKey}
               value={cuerpoHtml}
               onChange={setCuerpoHtml}
-              disabled={readOnly}
+              disabled={readOnly || saving}
             />
           </div>
 
@@ -127,6 +126,7 @@ export function ClausulaEditorDialog({
               <Checkbox
                 id="save-biblioteca"
                 checked={saveToBiblioteca}
+                disabled={saving}
                 onCheckedChange={(checked) => setSaveToBiblioteca(checked === true)}
               />
               <Label htmlFor="save-biblioteca" className="cursor-pointer text-sm leading-snug">
@@ -148,14 +148,21 @@ export function ClausulaEditorDialog({
           {!readOnly ? (
             <Button
               type="button"
-              disabled={!titulo.trim()}
-              onClick={() =>
-                onSave({
-                  titulo: titulo.trim(),
-                  cuerpoHtml,
-                  saveToBiblioteca,
-                })
-              }
+              disabled={!titulo.trim() || saving}
+              onClick={() => {
+                void (async () => {
+                  setSaving(true);
+                  try {
+                    await onSave({
+                      titulo: titulo.trim(),
+                      cuerpoHtml,
+                      saveToBiblioteca,
+                    });
+                  } finally {
+                    setSaving(false);
+                  }
+                })();
+              }}
               className="bg-navy text-white hover:bg-navy-hover"
             >
               {isAddFlow ? (
@@ -163,7 +170,7 @@ export function ClausulaEditorDialog({
               ) : (
                 <Check className="mr-1.5 h-4 w-4" />
               )}
-              {saveLabel}
+              {saving ? "Guardando…" : saveLabel}
             </Button>
           ) : null}
         </DialogFooter>

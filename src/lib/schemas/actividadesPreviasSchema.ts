@@ -5,7 +5,10 @@ const MAX_TEXT_255 = 255;
 const MAX_TEXT_500 = 500;
 
 function parseDecimalString(value: string) {
-  const normalized = value.trim().replace(/\./g, "").replace(",", ".");
+  const raw = value.trim();
+  if (!raw) return Number.NaN;
+  if (/^\d+(\.\d+)?$/.test(raw)) return Number(raw);
+  const normalized = raw.replace(/\./g, "").replace(",", ".");
   return Number(normalized);
 }
 
@@ -33,13 +36,13 @@ function requiredPositiveIntegerString(message: string) {
     .refine((value) => Number(value) > 0, "Debe ser mayor a cero");
 }
 
-function requiredPositiveDecimalString(message: string) {
+function optionalDecimalString() {
   return z
-    .string({ message })
-    .trim()
-    .min(1, message)
-    .refine((value) => !Number.isNaN(parseDecimalString(value)), "Debe ingresar un número válido")
-    .refine((value) => parseDecimalString(value) > 0, "Debe ser mayor a cero");
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value === "" || !Number.isNaN(parseDecimalString(value)), {
+      message: "Debe ingresar un número válido",
+    });
 }
 
 function requiredVanScoreString(message: string) {
@@ -88,7 +91,8 @@ const baseActividadesPreviasSchema = z.object({
   viabilidadContratoMarcoAuAu: requiredBoolean(
     "Indique la viabilidad de agrupar o utilizar contrato marco"
   ),
-  justificacionContratoMarcoAuAu: z.string().max(MAX_TEXT_255).optional(),
+  // DB: fase_preparatoria.justificacion_contrato_marco_au_au VARCHAR(100)
+  justificacionContratoMarcoAuAu: z.string().max(MAX_TEXT_100).optional(),
   fecEstudioMercadoAuAu: requiredDateString("Indique la fecha del estudio de mercado"),
   numCertificacionPresupuestariaAuAu: requiredText(
     "Indique el número de referencia de la CDP",
@@ -116,6 +120,16 @@ const baseActividadesPreviasSchema = z.object({
   puntuacionBonoLocalAuAu: z.string().optional(),
   indBonoSujetoAuAu: z.boolean().optional(),
   puntuacionBonoSujetoAuAu: z.string().optional(),
+  requiereGarantiaLaboralAuAu: requiredBoolean("Indique si se exigirá la Garantía Laboral"),
+  porcentajeGarantiaLaboralAuAu: optionalDecimalString(),
+  retencionFianzaLaboralAuAu: z.boolean().optional(),
+  polizaResponsabilidadCivilAuAu: requiredBoolean(
+    "Indique si se exigirá Póliza de Responsabilidad Civil"
+  ),
+  porcentajeResponsabilidadCivilAuAu: optionalDecimalString(),
+  montoResponsabilidadCivilBsAuAu: optionalDecimalString(),
+  anticipoContratoAuAu: requiredBoolean("Indique si desea otorgar un Anticipo Contractual"),
+  porcentajeAnticipoAuAu: optionalDecimalString(),
 });
 
 export type ActividadesPreviasFormInputValues = z.input<typeof baseActividadesPreviasSchema>;
@@ -219,7 +233,7 @@ export function buildActividadesPreviasFormSchema(
       }
 
       if (data.indPrefLocalAuAu === true) {
-        const result = requiredPositiveDecimalString(
+        const result = requiredPositiveIntegerString(
           "Indique el puntaje adicional local"
         ).safeParse(data.puntuacionBonoLocalAuAu ?? "");
         if (!result.success) {
@@ -232,7 +246,7 @@ export function buildActividadesPreviasFormSchema(
       }
 
       if (data.indBonoSujetoAuAu === true) {
-        const result = requiredPositiveDecimalString(
+        const result = requiredPositiveIntegerString(
           "Indique el puntaje adicional por categoría de sujeto"
         ).safeParse(data.puntuacionBonoSujetoAuAu ?? "");
         if (!result.success) {
@@ -240,6 +254,87 @@ export function buildActividadesPreviasFormSchema(
             code: "custom",
             path: ["puntuacionBonoSujetoAuAu"],
             message: result.error.issues[0]?.message ?? "Puntaje por sujeto inválido",
+          });
+        }
+      }
+    }
+
+    if (data.requiereGarantiaLaboralAuAu === true) {
+      const pct = data.porcentajeGarantiaLaboralAuAu?.trim() ?? "";
+      if (!pct) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["porcentajeGarantiaLaboralAuAu"],
+          message: "Indique el porcentaje de la Garantía Laboral",
+        });
+      } else {
+        const num = parseDecimalString(pct);
+        if (Number.isNaN(num) || num < 0 || num > 100) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["porcentajeGarantiaLaboralAuAu"],
+            message: "Debe ser un valor entre 0 y 100",
+          });
+        }
+      }
+      if (data.retencionFianzaLaboralAuAu !== true && data.retencionFianzaLaboralAuAu !== false) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["retencionFianzaLaboralAuAu"],
+          message: "Indique si se admitirá retención para la Garantía Laboral",
+        });
+      }
+    }
+
+    if (data.polizaResponsabilidadCivilAuAu === true) {
+      const pct = data.porcentajeResponsabilidadCivilAuAu?.trim() ?? "";
+      if (!pct) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["porcentajeResponsabilidadCivilAuAu"],
+          message: "Indique el porcentaje de la suma asegurada",
+        });
+      } else {
+        const num = parseDecimalString(pct);
+        if (Number.isNaN(num) || num < 0 || num > 100) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["porcentajeResponsabilidadCivilAuAu"],
+            message: "Debe ser un valor entre 0 y 100",
+          });
+        }
+      }
+      const monto = data.montoResponsabilidadCivilBsAuAu?.trim() ?? "";
+      if (!monto) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["montoResponsabilidadCivilBsAuAu"],
+          message: "Indique el monto total de la Suma Asegurada",
+        });
+      } else if (Number.isNaN(parseDecimalString(monto)) || parseDecimalString(monto) <= 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["montoResponsabilidadCivilBsAuAu"],
+          message: "Debe ser un monto mayor a cero",
+        });
+      }
+    }
+
+    if (data.anticipoContratoAuAu === true) {
+      const pct = data.porcentajeAnticipoAuAu?.trim() ?? "";
+      if (!pct) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["porcentajeAnticipoAuAu"],
+          message: "Indique el porcentaje de anticipo",
+        });
+      } else {
+        const num = parseDecimalString(pct);
+        if (Number.isNaN(num) || num < 0 || num > 50) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["porcentajeAnticipoAuAu"],
+            message: "El anticipo debe ser un valor entre 0 y 50",
           });
         }
       }

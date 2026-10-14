@@ -116,9 +116,9 @@ describe("Evaluación técnica y económica — bolsa compartida", () => {
     ).toBe(true);
   });
 
-  it("umbral técnico mayor al total técnico bloquea", () => {
+  it("umbral técnico mayor a 100 bloquea", () => {
     const values = validMatrix();
-    values.puntuacionMinimaEvaluacionTecnicaAuAu = 50;
+    values.puntuacionMinimaEvaluacionTecnicaAuAu = 101;
     expect(canSubmitEvaluacionTecnicaEconomica(values)).toBe(false);
   });
 });

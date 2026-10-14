@@ -32,6 +32,7 @@ export default async function GestionAspectosGeneralesPage({ params }: Props) {
     <div className="mx-auto flex w-full min-w-0 max-w-full flex-col items-start overflow-x-hidden p-0">
       <AspectosGeneralesForm
         expedienteId={id}
+        enteId={user.enteId ?? undefined}
         readOnly={isReadOnlyRole(user.role)}
         basePath="/gestion-expedientes"
       />
