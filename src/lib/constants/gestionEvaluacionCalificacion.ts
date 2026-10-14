@@ -244,7 +244,6 @@ export function buildSobre2EvaluacionPayload(
     criterio4Evaluacion: c4 ?? "",
     puntuacionCriterio4: clampMax(p4, CRITERIOS_MATRIZ_MAX[3]),
     montoOfertaBs: parseFloat(cleanMonto) || 0,
-    posicionPrelacion: state.posicionPrelacion,
     oferenteCalificado: true,
     motivoDescalificacion: "",
   };

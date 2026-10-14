@@ -126,17 +126,25 @@ export function GestionSobre2ChecklistForm({
       return;
     }
 
+    const hayAlgunNo = Object.values(respuestas).some((v) => v === "NO");
+
     setIsSaving(true);
     try {
       const payload = buildSobre2ChecklistPayload(respuestas, observaciones);
       await evaluarSobre2ChecklistFase3(evaluacionId, payload);
 
-      await generarListaCotejo(expedienteId, evaluacionId)
-        .then(() => toast.success("Lista de cotejo generada correctamente."))
-        .catch(() => toast.warning("Sobre 2 guardado, pero la lista de cotejo no pudo generarse."));
+      await generarListaCotejo(expedienteId).catch(() =>
+        toast.warning("Sobre 2 guardado, pero la lista de cotejo no pudo generarse.")
+      );
 
       const nombre = String(oferente?.nombreProveedorEvaluado ?? "oferente");
-      toast.success(`Lista de cotejo de ${nombre} guardada con éxito.`);
+      if (hayAlgunNo) {
+        toast.error(
+          `${nombre} ha quedado descalificado: uno o más recaudos del Sobre 2 no fueron consignados.`
+        );
+      } else {
+        toast.success(`Lista de cotejo de ${nombre} guardada con éxito.`);
+      }
       router.push(expedienteTabPath(BASE_PATH, expedienteId, RETURN_TAB));
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Error al guardar el Sobre 2");

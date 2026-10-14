@@ -13,17 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useRoleAccess } from "@/hooks/use-role-access";
 import {
   CRITERIOS_MATRIZ_MAX,
-  OPCIONES_PRELACION_DEFAULT,
   buildCalificacionEvaluacionTecnicaPayload,
   buildSobre2EvaluacionPayload,
   emptyMatrizFormState,
@@ -39,7 +31,6 @@ import {
   evaluarSobre2EvaluacionFase3,
   listarEvaluacionesFase3,
   obtenerEvaluacionFase3,
-  obtenerMetricasEvaluacionFase3,
 } from "@/services/oferenteService";
 
 const BASE_PATH = "/gestion-expedientes";
@@ -60,24 +51,6 @@ function parseEvaluacionesList(raw: unknown): Record<string, unknown>[] {
   return [];
 }
 
-const ORDINALES = [
-  "Primera",
-  "Segunda",
-  "Tercera",
-  "Cuarta",
-  "Quinta",
-  "Sexta",
-  "Séptima",
-  "Octava",
-  "Novena",
-  "Décima",
-];
-
-function generarOpcionesPrelacion(total: number): string[] {
-  const n = Math.max(total, OPCIONES_PRELACION_DEFAULT.length);
-  return Array.from({ length: Math.min(n, ORDINALES.length) }, (_, i) => `${ORDINALES[i]} opción`);
-}
-
 export function GestionMatrizForm({ expedienteId, evaluacionId }: GestionMatrizFormProps) {
   const router = useRouter();
   const { readOnly } = useRoleAccess();
@@ -88,9 +61,6 @@ export function GestionMatrizForm({ expedienteId, evaluacionId }: GestionMatrizF
   const [modalidadLabel, setModalidadLabel] = useState("EN PROCESO");
   const [showVan, setShowVan] = useState(false);
   const [form, setForm] = useState<MatrizFormState>(emptyMatrizFormState);
-  const [opcionesPrelacion, setOpcionesPrelacion] = useState<string[]>([
-    ...OPCIONES_PRELACION_DEFAULT,
-  ]);
   const [isSaving, setIsSaving] = useState(false);
 
   const criterios = useMemo(() => getCriteriosMatrizPorTipo(tipoContratacion), [tipoContratacion]);
@@ -118,17 +88,12 @@ export function GestionMatrizForm({ expedienteId, evaluacionId }: GestionMatrizF
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [exp, evaluacionesRaw, evaluacionData, metricas]: [
-          unknown,
-          unknown,
-          unknown,
-          unknown,
-        ] = await Promise.all([
-          obtenerExpediente(expedienteId),
-          listarEvaluacionesFase3(expedienteId),
-          obtenerEvaluacionFase3(evaluacionId).catch(() => null),
-          obtenerMetricasEvaluacionFase3(expedienteId).catch(() => null),
-        ]);
+        const [exp, evaluacionesRaw, evaluacionData]: [unknown, unknown, unknown] =
+          await Promise.all([
+            obtenerExpediente(expedienteId),
+            listarEvaluacionesFase3(expedienteId),
+            obtenerEvaluacionFase3(evaluacionId).catch(() => null),
+          ]);
 
         const list = parseEvaluacionesList(evaluacionesRaw);
         const target =
@@ -156,12 +121,6 @@ export function GestionMatrizForm({ expedienteId, evaluacionId }: GestionMatrizF
               : undefined;
           setShowVan(sobre2?.declaracionAutocalculoVan === true);
         }
-
-        const totalOferentes =
-          (metricas as { totalOferentes?: number } | null)?.totalOferentes ?? list.length;
-        if (totalOferentes > 0) {
-          setOpcionesPrelacion(generarOpcionesPrelacion(totalOferentes));
-        }
       } catch {
         toast.error("Error al cargar la matriz de evaluación");
       } finally {
@@ -188,10 +147,6 @@ export function GestionMatrizForm({ expedienteId, evaluacionId }: GestionMatrizF
     }
     if (showVan && form.porcentajeVan === "") {
       toast.error("Indique el porcentaje VAN");
-      return;
-    }
-    if (!form.posicionPrelacion) {
-      toast.error("Debe indicar el orden de prelación");
       return;
     }
 
@@ -414,27 +369,14 @@ export function GestionMatrizForm({ expedienteId, evaluacionId }: GestionMatrizF
 
               <div>
                 <label className="block text-[13px] font-bold text-color-titulos">
-                  Indique en el orden de prelación, la posición de la empresa según su evaluación.
+                  Orden de prelación
                 </label>
                 <p className="mb-2 text-[11px] italic text-muted-foreground">
-                  Ejemplo: Primera opción
+                  Lo calcula el sistema al confirmar la evaluación, según el puntaje.
                 </p>
-                <Select
-                  value={form.posicionPrelacion || undefined}
-                  onValueChange={readOnly ? undefined : (v) => patch("posicionPrelacion", v)}
-                  disabled={readOnly}
-                >
-                  <SelectTrigger className="h-11 max-w-md text-[13px]">
-                    <SelectValue placeholder="Seleccione la prelación..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {opcionesPrelacion.map((opt) => (
-                      <SelectItem key={opt} value={opt} className="text-[13px]">
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-sm font-semibold text-navy">
+                  {form.posicionPrelacion?.trim() ? form.posicionPrelacion : "Pendiente de cálculo"}
+                </p>
               </div>
             </CardContent>
           </Card>

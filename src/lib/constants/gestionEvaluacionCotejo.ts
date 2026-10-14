@@ -93,7 +93,11 @@ export const GESTION_SOBRE1_ITEMS: ChecklistItemDef[] = [
   },
 ];
 
-/** Sección B — Sobre N°2 checklist (11 ítems) — gestión */
+/**
+ * Sección B — Sobre N°2 checklist (9 ítems) — gestión.
+ * garantiaFielCumpl y fianzaLaboral se excluyen de la evaluación porque son
+ * documentos requeridos post-adjudicación, no al momento de la recepción.
+ */
 export const GESTION_SOBRE2_CHECKLIST_ITEMS: ChecklistItemDef[] = [
   {
     id: 1,
@@ -141,25 +145,13 @@ export const GESTION_SOBRE2_CHECKLIST_ITEMS: ChecklistItemDef[] = [
   },
   {
     id: 8,
-    texto: "¿Consignó garantía de fiel cumplimiento del contrato?",
-    field: "garantiaFielCumpl",
-    obsField: "obsGarantiaFielCumpl",
-  },
-  {
-    id: 9,
     texto:
       "¿Consignó carta de compromiso de tiempo de ejecución, disponibilidad y garantía técnica / tiempo de respuesta?",
     field: "cartaCompromiso",
     obsField: "obsCartaCompromiso",
   },
   {
-    id: 10,
-    texto: "¿Consignó Fianza Laboral? (Si aplica)",
-    field: "fianzaLaboral",
-    obsField: "obsFianzaLaboral",
-  },
-  {
-    id: 11,
+    id: 9,
     texto: "¿Consignó experiencia del personal técnico clave? (Si aplica)",
     field: "experienciaPersonalTecnico",
     obsField: "obsExperienciaPersonalTecnico",
@@ -233,14 +225,15 @@ export function buildSobre2ChecklistPayload(
     obsDeclaracionAutocalculoVan: obs(6),
     cartaNotificaciones: get(7),
     obsCartaNotificaciones: obs(7),
-    garantiaFielCumpl: get(8),
-    obsGarantiaFielCumpl: obs(8),
-    cartaCompromiso: get(9),
-    obsCartaCompromiso: obs(9),
-    fianzaLaboral: get(10),
-    obsFianzaLaboral: obs(10),
-    experienciaPersonalTecnico: get(11),
-    obsExperienciaPersonalTecnico: obs(11),
+    // Excluidos de la evaluación (documentos post-adjudicación)
+    garantiaFielCumpl: false,
+    obsGarantiaFielCumpl: "",
+    cartaCompromiso: get(8),
+    obsCartaCompromiso: obs(8),
+    fianzaLaboral: false,
+    obsFianzaLaboral: "",
+    experienciaPersonalTecnico: get(9),
+    obsExperienciaPersonalTecnico: obs(9),
   };
 }
 

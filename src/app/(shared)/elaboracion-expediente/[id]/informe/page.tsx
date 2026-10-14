@@ -25,8 +25,6 @@ interface InformeState {
   actualizacionPresupuesto: "SI" | "NO" | null;
   montoNuevoPresupuesto: string;
   justificacionActualizacionPresup: string;
-  indVerificadoGarantia: "SI" | "NO" | null;
-  indVerificadoCrs: "SI" | "NO" | null;
   observacionFormalidades: "SI" | "NO" | null;
   omisionFormalidades: string;
   subsanacionActo: string;
@@ -38,8 +36,6 @@ const initialState: InformeState = {
   actualizacionPresupuesto: null,
   montoNuevoPresupuesto: "",
   justificacionActualizacionPresup: "",
-  indVerificadoGarantia: null,
-  indVerificadoCrs: null,
   observacionFormalidades: null,
   omisionFormalidades: "",
   subsanacionActo: "",
@@ -167,14 +163,6 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             montoNuevoPresupuesto:
               data.montoNuevoPresupuesto != null ? String(data.montoNuevoPresupuesto) : "",
             justificacionActualizacionPresup: data.justificacionActualizacionPresup || "",
-            indVerificadoGarantia:
-              data.indVerificadoGarantia === true
-                ? "SI"
-                : data.indVerificadoGarantia === false
-                  ? "NO"
-                  : null,
-            indVerificadoCrs:
-              data.indVerificadoCrs === true ? "SI" : data.indVerificadoCrs === false ? "NO" : null,
             observacionFormalidades:
               data.observacionFormalidades === true
                 ? "SI"
@@ -207,8 +195,6 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
   // ── Validación: todas las preguntas booleanas respondidas ──
   const todasRespondidas =
     form.actualizacionPresupuesto !== null &&
-    form.indVerificadoGarantia !== null &&
-    form.indVerificadoCrs !== null &&
     form.observacionFormalidades !== null &&
     form.plazoEjecucionOfertaGanadora.trim() !== "";
 
@@ -239,8 +225,6 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
             : null,
         justificacionActualizacionPresup:
           form.actualizacionPresupuesto === "SI" ? form.justificacionActualizacionPresup : null,
-        indVerificadoGarantia: form.indVerificadoGarantia === "SI",
-        indVerificadoCrs: form.indVerificadoCrs === "SI",
         observacionFormalidades: form.observacionFormalidades === "SI",
         omisionFormalidades:
           form.observacionFormalidades === "SI" ? form.omisionFormalidades : null,
@@ -355,24 +339,6 @@ export default function InformeRecomendacionPage({ params }: { params: Promise<{
               </fieldset>
             )}
           </PreguntaCard>
-
-          {/* P2: Garantía de mantenimiento */}
-          <PreguntaCard
-            pregunta="Indique si se verificó que todos los oferentes calificados consignaron la garantía de mantenimiento de la oferta."
-            referencia="Artículos 64 LCP; 19 NORMAS DE CONTROL INTERNO SUNAI."
-            valor={form.indVerificadoGarantia}
-            onToggle={(v) => set("indVerificadoGarantia", v)}
-            disabled={readOnly}
-          />
-
-          {/* P3: Compromiso de Responsabilidad Social */}
-          <PreguntaCard
-            pregunta="Indique si se verificó que todos los oferentes calificados presentaron el compromiso de responsabilidad social."
-            referencia="Artículos 66.15 LCP; 5 NORMAS DE CONTROL INTERNO SUNAI."
-            valor={form.indVerificadoCrs}
-            onToggle={(v) => set("indVerificadoCrs", v)}
-            disabled={readOnly}
-          />
 
           {/* P4: Formalidades / Omisiones */}
           <PreguntaCard

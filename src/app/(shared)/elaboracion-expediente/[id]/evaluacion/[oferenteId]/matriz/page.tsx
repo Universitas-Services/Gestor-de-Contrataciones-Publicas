@@ -40,8 +40,8 @@ import {
 import { obtenerExpediente } from "@/services/expedienteService";
 import {
   generarListaCotejo,
-  previewListaCotejoEvaluacion,
-  descargarListaCotejoEvaluacion,
+  previewListaCotejo,
+  descargarListaCotejo,
 } from "@/services/generadorDocumentosService";
 import { ManualPreviewDialog } from "@/components/dashboards/admin_ente/ManualPreviewDialog";
 import { useRoleAccess } from "@/hooks/use-role-access";
@@ -339,7 +339,7 @@ export default function MatrizEvaluacionPage({
       await evaluarSobre2Fase3(oferenteId, payload);
 
       // Generar lista de cotejo al guardar evaluación calificada
-      await generarListaCotejo(id, oferenteId)
+      await generarListaCotejo(id)
         .then(() => toast.success("Lista de cotejo generada correctamente."))
         .catch(() =>
           toast.warning(
@@ -366,7 +366,7 @@ export default function MatrizEvaluacionPage({
     setIsPreviewing(true);
     setPreviewOpen(true);
     try {
-      const result = await previewListaCotejoEvaluacion(oferenteId);
+      const result = await previewListaCotejo(id);
       setPreviewUrl(result.urlArchivo);
       setPreviewTitle(result.tituloDocumento || "Lista de Cotejo");
     } catch (error: unknown) {
@@ -382,7 +382,7 @@ export default function MatrizEvaluacionPage({
   const handleDownloadCotejo = async () => {
     setIsDownloading(true);
     try {
-      const { data, fileName } = await descargarListaCotejoEvaluacion(oferenteId);
+      const { data, fileName } = await descargarListaCotejo(id);
       const blob = new Blob([new Uint8Array(data)], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });

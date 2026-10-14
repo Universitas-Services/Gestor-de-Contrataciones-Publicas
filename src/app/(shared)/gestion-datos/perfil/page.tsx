@@ -9,10 +9,10 @@ import Link from "next/link";
 import { ROLE_ROUTES } from "@/lib/constants/routes";
 import { canAccessEnteModules, isReadOnlyRole } from "@/lib/permissions/roleAccess";
 import { Building2, Pencil, IdCard, Network, MapPin } from "lucide-react";
-import Image from "next/image";
 import { ManualButtons } from "@/components/dashboards/admin_ente/ManualButtons";
 import { IoMdAttach } from "react-icons/io";
 import { ManualHistoryTable } from "@/components/dashboards/admin_ente/ManualHistoryTable";
+import { CuentasBancariasSection } from "@/components/features-components/PerfilEnte/CuentasBancariasSection";
 
 export default async function PerfilEntePage() {
   const user = await getCurrentUser();
@@ -229,6 +229,11 @@ export default async function PerfilEntePage() {
               </section>
             </div>
           </div>
+        </div>
+
+        {/* Cuentas bancarias del ente */}
+        <div className="mt-8">
+          <CuentasBancariasSection enteId={user.enteId} readOnly={readOnly} />
         </div>
       </div>
     </div>

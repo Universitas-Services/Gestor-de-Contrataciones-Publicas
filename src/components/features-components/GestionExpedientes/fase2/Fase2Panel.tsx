@@ -15,6 +15,7 @@ import {
 import { FaRegTrashAlt, FaRegClipboard } from "react-icons/fa";
 import { BsArrowClockwise } from "react-icons/bs";
 import { IoMdWarning } from "react-icons/io";
+import { AlertCircle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,16 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { Separator } from "@/components/ui/separator";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 import { type Adquirente, type Oferente } from "@/types/expediente.types";
 import {
@@ -62,8 +56,9 @@ import {
   regenerarDocumento,
   previewDocumento,
   descargarDocumento,
-  previewListaCotejoEvaluacion,
-  descargarListaCotejoEvaluacion,
+  generarListaCotejo,
+  previewListaCotejo,
+  descargarListaCotejo,
   type DocumentoStatus,
 } from "@/services/generadorDocumentosService";
 import type { AdquirenteFormValues, OferenteFormValues } from "@/lib/schemas/fase2Schema";
@@ -74,10 +69,9 @@ import {
   type CausalDeclaratoriaDesierto,
 } from "@/lib/constants/fase2Desierto";
 import {
-  isListaCotejoCompletada,
   mapToParticipanteEvaluacion,
   parseEvaluacionesResponse,
-  sortByPrelacion,
+  sortParticipantesParaTabla,
   type ParticipanteEvaluacion,
 } from "@/lib/utils/evaluacionesFase3Utils";
 import {
@@ -99,8 +93,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react"; // ─── Documentos del Procedimiento (Fase 2) ──────────────────────────
 
 /** Tipos de documento que interesan en la Fase 2 */
 const FASE2_DOC_TYPES = ["REGISTRO_ADQUIRENTES", "ACTA_RECEPCION", "ACTA_APERTURA"];
@@ -110,6 +102,7 @@ const TIPO_TO_ENDPOINT: Record<string, string> = {
   REGISTRO_ADQUIRENTES: "registro-adquirentes",
   ACTA_RECEPCION: "acta-recepcion-sobres",
   ACTA_APERTURA: "acta-apertura-sobres",
+  [INFORME_RECOMENDACION_DESIERTO_TIPO]: "informe-recomendacion",
 };
 
 /** Icono izquierdo por tipo de documento */
@@ -121,9 +114,9 @@ const TIPO_TO_ICON: Record<string, "receipt" | "clipboard"> = {
 
 /** Mapeo de nombres con mayúsculas corregidas para visualización en Fase 2 */
 const DOCUMENTOS_DISPLAY: Record<string, string> = {
-  REGISTRO_ADQUIRENTES: "Registro de adquirentes del pliego",
-  ACTA_RECEPCION: "Acta de recepción de sobres",
-  ACTA_APERTURA: "Acta de apertura de sobres",
+  REGISTRO_ADQUIRENTES: "Registro de adquirentes",
+  ACTA_RECEPCION: "Acta de recepción",
+  ACTA_APERTURA: "Acta de apertura",
   [INFORME_RECOMENDACION_DESIERTO_TIPO]: INFORME_RECOMENDACION_DESIERTO_LABEL,
 };
 
@@ -136,15 +129,16 @@ interface GenerarDocBtnProps {
   onGenerar: (tipo: string) => void;
 }
 
-function GenerarDocBtn({ tipo, adquirentesCount, oferentesCount, onGenerar }: GenerarDocBtnProps) {
+function GenerarDocBtn({
+  tipo,
+  adquirentesCount,
+  oferentesCount: _oferentesCount,
+  onGenerar,
+}: GenerarDocBtnProps) {
   const requiereAdquirentes = tipo === "REGISTRO_ADQUIRENTES";
-  const requiereOferentes = tipo === "ACTA_RECEPCION" || tipo === "ACTA_APERTURA";
-  const puedeGenerar =
-    (requiereAdquirentes && adquirentesCount > 0) || (requiereOferentes && oferentesCount > 0);
+  const puedeGenerar = !requiereAdquirentes || adquirentesCount > 0;
 
-  const mensajeDisabled = requiereAdquirentes
-    ? "Registre al menos un adquirente para generar este documento"
-    : "Registre al menos un oferente para generar este documento";
+  const mensajeDisabled = "Registre al menos un adquirente para generar este documento";
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -208,7 +202,7 @@ export function Fase2Panel({
   const [desiertoModalOpen, setDesiertoModalOpen] = useState(false);
   const [isDeclaringDesierto, setIsDeclaringDesierto] = useState(false);
 
-  const { isDesierto, hasInformeDesierto, saveDeclaratoria } = useDeclaratoriaDesierto(
+  const { isDesierto, saveDeclaratoria } = useDeclaratoriaDesierto(
     expedienteId,
     enableDeclaratoriaDesierto ? declaratoriaDesiertoSeed : null
   );
@@ -227,7 +221,8 @@ export function Fase2Panel({
   const [participantes, setParticipantes] = useState<ParticipanteEvaluacion[]>([]);
   const [loadingParticipantes, setLoadingParticipantes] = useState(false);
   const [participantesPage, setParticipantesPage] = useState(1);
-  const [downloadingListaCotejoId, setDownloadingListaCotejoId] = useState<string | null>(null);
+  const [procesandoCotejo, setProcesandoCotejo] = useState(false);
+  const [cotejoGenerado, setCotejoGenerado] = useState(false);
 
   // ── Modal de proveedor guardado rápidamente ──
   const [showProviderWarning, setShowProviderWarning] = useState(false);
@@ -243,6 +238,8 @@ export function Fase2Panel({
 
   // ── Estado de Documentos (dinámico desde backend) ──
   const [documentos, setDocumentos] = useState<DocumentoStatus[]>([]);
+  const [informeRecomendacionStatus, setInformeRecomendacionStatus] =
+    useState<DocumentoStatus | null>(null);
 
   // ── Funciones de carga ──
   const loadOferentes = async () => {
@@ -302,22 +299,35 @@ export function Fase2Panel({
           : participante;
       });
 
-      // El listado a menudo no incluye sobre1/sobre2; completar con GET por evaluación
+      // Completar cotejo / puntaje cuando el listado viene incompleto
       const withCotejo = await Promise.all(
         mapped.map(async (participante) => {
-          if (participante.listaCotejoCompletada || !participante.id) return participante;
+          const needsCotejo = !participante.listaCotejoCompletada && !!participante.id;
+          const needsScore =
+            participante.oferenteCalificado === true &&
+            participante.puntuacionFinalConBonos === null &&
+            !!participante.id;
+          if (!needsCotejo && !needsScore) return participante;
           try {
             const detalle = await obtenerEvaluacionFase3(participante.id);
             const detalleObj =
               detalle && typeof detalle === "object"
                 ? (detalle as Record<string, unknown>)
                 : undefined;
+            if (!detalleObj) return participante;
+            const remapped = mapToParticipanteEvaluacion({
+              ...detalleObj,
+              id: participante.id || detalleObj.id,
+              ofertaId: participante.ofertaId || detalleObj.ofertaId,
+            });
             return {
               ...participante,
-              listaCotejoCompletada: isListaCotejoCompletada(
-                detalleObj?.sobre1,
-                detalleObj?.sobre2
-              ),
+              listaCotejoCompletada:
+                participante.listaCotejoCompletada || remapped.listaCotejoCompletada,
+              puntuacionFinalConBonos:
+                participante.puntuacionFinalConBonos ?? remapped.puntuacionFinalConBonos,
+              prelacion: participante.prelacion ?? remapped.prelacion,
+              montoOfertaBs: participante.montoOfertaBs ?? remapped.montoOfertaBs,
             };
           } catch {
             return participante;
@@ -325,7 +335,7 @@ export function Fase2Panel({
         })
       );
 
-      setParticipantes(sortByPrelacion(withCotejo));
+      setParticipantes(sortParticipantesParaTabla(withCotejo));
       setParticipantesPage(1);
     } catch (error) {
       console.error("Error al cargar evaluaciones:", error);
@@ -364,11 +374,23 @@ export function Fase2Panel({
     if (!expedienteId) return;
     try {
       const allDocs = await obtenerStatusDocumentos(expedienteId);
-      // Filtrar solo los 3 documentos de Fase 2
       const fase2Docs = allDocs.filter((d) => FASE2_DOC_TYPES.includes(d.tipo));
       setDocumentos(fase2Docs);
+      setInformeRecomendacionStatus(
+        allDocs.find((d) => d.tipo === "INFORME_RECOMENDACION") ?? null
+      );
     } catch (error) {
       console.error("Error al cargar estado de documentos:", error);
+    }
+  };
+
+  const checkCotejoGenerado = async () => {
+    if (!expedienteId) return;
+    try {
+      await previewListaCotejo(expedienteId);
+      setCotejoGenerado(true);
+    } catch {
+      setCotejoGenerado(false);
     }
   };
 
@@ -377,6 +399,7 @@ export function Fase2Panel({
     loadOferentes();
     loadAdquirentes();
     loadDocumentos();
+    void checkCotejoGenerado();
     if (enableParticipantesEvaluacion) {
       void loadParticipantes();
     }
@@ -543,11 +566,11 @@ export function Fase2Panel({
     }
   };
 
-  const handlePreviewListaCotejo = async (evaluacionId: string) => {
+  const handlePreviewListaCotejo = async () => {
     setIsPreviewing(true);
     setPreviewDocOpen(true);
     try {
-      const result = await previewListaCotejoEvaluacion(evaluacionId);
+      const result = await previewListaCotejo(expedienteId);
       setPreviewDocUrl(result.urlArchivo);
       setPreviewDocTitle(result.tituloDocumento || "Lista de Cotejo");
     } catch (error: unknown) {
@@ -559,10 +582,10 @@ export function Fase2Panel({
     }
   };
 
-  const handleDownloadListaCotejo = async (evaluacionId: string) => {
-    setDownloadingListaCotejoId(evaluacionId);
+  const handleDownloadListaCotejo = async () => {
+    setProcesandoCotejo(true);
     try {
-      const { data, fileName } = await descargarListaCotejoEvaluacion(evaluacionId);
+      const { data, fileName } = await descargarListaCotejo(expedienteId);
       const blob = new Blob([new Uint8Array(data)], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
@@ -574,12 +597,34 @@ export function Fase2Panel({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("Lista de cotejo descargada exitosamente");
+      toast.success("Lista de Cotejo descargada exitosamente");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al descargar lista de cotejo");
     } finally {
-      setDownloadingListaCotejoId(null);
+      setProcesandoCotejo(false);
     }
+  };
+
+  const handleCotejoAccion = async (accion: "generar" | "preview" | "download") => {
+    if (accion === "generar") {
+      if (readOnly) return;
+      setProcesandoCotejo(true);
+      try {
+        await generarListaCotejo(expedienteId);
+        setCotejoGenerado(true);
+        toast.success("Lista de Cotejo generada exitosamente.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Error al generar la lista de cotejo");
+      } finally {
+        setProcesandoCotejo(false);
+      }
+      return;
+    }
+    if (accion === "preview") {
+      await handlePreviewListaCotejo();
+      return;
+    }
+    await handleDownloadListaCotejo();
   };
 
   // ── Handlers de Documentos ──
@@ -616,13 +661,6 @@ export function Fase2Panel({
   };
 
   const handlePreviewDocumento = async (doc: DocumentoStatus) => {
-    if (doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO) {
-      toast.info(
-        "La previsualización del informe desierto estará disponible cuando exista el API."
-      );
-      return;
-    }
-
     const endpoint = TIPO_TO_ENDPOINT[doc.tipo];
     if (!endpoint || !expedienteId) return;
 
@@ -644,10 +682,6 @@ export function Fase2Panel({
   };
 
   const handleDownloadDocumento = async (doc: DocumentoStatus) => {
-    if (doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO) {
-      toast.info("La descarga del informe desierto estará disponible cuando exista el API.");
-      return;
-    }
     const endpoint = TIPO_TO_ENDPOINT[doc.tipo];
     if (!endpoint || !expedienteId) return;
 
@@ -681,23 +715,19 @@ export function Fase2Panel({
   };
 
   const documentosVisibles = useMemo(() => {
-    if (!enableDeclaratoriaDesierto || !hasInformeDesierto) return documentos;
+    if (!enableDeclaratoriaDesierto || !isDesierto) return documentos;
 
-    const alreadyPresent = documentos.some(
-      (doc) => doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO
-    );
-    if (alreadyPresent) return documentos;
-
+    // El backend genera el Informe de Recomendación con la plantilla de la causal (1, 2 o 3).
     const informeDesierto: DocumentoStatus = {
       tipo: INFORME_RECOMENDACION_DESIERTO_TIPO,
       label: INFORME_RECOMENDACION_DESIERTO_LABEL,
-      generado: true,
-      estaDesactualizado: false,
-      documento: null,
+      generado: informeRecomendacionStatus?.generado ?? false,
+      estaDesactualizado: informeRecomendacionStatus?.estaDesactualizado ?? false,
+      documento: informeRecomendacionStatus?.documento ?? null,
     };
 
     return [...documentos, informeDesierto];
-  }, [documentos, enableDeclaratoriaDesierto, hasInformeDesierto]);
+  }, [documentos, enableDeclaratoriaDesierto, isDesierto, informeRecomendacionStatus]);
 
   const handleConfirmDeclaratoria = async (payload: {
     causal_declaratoria_desierto_au_au: CausalDeclaratoriaDesierto;
@@ -724,55 +754,46 @@ export function Fase2Panel({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {enableDeclaratoriaDesierto ? (
-        <Card className="border border-border bg-card shadow-sm">
-          <CardContent className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-[15px] font-bold leading-tight text-color-titulos">
-                  Registro y control de participantes
-                </h2>
-                {isDesierto ? (
-                  <Badge
-                    variant="outline"
-                    className="border-destructive/30 bg-destructive/10 text-destructive"
-                  >
-                    Declarado desierto
-                  </Badge>
-                ) : null}
-              </div>
-              <p className="text-[12px] italic leading-relaxed text-muted-foreground">
-                Gestione el listado de adquirentes y registre las ofertas recibidas para la
-                evaluación.
-              </p>
-            </div>
-
-            {!readOnly ? (
-              <Button
-                type="button"
+    <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-[15px] font-bold leading-tight text-color-titulos">
+              Registro y Control de Participantes
+            </h2>
+            {enableDeclaratoriaDesierto && isDesierto ? (
+              <Badge
                 variant="outline"
-                disabled={isDesierto}
-                onClick={() => setDesiertoModalOpen(true)}
-                className="shrink-0 gap-2 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive disabled:opacity-60"
+                className="border-destructive/30 bg-destructive/10 text-destructive"
               >
-                <AlertCircle className="h-4 w-4" />
-                {isDesierto
-                  ? "Procedimiento declarado desierto"
-                  : "Declarar Procedimiento Desierto"}
-              </Button>
+                Declarado desierto
+              </Badge>
             ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
+          </div>
+          <p className="mt-1 text-[12px] italic leading-relaxed text-muted-foreground">
+            Gestione adquirentes, registre ofertas recibidas y ejecute las evaluaciones
+            correspondientes.
+          </p>
+        </div>
+        {enableDeclaratoriaDesierto && !readOnly ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isDesierto}
+            onClick={() => setDesiertoModalOpen(true)}
+            className="shrink-0 gap-2 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive disabled:opacity-60"
+          >
+            <AlertCircle className="h-4 w-4" />
+            {isDesierto ? "Procedimiento declarado desierto" : "Declarar Procedimiento Desierto"}
+          </Button>
+        ) : null}
+      </div>
 
-      {/* ── Sección Superior: Adquirentes + Documentos ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Tabla de Adquirentes (2/3) */}
-        <Card className="col-span-1 lg:col-span-2 border border-border shadow-sm overflow-hidden flex flex-col p-0 gap-0">
-          <CardHeader className="pb-4 pt-4 px-6 flex flex-row items-center justify-between border-b border-border bg-slate-50 m-0">
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="col-span-1 flex min-w-0 flex-col gap-0 overflow-hidden border border-border p-0 shadow-sm lg:col-span-2">
+          <CardHeader className="m-0 flex flex-row items-center justify-between border-b border-border bg-slate-50 px-6 py-4">
             <div className="flex items-center gap-3">
-              <IoServer className="w-6 h-6 text-color-titulos" />
+              <IoServer className="h-6 w-6 text-color-titulos" />
               <CardTitle className="text-[17px] font-bold text-color-titulos">
                 Registro de Adquirentes
               </CardTitle>
@@ -784,26 +805,26 @@ export function Fase2Panel({
                   setAdquirenteSheetOpen(true);
                 }}
                 variant="ghost"
-                className="text-navy hover:text-navy-hover hover:bg-slate-100 font-bold text-[13px] p-0"
+                className="p-0 text-[13px] font-bold text-navy hover:bg-slate-100 hover:text-navy-hover"
               >
                 + Añadir Adquirentes
               </Button>
             )}
           </CardHeader>
-          <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
-            <Table className="table-fixed w-full">
+          <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+            <Table className="w-full table-fixed">
               <TableHeader>
-                <TableRow className="hover:bg-transparent border-b border-border">
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[15%]">
+                <TableRow className="border-b border-border hover:bg-transparent">
+                  <TableHead className="h-12 w-[15%] text-center text-[13px] font-bold text-color-titulos">
                     Fecha
                   </TableHead>
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[45%]">
-                    Empresa
+                  <TableHead className="h-12 w-[45%] text-center text-[13px] font-bold text-color-titulos">
+                    Empresa Adquirente
                   </TableHead>
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[25%]">
-                    Deposito
+                  <TableHead className="h-12 w-[25%] text-center text-[13px] font-bold text-color-titulos">
+                    Depósito / Ref.
                   </TableHead>
-                  <TableHead className="text-color-titulos font-bold text-center h-12 text-[15px] w-[15%]">
+                  <TableHead className="h-12 w-[15%] text-center text-[13px] font-bold text-color-titulos">
                     Acciones
                   </TableHead>
                 </TableRow>
@@ -813,10 +834,10 @@ export function Fase2Panel({
                   <TableRow>
                     <TableCell
                       colSpan={4}
-                      className="text-center text-muted-foreground italic py-12"
+                      className="py-12 text-center italic text-muted-foreground"
                     >
                       <div className="flex flex-col items-center gap-2">
-                        <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-navy border-t-transparent" />
                         <p>Cargando adquirentes...</p>
                       </div>
                     </TableCell>
@@ -825,33 +846,33 @@ export function Fase2Panel({
                   <TableRow>
                     <TableCell
                       colSpan={4}
-                      className="text-center text-muted-foreground italic py-12"
+                      className="py-12 text-center italic text-muted-foreground"
                     >
                       No hay adquirentes registrados.
                     </TableCell>
                   </TableRow>
                 ) : (
                   (() => {
-                    const start = (adquirentesPage - 1) * ADQ_PAGE_SIZE;
-                    const paginados = adquirentes.slice(start, start + ADQ_PAGE_SIZE);
+                    const startPage = (adquirentesPage - 1) * ADQ_PAGE_SIZE;
+                    const paginados = adquirentes.slice(startPage, startPage + ADQ_PAGE_SIZE);
                     return paginados.map((adq) => (
                       <TableRow
                         key={adq.id}
                         className="border-b border-border hover:bg-slate-50/50"
                       >
-                        <TableCell className="text-[13px] font-semibold text-color-subtitulos text-center py-3 px-2 whitespace-normal break-words leading-tight">
+                        <TableCell className="break-words px-2 py-3 text-center text-[13px] font-semibold leading-tight text-color-subtitulos">
                           {formatDate(adq.fecha)}
                         </TableCell>
-                        <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 whitespace-normal break-all leading-tight">
+                        <TableCell className="break-all px-2 py-3 text-center text-[13px] font-semibold leading-tight text-color-titulos">
                           {adq.empresa}
                         </TableCell>
-                        <TableCell className="text-[13px] font-semibold text-color-titulos text-center py-3 px-2 tabular-nums whitespace-normal break-all leading-tight">
+                        <TableCell className="break-all px-2 py-3 text-center text-[13px] font-semibold tabular-nums leading-tight text-color-titulos">
                           {adq.deposito}
                         </TableCell>
-                        <TableCell className="text-center py-4">
+                        <TableCell className="py-4 text-center">
                           <div className="flex items-center justify-center gap-3">
                             <button
-                              className="text-slate-500 hover:text-navy transition-colors"
+                              className="text-slate-500 transition-colors hover:text-navy"
                               onClick={async () => {
                                 try {
                                   const detallado = await obtenerAdquirente(adq.id);
@@ -868,22 +889,22 @@ export function Fase2Panel({
                                         : "",
                                   });
                                   setAdquirenteSheetOpen(true);
-                                } catch (e) {
+                                } catch {
                                   toast.error("Error al obtener detalles del adquirente");
                                 }
                               }}
                             >
-                              <BsEye className="w-[18px] h-[18px]" />
+                              <BsEye className="h-[18px] w-[18px]" />
                             </button>
                             {!readOnly && (
                               <button
-                                className="text-red-400 hover:text-red-600 transition-colors"
+                                className="text-red-400 transition-colors hover:text-red-600"
                                 onClick={() => {
                                   setAdquirenteToDelete(adq.id);
                                   setDeleteAdquirenteOpen(true);
                                 }}
                               >
-                                <FaRegTrashAlt className="w-4 h-4" />
+                                <FaRegTrashAlt className="h-4 w-4" />
                               </button>
                             )}
                           </div>
@@ -895,16 +916,16 @@ export function Fase2Panel({
               </TableBody>
             </Table>
 
-            <div className="px-6 py-4 bg-slate-50 border-t border-border mt-auto">
+            <div className="mt-auto border-t border-border bg-slate-50 px-6 py-4">
               <Pagination className="justify-end">
                 <PaginationContent className="gap-1">
                   <PaginationItem>
                     <button
                       disabled={adquirentesPage === 1}
                       onClick={() => setAdquirentesPage((prev) => Math.max(prev - 1, 1))}
-                      className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      &lt;
+                      {"<"}
                     </button>
                   </PaginationItem>
                   {Array.from(
@@ -915,10 +936,10 @@ export function Fase2Panel({
                         <PaginationItem key={pageNum}>
                           <button
                             onClick={() => setAdquirentesPage(pageNum)}
-                            className={`h-8 w-8 flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
+                            className={`flex h-8 w-8 items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
                               adquirentesPage === pageNum
                                 ? "bg-navy text-white hover:bg-navy-hover"
-                                : "bg-white border border-border text-muted-foreground hover:bg-slate-100"
+                                : "border border-border bg-white text-muted-foreground hover:bg-slate-100"
                             }`}
                           >
                             {pageNum}
@@ -941,9 +962,9 @@ export function Fase2Panel({
                           )
                         )
                       }
-                      className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      &gt;
+                      {">"}
                     </button>
                   </PaginationItem>
                 </PaginationContent>
@@ -952,49 +973,114 @@ export function Fase2Panel({
           </CardContent>
         </Card>
 
-        {/* Documentos del Procedimiento (1/3) */}
-        <Card className="border border-border shadow-sm flex flex-col pt-6">
-          <CardHeader className="pb-6 pt-0 px-6">
+        <Card className="flex min-w-0 flex-col border border-border pt-6 shadow-sm">
+          <CardHeader className="px-6 pb-6 pt-0">
             <div className="flex items-center gap-4">
-              <IoDocumentTextOutline className="w-6 h-6 text-color-titulos" />
+              <IoDocumentTextOutline className="h-6 w-6 text-color-titulos" />
               <CardTitle className="text-[17px] font-bold text-color-titulos">
                 Documentos del procedimiento
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="px-6 pb-6 flex-1 flex flex-col">
-            <div className="space-y-8 mt-2">
+          <CardContent className="flex flex-1 flex-col px-6 pb-6">
+            <div className="mt-2 space-y-8">
+              {/* Plantilla Lista de Cotejo — mismo layout que el resto */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  <div className="flex h-[46px] w-[46px] flex-shrink-0 items-center justify-center rounded-xl bg-muted">
+                    <FaRegClipboard className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="truncate text-[14px] font-bold leading-tight text-color-titulos">
+                            Lista de Cotejo
+                          </p>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[280px] text-xs">
+                          Lista de Cotejo
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+                <div className="flex w-[104px] flex-shrink-0 items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                    title="Previsualizar documento"
+                    disabled={!cotejoGenerado || procesandoCotejo}
+                    onClick={() => void handleCotejoAccion("preview")}
+                  >
+                    <IoEyeOutline className="h-[26px] w-[26px]" />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                    title="Descargar documento"
+                    disabled={!cotejoGenerado || procesandoCotejo}
+                    onClick={() => void handleCotejoAccion("download")}
+                  >
+                    {procesandoCotejo ? (
+                      <div className="flex h-[24px] w-[24px] items-center justify-center">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
+                      </div>
+                    ) : (
+                      <IoDownloadOutline className="h-[24px] w-[24px]" />
+                    )}
+                  </button>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <button
+                            type="button"
+                            className={`flex h-[26px] w-[26px] items-center justify-center text-[#334155] ${
+                              readOnly || procesandoCotejo
+                                ? "cursor-not-allowed opacity-30"
+                                : "hover:text-navy"
+                            }`}
+                            disabled={readOnly || procesandoCotejo}
+                            title="Generar lista de cotejo"
+                            onClick={() => void handleCotejoAccion("generar")}
+                          >
+                            <IoNewspaperOutline className="h-6 w-6" />
+                          </button>
+                        </span>
+                      </TooltipTrigger>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+
               {documentosVisibles.map((doc) => {
                 const desactualizado = doc.estaDesactualizado && doc.generado;
                 const isInformeDesierto = doc.tipo === INFORME_RECOMENDACION_DESIERTO_TIPO;
                 return (
-                  <div key={doc.tipo} className="flex items-center justify-between gap-2">
-                    {/* ── Icono + Label ── */}
-                    <div className="flex items-center gap-4 flex-1">
+                  <div key={doc.tipo} className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-4">
                       {desactualizado ? (
                         <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              {/* Cuadro con animación cross-dissolve */}
                               <div
-                                className="relative w-[46px] h-[46px] rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                                className="relative flex h-[46px] w-[46px] flex-shrink-0 cursor-pointer items-center justify-center rounded-xl"
                                 style={{
                                   backgroundColor: "var(--doc-warning-bg)",
                                   border: "1px solid var(--doc-warning-border)",
                                 }}
                               >
-                                {/* Icono normal — se desvanece */}
                                 <span className="doc-icon-normal absolute inset-0 flex items-center justify-center">
                                   {TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
-                                    <FaRegClipboard className="w-[20px] h-[20px] text-slate-600" />
+                                    <FaRegClipboard className="h-5 w-5 text-slate-600" />
                                   ) : (
-                                    <IoReceiptOutline className="w-[22px] h-[22px] text-slate-600" />
+                                    <IoReceiptOutline className="h-[22px] w-[22px] text-slate-600" />
                                   )}
                                 </span>
-                                {/* Icono warning — aparece */}
                                 <span className="doc-icon-warning absolute inset-0 flex items-center justify-center">
                                   <IoMdWarning
-                                    className="w-[22px] h-[22px]"
+                                    className="h-[22px] w-[22px]"
                                     style={{ color: "var(--doc-warning)" }}
                                   />
                                 </span>
@@ -1010,61 +1096,60 @@ export function Fase2Panel({
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <div className="w-[46px] h-[46px] rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                        <div className="flex h-[46px] w-[46px] flex-shrink-0 items-center justify-center rounded-xl bg-muted">
                           {isInformeDesierto || TIPO_TO_ICON[doc.tipo] === "clipboard" ? (
-                            <FaRegClipboard className="w-[20px] h-[20px] text-muted-foreground" />
+                            <FaRegClipboard className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <IoReceiptOutline className="w-[22px] h-[22px] text-muted-foreground" />
+                            <IoReceiptOutline className="h-[22px] w-[22px] text-muted-foreground" />
                           )}
                         </div>
                       )}
-                      <p className="text-[14px] font-bold text-color-titulos leading-tight max-w-[130px]">
-                        {DOCUMENTOS_DISPLAY[doc.tipo] || doc.label}
-                      </p>
+                      <div className="min-w-0">
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="truncate text-[14px] font-bold leading-tight text-color-titulos">
+                                {DOCUMENTOS_DISPLAY[doc.tipo] || doc.label}
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[280px] text-xs">
+                              {DOCUMENTOS_DISPLAY[doc.tipo] || doc.label}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
 
-                    {/* ── Botones de acción ── */}
-                    <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="flex w-[104px] flex-shrink-0 items-center justify-end gap-3">
                       {procesandoDoc[doc.tipo] ? (
-                        <div className="flex items-center justify-center w-[22px] h-[22px]">
-                          <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                        <div className="flex h-[26px] w-[26px] items-center justify-center">
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
                         </div>
                       ) : (
                         <>
-                          {/* Visualizar */}
                           <button
-                            className="text-muted-foreground hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
                             disabled={!doc.generado}
                             onClick={() => handlePreviewDocumento(doc)}
+                            title="Previsualizar documento"
                           >
-                            <IoEyeOutline className="w-[26px] h-[26px]" />
+                            <IoEyeOutline className="h-[26px] w-[26px]" />
                           </button>
-
-                          {/* Descargar */}
                           <button
-                            className="text-muted-foreground hover:text-navy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-30"
                             disabled={!doc.generado || isDownloading[doc.tipo]}
                             onClick={() => handleDownloadDocumento(doc)}
+                            title="Descargar documento"
                           >
                             {isDownloading[doc.tipo] ? (
-                              <div className="w-[24px] h-[24px] flex items-center justify-center">
-                                <div className="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                              <div className="flex h-[24px] w-[24px] items-center justify-center">
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent" />
                               </div>
                             ) : (
-                              <IoDownloadOutline className="w-[24px] h-[24px]" />
+                              <IoDownloadOutline className="h-[24px] w-[24px]" />
                             )}
                           </button>
-
-                          {/* Generar (primera vez) / Regenerar (cuando desactualizado) / Icono inactivo */}
-                          {isInformeDesierto ? (
-                            <button
-                              className="cursor-not-allowed text-muted-foreground opacity-30"
-                              disabled
-                              title="Pendiente de API"
-                            >
-                              <BsArrowClockwise className="h-[20px] w-[20px]" />
-                            </button>
-                          ) : !doc.generado ? (
+                          {!doc.generado ? (
                             <GenerarDocBtn
                               tipo={doc.tipo}
                               adquirentesCount={readOnly ? 0 : adquirentes.length}
@@ -1078,22 +1163,20 @@ export function Fase2Panel({
                               onGenerar={handleGenerarDocumento}
                             />
                           ) : desactualizado ? (
-                            // Regenerar — activo solo cuando estaDesactualizado
                             <button
                               className="text-destructive/70 transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30"
                               onClick={() => handleRegenerarDocumento(doc)}
                               title="Regenerar documento"
                               disabled={readOnly}
                             >
-                              <BsArrowClockwise className="w-[20px] h-[20px]" />
+                              <BsArrowClockwise className="h-5 w-5" />
                             </button>
                           ) : (
-                            // Ya generado y al día — botón deshabilitado
                             <button
                               className="cursor-not-allowed text-muted-foreground opacity-30"
                               disabled
                             >
-                              <BsArrowClockwise className="w-[20px] h-[20px]" />
+                              <BsArrowClockwise className="h-5 w-5" />
                             </button>
                           )}
                         </>
@@ -1107,14 +1190,18 @@ export function Fase2Panel({
         </Card>
       </div>
 
-      {/* ── Sección Inferior: Oferentes ── */}
-      <Card className="border border-border shadow-sm overflow-hidden flex flex-col p-0 gap-0">
-        <CardHeader className="pb-4 pt-4 px-6 flex flex-row items-center justify-between border-b border-border bg-slate-50 m-0">
-          <div className="flex items-center gap-3">
-            <IoDiamondOutline className="w-6 h-6 text-color-titulos" />
-            <CardTitle className="text-[17px] font-bold text-color-titulos">
-              Registro de Oferentes
-            </CardTitle>
+      <Card className="flex min-w-0 flex-col gap-0 overflow-hidden border border-border p-0 shadow-sm">
+        <CardHeader className="m-0 flex flex-row items-center justify-between border-b border-border bg-slate-50 px-6 py-4">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex items-center gap-3">
+              <IoDiamondOutline className="h-6 w-6 shrink-0 text-color-titulos" />
+              <CardTitle className="text-[17px] font-bold text-color-titulos">
+                Registro y Evaluación de Oferentes
+              </CardTitle>
+            </div>
+            <p className="pl-9 text-[11px] text-muted-foreground">
+              Ofertas consignadas formalmente en el acto público.
+            </p>
           </div>
           {!readOnly && (
             <Button
@@ -1123,13 +1210,13 @@ export function Fase2Panel({
                 setOferenteSheetOpen(true);
               }}
               variant="ghost"
-              className="text-navy hover:text-navy-hover hover:bg-slate-100 font-bold text-[13px] p-0"
+              className="shrink-0 p-0 text-[13px] font-bold text-navy hover:bg-slate-100 hover:text-navy-hover"
             >
               + Añadir Oferentes
             </Button>
           )}
         </CardHeader>
-        <CardContent className="overflow-hidden p-0">
+        <CardContent className="min-w-0 overflow-hidden p-0">
           {enableParticipantesEvaluacion ? (
             <OferentesEvaluacionTable
               participantes={participantes}
@@ -1145,34 +1232,31 @@ export function Fase2Panel({
                 setOferenteToDelete(ofertaId);
                 setDeleteOferenteOpen(true);
               }}
-              onPreviewListaCotejo={(evaluacionId) => void handlePreviewListaCotejo(evaluacionId)}
-              onDownloadListaCotejo={(evaluacionId) => void handleDownloadListaCotejo(evaluacionId)}
-              downloadingId={downloadingListaCotejoId}
             />
           ) : (
             <>
-              <Table className="table-fixed w-full">
+              <Table className="w-full table-fixed">
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b border-border">
-                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[18%]">
+                  <TableRow className="border-b border-border hover:bg-transparent">
+                    <TableHead className="h-10 w-[18%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       Empresa
                     </TableHead>
-                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[12%]">
+                    <TableHead className="h-10 w-[12%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       RIF
                     </TableHead>
-                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
+                    <TableHead className="h-10 w-[15%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       Rep. Legal
                     </TableHead>
-                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[11%]">
+                    <TableHead className="h-10 w-[11%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       Cédula
                     </TableHead>
-                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[19%]">
+                    <TableHead className="h-10 w-[19%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       Reg. Mercantil
                     </TableHead>
-                    <TableHead className="text-color-titulos font-bold px-2 h-10 text-[11px] text-center w-[15%]">
+                    <TableHead className="h-10 w-[15%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       Monto oferta
                     </TableHead>
-                    <TableHead className="text-color-titulos font-bold px-2 text-center h-10 text-[11px] w-[10%]">
+                    <TableHead className="h-10 w-[10%] px-2 text-center text-[11px] font-bold text-color-titulos">
                       Acciones
                     </TableHead>
                   </TableRow>
@@ -1182,10 +1266,10 @@ export function Fase2Panel({
                     <TableRow>
                       <TableCell
                         colSpan={7}
-                        className="text-center text-muted-foreground italic py-12"
+                        className="py-12 text-center italic text-muted-foreground"
                       >
                         <div className="flex flex-col items-center gap-2">
-                          <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-navy border-t-transparent" />
                           <p>Cargando oferentes...</p>
                         </div>
                       </TableCell>
@@ -1194,7 +1278,7 @@ export function Fase2Panel({
                     <TableRow>
                       <TableCell
                         colSpan={7}
-                        className="text-center text-muted-foreground italic py-12"
+                        className="py-12 text-center italic text-muted-foreground"
                       >
                         No hay oferentes registrados.
                       </TableCell>
@@ -1208,41 +1292,41 @@ export function Fase2Panel({
                           key={ofe.id}
                           className="border-b border-border hover:bg-slate-50/50"
                         >
-                          <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                          <TableCell className="break-all px-2 py-3 text-center text-[10px] font-semibold leading-tight text-color-titulos">
                             {ofe.nombreEmpresa}
                           </TableCell>
-                          <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
+                          <TableCell className="break-all px-2 py-3 text-center font-mono text-[10px] font-semibold leading-tight text-color-subtitulos">
                             {ofe.rif}
                           </TableCell>
-                          <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                          <TableCell className="break-all px-2 py-3 text-center text-[10px] font-semibold leading-tight text-color-subtitulos">
                             {ofe.representanteLegal}
                           </TableCell>
-                          <TableCell className="text-[10px] font-semibold text-color-subtitulos font-mono py-3 px-2 text-center leading-tight break-all">
+                          <TableCell className="break-all px-2 py-3 text-center font-mono text-[10px] font-semibold leading-tight text-color-subtitulos">
                             {ofe.cedula}
                           </TableCell>
-                          <TableCell className="text-[10px] font-semibold text-color-subtitulos py-3 px-2 text-center whitespace-normal break-all leading-tight">
+                          <TableCell className="break-all px-2 py-3 text-center text-[10px] font-semibold leading-tight text-color-subtitulos">
                             {ofe.registroMercantil}
                           </TableCell>
-                          <TableCell className="text-[10px] font-semibold text-color-titulos py-3 px-2 tabular-nums text-center whitespace-normal break-all leading-tight">
+                          <TableCell className="break-all px-2 py-3 text-center text-[10px] font-semibold tabular-nums leading-tight text-color-titulos">
                             {ofe.montoOferta}
                           </TableCell>
-                          <TableCell className="text-center py-4">
+                          <TableCell className="py-4 text-center">
                             <div className="flex items-center justify-center gap-3">
                               <button
-                                className="text-slate-500 hover:text-navy transition-colors"
+                                className="text-slate-500 transition-colors hover:text-navy"
                                 onClick={() => void openOferenteDetalle(ofe.id)}
                               >
-                                <BsEye className="w-[18px] h-[18px]" />
+                                <BsEye className="h-[18px] w-[18px]" />
                               </button>
                               {!readOnly && (
                                 <button
-                                  className="text-red-400 hover:text-red-600 transition-colors"
+                                  className="text-red-400 transition-colors hover:text-red-600"
                                   onClick={() => {
                                     setOferenteToDelete(ofe.id);
                                     setDeleteOferenteOpen(true);
                                   }}
                                 >
-                                  <FaRegTrashAlt className="w-4 h-4" />
+                                  <FaRegTrashAlt className="h-4 w-4" />
                                 </button>
                               )}
                             </div>
@@ -1253,31 +1337,32 @@ export function Fase2Panel({
                   )}
                 </TableBody>
               </Table>
-
-              <div className="px-6 py-4 bg-slate-50 border-t border-border mt-auto">
+              <div className="border-t border-border bg-muted/40 px-6 py-4">
                 <Pagination className="justify-end">
                   <PaginationContent className="gap-1">
                     <PaginationItem>
                       <button
                         disabled={oferentesPage === 1}
                         onClick={() => setOferentesPage((prev) => Math.max(prev - 1, 1))}
-                        className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         &lt;
                       </button>
                     </PaginationItem>
                     {Array.from(
-                      { length: Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1) },
+                      {
+                        length: Math.max(Math.ceil(oferentes.length / OFE_PAGE_SIZE), 1),
+                      },
                       (_, i) => {
                         const pageNum = i + 1;
                         return (
                           <PaginationItem key={pageNum}>
                             <button
                               onClick={() => setOferentesPage(pageNum)}
-                              className={`h-8 w-8 flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
+                              className={`flex h-8 w-8 items-center justify-center rounded-md text-[13px] font-semibold transition-colors ${
                                 oferentesPage === pageNum
                                   ? "bg-navy text-white hover:bg-navy-hover"
-                                  : "bg-white border border-border text-muted-foreground hover:bg-slate-100"
+                                  : "border border-border bg-card text-muted-foreground hover:bg-muted"
                               }`}
                             >
                               {pageNum}
@@ -1299,7 +1384,7 @@ export function Fase2Panel({
                             )
                           )
                         }
-                        className="h-8 w-8 flex items-center justify-center border border-border bg-white text-muted-foreground hover:bg-slate-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         &gt;
                       </button>

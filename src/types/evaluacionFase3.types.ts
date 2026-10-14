@@ -90,7 +90,7 @@ export interface Sobre2EvaluacionPayload {
   puntuacionCriterio4: number;
   montoOfertaBs: number;
   porcentajeVan?: number;
-  posicionPrelacion: string;
+  posicionPrelacion?: string;
   oferenteCalificado: true;
   motivoDescalificacion: "";
 }

@@ -40,6 +40,7 @@ export interface PresupuestoItemsTableProps {
   emptyDescription?: string;
   pageSize?: number;
   loading?: boolean;
+  hideHeader?: boolean;
   serverPagination?: {
     currentPage: number;
     totalPages: number;
@@ -191,6 +192,7 @@ export function PresupuestoItemsTable({
   emptyDescription = "Agregue al menos un producto para construir el presupuesto base.",
   pageSize = 5,
   loading = false,
+  hideHeader = false,
   serverPagination,
   serverTotals,
 }: PresupuestoItemsTableProps) {
@@ -237,29 +239,31 @@ export function PresupuestoItemsTable({
 
   return (
     <Card className="border border-slate-200 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="flex items-center gap-2 text-[17px] font-bold text-color-titulos">
-          <WalletCards className="h-5 w-5 text-navy" />
-          Presupuesto base
-        </CardTitle>
+      {!hideHeader ? (
+        <CardHeader className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2 text-[17px] font-bold text-color-titulos">
+            <WalletCards className="h-5 w-5 text-navy" />
+            Presupuesto base
+          </CardTitle>
 
-        {showAddButton && (
-          <Button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onAdd?.();
-            }}
-            disabled={addButtonDisabled}
-            size="sm"
-            className="cursor-pointer w-fit bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
-          >
-            <Plus className="h-4 w-4" />
-            {addButtonLabel}
-          </Button>
-        )}
-      </CardHeader>
+          {showAddButton && (
+            <Button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onAdd?.();
+              }}
+              disabled={addButtonDisabled}
+              size="sm"
+              className="w-fit cursor-pointer bg-navy text-[11px] font-semibold text-white hover:bg-navy-hover"
+            >
+              <Plus className="h-4 w-4" />
+              {addButtonLabel}
+            </Button>
+          )}
+        </CardHeader>
+      ) : null}
 
       <CardContent className="px-0 pb-4">
         <Table className="table-fixed min-w-full">

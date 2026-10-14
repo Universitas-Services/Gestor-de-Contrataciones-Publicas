@@ -4,6 +4,11 @@ import { getServerToken, getSessionCookie } from "@/lib/auth/session";
 import type { EnteResponse, EnteUpdatePayload } from "@/types/ente.types";
 import type { DashboardOperativoResponse } from "@/types/dashboard-operativo.types";
 import type {
+  ActualizarCuentaBancariaEntePayload,
+  CuentaBancariaEnteApi,
+  CrearCuentaBancariaEntePayload,
+} from "@/types/fase1Micromodulos.types";
+import type {
   CreateUserPayload,
   CreateUserResponse,
   User,
@@ -313,4 +318,109 @@ export const obtenerDashboardOperativo = async (): Promise<DashboardOperativoRes
   }
 
   return response.json() as Promise<DashboardOperativoResponse>;
+};
+
+/**
+ * GET /entes/{enteId}/cuentas-bancarias
+ */
+export const listarCuentasBancariasEnte = async (
+  enteId: string
+): Promise<CuentaBancariaEnteApi[]> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/cuentas-bancarias`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al listar cuentas bancarias");
+  }
+
+  const json = await response.json();
+  const payload = (json as { data?: CuentaBancariaEnteApi[] }).data ?? json;
+  return Array.isArray(payload) ? payload : [];
+};
+
+/**
+ * POST /entes/{enteId}/cuentas-bancarias
+ */
+export const crearCuentaBancariaEnte = async (
+  enteId: string,
+  payload: CrearCuentaBancariaEntePayload
+): Promise<CuentaBancariaEnteApi> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/cuentas-bancarias`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al crear la cuenta bancaria");
+  }
+
+  const json = await response.json();
+  const data = (json as { data?: CuentaBancariaEnteApi }).data ?? json;
+  return data as CuentaBancariaEnteApi;
+};
+
+/**
+ * PATCH /entes/{enteId}/cuentas-bancarias/{id}
+ */
+export const actualizarCuentaBancariaEnte = async (
+  enteId: string,
+  cuentaId: string,
+  payload: ActualizarCuentaBancariaEntePayload
+): Promise<CuentaBancariaEnteApi> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/cuentas-bancarias/${cuentaId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al actualizar la cuenta bancaria");
+  }
+
+  const json = await response.json();
+  const data = (json as { data?: CuentaBancariaEnteApi }).data ?? json;
+  return data as CuentaBancariaEnteApi;
+};
+
+/**
+ * DELETE /entes/{enteId}/cuentas-bancarias/{id}
+ */
+export const eliminarCuentaBancariaEnte = async (
+  enteId: string,
+  cuentaId: string
+): Promise<void> => {
+  const token = await getServerToken();
+
+  const response = await fetch(`${API_URL}/entes/${enteId}/cuentas-bancarias/${cuentaId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message ?? "Error al eliminar la cuenta bancaria");
+  }
 };

@@ -425,3 +425,143 @@ export const obtenerInformeRecomendacion = async (expedienteId: string): Promise
 
   return response.json();
 };
+
+export interface GestionAdjudicacionGates {
+  puedeCambiarCaracter: boolean;
+  hayOferentesPendientesEvaluar: boolean;
+  dictamenesCompletos: boolean;
+  puedeGenerarInforme: boolean;
+  informePersistido: boolean;
+  informeGenerado: boolean;
+  puedeGenerarActa: boolean;
+  actaGenerada: boolean;
+  puedeGenerarNotificaciones: boolean;
+  notificacionesGeneradas: boolean;
+}
+
+export interface GestionAdjudicacionResponse {
+  expedienteId: string;
+  caracterAdjudicacion: "TOTAL" | "PARCIAL" | null;
+  gates: GestionAdjudicacionGates;
+  oferentes: Array<Record<string, unknown>>;
+  informe: Record<string, unknown> | null;
+}
+
+async function throwApiError(response: Response, fallback: string): Promise<never> {
+  const errorData = (await response.json().catch(() => ({}))) as {
+    message?: string | string[];
+  };
+  const message = Array.isArray(errorData.message)
+    ? errorData.message.join(". ")
+    : errorData.message;
+  throw new Error(message || fallback);
+}
+
+export const obtenerGestionAdjudicacion = async (
+  expedienteId: string
+): Promise<GestionAdjudicacionResponse> => {
+  const token = await getServerToken();
+  const response = await fetch(
+    `${API_URL}/evaluacion-fase3/expediente/${expedienteId}/gestion-adjudicacion`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!response.ok) {
+    await throwApiError(response, "Error al cargar la gestión de adjudicación");
+  }
+  return response.json();
+};
+
+export const setCaracterAdjudicacionApi = async (
+  expedienteId: string,
+  caracterAdjudicacion: "TOTAL" | "PARCIAL"
+): Promise<GestionAdjudicacionResponse> => {
+  const token = await getServerToken();
+  const response = await fetch(
+    `${API_URL}/evaluacion-fase3/expediente/${expedienteId}/gestion-adjudicacion/caracter`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ caracterAdjudicacion }),
+    }
+  );
+  if (!response.ok) {
+    await throwApiError(response, "No se pudo actualizar el carácter de adjudicación");
+  }
+  return response.json();
+};
+
+export const guardarDictamenTotal = async (
+  expedienteId: string,
+  evaluacionId: string,
+  payload: Record<string, unknown>
+): Promise<unknown> => {
+  const token = await getServerToken();
+  const response = await fetch(
+    `${API_URL}/evaluacion-fase3/expediente/${expedienteId}/dictamenes/${evaluacionId}/total`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) {
+    await throwApiError(response, "Error al guardar la adjudicación total");
+  }
+  return response.json();
+};
+
+export const guardarCausaNoAdjudicado = async (
+  expedienteId: string,
+  evaluacionId: string,
+  causaNoAdjudicadoAuAu: string
+): Promise<unknown> => {
+  const token = await getServerToken();
+  const response = await fetch(
+    `${API_URL}/evaluacion-fase3/expediente/${expedienteId}/dictamenes/${evaluacionId}/no-adjudicado`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ causaNoAdjudicadoAuAu }),
+    }
+  );
+  if (!response.ok) {
+    await throwApiError(response, "Error al guardar la causa de no adjudicación");
+  }
+  return response.json();
+};
+
+export const guardarDictamenParcial = async (
+  expedienteId: string,
+  evaluacionId: string,
+  payload: Record<string, unknown>
+): Promise<unknown> => {
+  const token = await getServerToken();
+  const response = await fetch(
+    `${API_URL}/evaluacion-fase3/expediente/${expedienteId}/dictamenes/${evaluacionId}/parcial`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) {
+    await throwApiError(response, "Error al guardar la adjudicación parcial");
+  }
+  return response.json();
+};

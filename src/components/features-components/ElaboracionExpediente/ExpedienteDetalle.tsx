@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -10,7 +10,6 @@ import {
   FileText,
   Pencil,
   CalendarDays,
-  DollarSign,
   Save,
   Users,
   Scale,
@@ -23,10 +22,13 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Fase1Panel } from "./fase-1/Fase1Panel";
+import { Fase1InicialPanel } from "@/components/features-components/GestionExpedientes/fase1/Fase1InicialPanel";
 import { Fase2Panel } from "@/components/features-components/GestionExpedientes/fase2/Fase2Panel";
 import { Fase3Panel } from "./fase3/Fase3Panel";
+import { Fase3GestionPanel } from "@/components/features-components/GestionExpedientes/fase3/Fase3GestionPanel";
 import { Fase4Panel } from "./fase4/Fase4Panel";
 import { EditarFichaModal } from "@/components/features-components/GestionExpedientes/EditarFichaModal";
+import { MontoEstimadoCard } from "@/components/features-components/GestionExpedientes/MontoEstimadoCard";
 import { useHeaderTitleOverride } from "@/components/shared/HeaderTitleContext";
 
 import type {
@@ -45,7 +47,7 @@ import { PlanificacionStep } from "./steps/PlanificacionStep";
 import { useDiasNoLaborables } from "@/hooks/useDiasNoLaborables";
 import { useDeclaratoriaDesierto } from "@/hooks/useDeclaratoriaDesierto";
 import { getYearRangeForCronograma } from "@/lib/utils/diasNoLaborablesUtils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   getFechaAnclaLabel,
   getModalidadDisplayLabel,
@@ -117,12 +119,20 @@ const TIPO_MIEMBRO: Record<string, string> = {
   PRESIDENTE: "Presidente",
 };
 
-const FASES = [
+const FASES_ELABORACION = [
   "Fase 0: Ficha Técnica",
   "Fase 1: Preparatoria",
   "Fase 2: Gestión participantes",
   "Fase 3: Análisis y recomendaciones",
   "Fase 4: Decisión y formalización",
+];
+
+const FASES_GESTION = [
+  "Fase 0: Ficha Técnica",
+  "Fase 1: Preparatoria",
+  "Fase 2: Gestión participantes (Registro y análisis)",
+  "Fase 3: Adjudicación e informes",
+  "Fase 4: Formalización",
 ];
 
 const EVENT_COLOR_VARS: Record<string, string> = {
@@ -170,13 +180,6 @@ function formatDate(iso: string): string {
   if (!iso) return "—";
   const d = new Date(`${iso.split("T")[0]}T12:00:00`);
   return d.toLocaleDateString("es-VE", { day: "2-digit", month: "long", year: "numeric" });
-}
-
-function formatMoney(value: string | number | undefined | null): string {
-  if (value == null || value === "") return "—";
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "—";
-  return num.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function cronogramaToEvents(cronograma: Record<string, unknown>): IEvent[] {
@@ -285,6 +288,11 @@ export function ExpedienteDetalle({
     declaratoriaDesiertoSeed
   );
   const fasesPosterioresBloqueadas = enableDeclaratoriaDesierto && isDesierto;
+  const fasesLabels = useMemo(
+    () => (basePath === "/gestion-expedientes" ? FASES_GESTION : FASES_ELABORACION),
+    [basePath]
+  );
+  const isGestionFlow = basePath === "/gestion-expedientes";
 
   useEffect(() => {
     const nomenclatura = data.codigoNomenclatura?.trim();
@@ -295,16 +303,34 @@ export function ExpedienteDetalle({
     };
   }, [data.codigoNomenclatura, setOverrideTitle]);
 
+  const tabParam = searchParams.get("tab");
+  const queryString = searchParams.toString();
+
   useEffect(() => {
-    setActiveTab(resolveTabFromParam(searchParams.get("tab"), initialTab));
-  }, [searchParams, initialTab]);
+    setActiveTab(resolveTabFromParam(tabParam, initialTab));
+  }, [tabParam, initialTab]);
+
+  const replaceExpedienteQuery = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(queryString);
+      mutate(params);
+      const nextQuery = params.toString();
+      if (nextQuery === queryString) return;
+      const href = nextQuery ? `${basePath}/${data.id}?${nextQuery}` : `${basePath}/${data.id}`;
+      router.replace(href, { scroll: false });
+    },
+    [basePath, data.id, queryString, router]
+  );
 
   useEffect(() => {
     if (fasesPosterioresBloqueadas && (activeTab === "fase-3" || activeTab === "fase-4")) {
       setActiveTab("fase-2");
-      router.replace(`${basePath}/${data.id}?tab=fase-2`, { scroll: false });
+      replaceExpedienteQuery((params) => {
+        params.set("tab", "fase-2");
+        params.delete("fase1Sub");
+      });
     }
-  }, [fasesPosterioresBloqueadas, activeTab, basePath, data.id, router]);
+  }, [fasesPosterioresBloqueadas, activeTab, replaceExpedienteQuery]);
 
   const handleTabChange = (value: string) => {
     const tab = value as Fase1TabValue;
@@ -314,8 +340,12 @@ export function ExpedienteDetalle({
       );
       return;
     }
+    if (tab === activeTab && tabParam === tab) return;
     setActiveTab(tab);
-    router.replace(`${basePath}/${data.id}?tab=${tab}`, { scroll: false });
+    replaceExpedienteQuery((params) => {
+      params.set("tab", tab);
+      if (tab !== "fase-1") params.delete("fase1Sub");
+    });
   };
 
   // Estado del cronograma (editable)
@@ -468,9 +498,6 @@ export function ExpedienteDetalle({
   const estado = getEstadoVisual(data.estatusProceso);
   const shortId = data.id?.slice(0, 8).toUpperCase() ?? "—";
 
-  const ucauRaw = data.modalidad?.valorUcauBase ? parseFloat(data.modalidad.valorUcauBase) : NaN;
-  const ucau = Number.isFinite(ucauRaw) ? ucauRaw : null;
-
   // Solo miembros principales (PRESIDENTE o MIEMBRO_PRINCIPAL)
   const miembrosPrincipales = (data.comision?.miembros ?? []).filter(
     (m) => m.tipoMiembro === "PRESIDENTE" || m.tipoMiembro === "MIEMBRO_PRINCIPAL"
@@ -570,12 +597,11 @@ export function ExpedienteDetalle({
           </CardContent>
         </Card>
 
-        {/* ── Tabs — letras azules, y cuadrante azul en fase activa, sin scroll horizontal ── */}
-        <div className="w-full">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            {/* border-b-2 actúa como la barra azul separadora de todo el bloque. flex-wrap permite que caigan a otra línea si no caben para evitar scroll */}
-            <TabsList className="w-full flex-wrap justify-start rounded-none border-b-2 border-navy bg-transparent h-auto p-0 gap-0">
-              {FASES.map((fase, i) => {
+        {/* ── Tabs — una sola línea; texto truncado + tooltip con nombre completo ── */}
+        <div className="w-full min-w-0">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
+            <TabsList className="flex h-11 w-full min-w-0 flex-nowrap gap-1 rounded-xl border border-slate-200/80 bg-slate-50 p-1 shadow-inner">
+              {fasesLabels.map((fase, i) => {
                 const tabValue = `fase-${i}` as Fase1TabValue;
                 const isFaseBloqueada =
                   fasesPosterioresBloqueadas && (tabValue === "fase-3" || tabValue === "fase-4");
@@ -584,37 +610,33 @@ export function ExpedienteDetalle({
                     value={tabValue}
                     disabled={isFaseBloqueada}
                     className={[
-                      /* layout & reset */
-                      "relative rounded-none px-1 sm:px-2 py-2 text-[12px] sm:text-[13px] font-medium transition-colors whitespace-nowrap",
-                      /* inactivos */
-                      "text-navy bg-transparent hover:bg-slate-100/50",
-                      /* activo: bloque azul sólido con letras blancas, alineado a la base */
-                      "data-[state=active]:bg-navy data-[state=active]:text-white",
-                      /* para ocultar la línea de abajo en el activo (opcional) pero como está sobre la línea, el bg solid lo cubre */
-                      "shadow-none data-[state=active]:shadow-none",
+                      "relative h-full w-full min-w-0 flex-1 overflow-hidden rounded-lg border border-transparent px-2 text-[12px] font-semibold transition-all duration-200 ease-in-out sm:text-[13px]",
+                      "justify-center bg-transparent text-slate-500 shadow-none after:hidden",
+                      "hover:bg-white/80 hover:text-slate-700 hover:shadow-sm",
+                      "data-[state=active]:border-navy/15 data-[state=active]:bg-navy data-[state=active]:text-white data-[state=active]:shadow-sm",
                       "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
                       isFaseBloqueada ? "cursor-not-allowed opacity-40" : "",
                     ].join(" ")}
                   >
-                    {fase}
+                    <span className="block w-full truncate text-center">{fase}</span>
                   </TabsTrigger>
                 );
 
-                if (!isFaseBloqueada) {
-                  return <React.Fragment key={i}>{trigger}</React.Fragment>;
-                }
-
                 return (
-                  <TooltipProvider key={i} delayDuration={100}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex">{trigger}</span>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-[240px] text-center text-xs">
-                        Procedimiento declarado desierto: las fases 3 y 4 no están disponibles.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip key={i} delayDuration={200}>
+                    <TooltipTrigger asChild>
+                      {/* span: el trigger disabled no emite hover; además reparte el ancho entre pestañas */}
+                      <span className="min-w-0 flex-1">{trigger}</span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-center text-xs">
+                      <p className="font-medium">{fase}</p>
+                      {isFaseBloqueada ? (
+                        <p className="mt-1 text-muted-foreground">
+                          Procedimiento declarado desierto: las fases 3 y 4 no están disponibles.
+                        </p>
+                      ) : null}
+                    </TooltipContent>
+                  </Tooltip>
                 );
               })}
             </TabsList>
@@ -644,35 +666,11 @@ export function ExpedienteDetalle({
                 </Card>
 
                 {/* Monto Estimado (1/3) */}
-                <Card className="border border-slate-200 shadow-sm">
-                  <CardHeader className="pb-2 pt-5 px-6">
-                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider font-inter">
-                      Monto estimado de contratación
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-6 pb-6 space-y-3">
-                    <div>
-                      <p className="text-xs text-slate-400 font-inter italic">Valor UCAU</p>
-                      <p className="text-2xl font-bold text-heading-dark font-inter tabular-nums">
-                        {ucau != null ? formatMoney(ucau) : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-inter italic">Bolívares (Bs.)</p>
-                      <p className="text-xl font-bold text-heading-dark font-inter tabular-nums">
-                        {formatMoney(data.modalidad?.montoEstimadoBs)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-inter italic flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> Dólares (USD)
-                      </p>
-                      <p className="text-lg font-bold text-heading-dark font-inter tabular-nums">
-                        $ {formatMoney(data.modalidad?.montoEstimadoDolar)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <MontoEstimadoCard
+                  data={data}
+                  readOnly={readOnly}
+                  enableRecalculoTasa={basePath === "/gestion-expedientes"}
+                />
 
                 {/* Causal legal — CC / CP / CD / ME cuando hay texto */}
                 {showCausal && causalTexto && (
@@ -795,25 +793,45 @@ export function ExpedienteDetalle({
                           </span>
                         </p>
                       ) : (
-                        <div className="flex flex-wrap gap-6">
-                          {miembrosPrincipales.map((m) => (
-                            <div key={m.id} className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9 bg-navy text-white text-xs font-bold">
-                                <AvatarFallback className="bg-navy text-white text-xs font-bold">
-                                  {getInitials(m.nombreCompletoMiembro)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-semibold text-heading-dark font-inter capitalize">
-                                  {m.nombreCompletoMiembro}
-                                </p>
-                                <p className="text-xs text-slate-400 font-inter italic">
-                                  {TIPO_AREA[m.areaRepresentacion] ?? m.areaRepresentacion} ·{" "}
-                                  {TIPO_MIEMBRO[m.tipoMiembro] ?? m.tipoMiembro}
-                                </p>
+                        <div className="flex min-w-0 flex-nowrap gap-3">
+                          {miembrosPrincipales.map((m) => {
+                            const areaLabel =
+                              TIPO_AREA[m.areaRepresentacion] ?? m.areaRepresentacion;
+                            const tipoLabel = TIPO_MIEMBRO[m.tipoMiembro] ?? m.tipoMiembro;
+                            const rolLabel = `${areaLabel} · ${tipoLabel}`;
+
+                            return (
+                              <div key={m.id} className="flex min-w-0 flex-1 items-center gap-2">
+                                <Avatar className="h-9 w-9 shrink-0 bg-navy text-white text-xs font-bold">
+                                  <AvatarFallback className="bg-navy text-white text-xs font-bold">
+                                    {getInitials(m.nombreCompletoMiembro)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="truncate text-sm font-semibold text-heading-dark font-inter capitalize cursor-default">
+                                        {m.nombreCompletoMiembro}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-center text-xs capitalize">
+                                      {m.nombreCompletoMiembro}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="truncate text-xs text-slate-400 font-inter italic cursor-default">
+                                        {rolLabel}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-center text-xs">
+                                      {rolLabel}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {miembrosPrincipales.length === 0 && (
                             <p className="text-sm text-slate-400 italic font-inter">
                               Sin miembros principales registrados.
@@ -887,26 +905,35 @@ export function ExpedienteDetalle({
 
             <TabsContent value="fase-1" className="mt-6">
               {isCaActoUnico ? (
-                <Fase1Panel
-                  expedienteId={data.id}
-                  fase1Creada={Boolean(data["fasePreparatoria"])}
-                  readOnly={readOnly}
-                  basePath={basePath}
-                  tipoContratacion={
-                    (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
-                    undefined
-                  }
-                />
+                isGestionFlow ? (
+                  <Fase1InicialPanel
+                    expedienteId={data.id}
+                    readOnly={readOnly}
+                    basePath={basePath}
+                  />
+                ) : (
+                  <Fase1Panel
+                    expedienteId={data.id}
+                    fase1Creada={Boolean(data["fasePreparatoria"])}
+                    readOnly={readOnly}
+                    basePath={basePath}
+                    tipoContratacion={
+                      (data.modalidad?.tipoContratacion as TipoContratacionBackend | undefined) ??
+                      undefined
+                    }
+                  />
+                )
               ) : (
                 <Card className="border border-slate-200 shadow-sm">
                   <CardContent className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
                     <Info className="h-8 w-8 text-slate-400" />
                     <p className="text-sm font-semibold text-slate-700">
-                      Fase preparatoria disponible solo para Concurso Abierto, Acto Único Apertura
-                      Única
+                      {isGestionFlow ? "Fase inicial" : "Fase preparatoria"} disponible solo para
+                      Concurso Abierto, Acto Único Apertura Única
                     </p>
                     <p className="max-w-md text-sm text-slate-500">
-                      Este flujo de carga de datos de la fase preparatoria aplica únicamente a esa
+                      Este flujo de carga de datos de la{" "}
+                      {isGestionFlow ? "fase inicial" : "fase preparatoria"} aplica únicamente a esa
                       modalidad. La modalidad actual es{" "}
                       <span className="font-medium text-slate-600">{modalidadLabel}</span>.
                     </p>
@@ -927,9 +954,17 @@ export function ExpedienteDetalle({
               />
             </TabsContent>
 
-            {/* ── TabsContent: Fase 3 — Análisis y recomendaciones ── */}
+            {/* ── TabsContent: Fase 3 ── */}
             <TabsContent value="fase-3" className="mt-6">
-              <Fase3Panel expedienteId={data.id} readOnly={readOnly} />
+              {basePath === "/gestion-expedientes" ? (
+                <Fase3GestionPanel
+                  expedienteId={data.id}
+                  readOnly={readOnly}
+                  tipoObjetoContratacion={data.modalidad?.tipoContratacion ?? null}
+                />
+              ) : (
+                <Fase3Panel expedienteId={data.id} readOnly={readOnly} />
+              )}
             </TabsContent>
 
             {/* ── TabsContent: Fase 4 — Decisión y formalización ── */}

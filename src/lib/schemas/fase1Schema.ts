@@ -104,7 +104,6 @@ function buildFase1FormSchema(gestionPaso1Simplificado: boolean) {
   return z
     .object({
       datosActoAutorizacionInicio: requiredText("Los datos del acto administrativo son requeridos"),
-      fechaActaInicio: requiredText("La fecha del acta de inicio es requerida", 50),
       ...paso1Fields,
       diasValidezOferta: requiredInteger("Los dias de validez de la oferta son requeridos"),
       autoridadAclaratorias: requiredText("La autoridad encargada de aclaratorias es requerida"),

@@ -35,8 +35,8 @@ import {
   obtenerStatusDocumentos,
   previewDocumento,
   descargarDocumento,
-  previewListaCotejoEvaluacion,
-  descargarListaCotejoEvaluacion,
+  previewListaCotejo,
+  descargarListaCotejo,
   type DocumentoStatus,
 } from "@/services/generadorDocumentosService";
 import {
@@ -320,7 +320,7 @@ export function Fase3Panel({ expedienteId, readOnly = false }: Fase3PanelProps) 
                               setIsPreviewing(true);
                               setPreviewDocOpen(true);
                               try {
-                                const result = await previewListaCotejoEvaluacion(p.id);
+                                const result = await previewListaCotejo(expedienteId);
                                 setPreviewDocUrl(result.urlArchivo);
                                 setPreviewDocTitle(result.tituloDocumento || "Lista de Cotejo");
                               } catch (error: unknown) {
@@ -342,9 +342,7 @@ export function Fase3Panel({ expedienteId, readOnly = false }: Fase3PanelProps) 
                             onClick={async () => {
                               if (p.oferenteCalificado === null) return;
                               try {
-                                const { data, fileName } = await descargarListaCotejoEvaluacion(
-                                  p.id
-                                );
+                                const { data, fileName } = await descargarListaCotejo(expedienteId);
                                 const blob = new Blob([new Uint8Array(data)], {
                                   type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                 });

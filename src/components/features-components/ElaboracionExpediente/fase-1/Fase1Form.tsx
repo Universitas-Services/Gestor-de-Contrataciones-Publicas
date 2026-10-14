@@ -95,10 +95,6 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function buildFechaIso(fechaActaInicio: string) {
-  return `${fechaActaInicio}T00:00:00.000Z`;
-}
-
 function toFormString(value: number | string | undefined | null) {
   if (value == null) return "";
   return String(value);
@@ -124,7 +120,6 @@ function buildDefaultValues({
   if (!fasePreparatoria) {
     return {
       datosActoAutorizacionInicio: "",
-      fechaActaInicio: "",
       detallesTecnicosCalidad: "",
       alcanceCantidadesObra: "",
       justificacionVentajas: "",
@@ -154,9 +149,6 @@ function buildDefaultValues({
 
   return {
     datosActoAutorizacionInicio: fasePreparatoria.datosActoAutorizacionInicio ?? "",
-    fechaActaInicio: fasePreparatoria.fechaActaInicio
-      ? fasePreparatoria.fechaActaInicio.split("T")[0]
-      : "",
     detallesTecnicosCalidad: fasePreparatoria.detallesTecnicosCalidad ?? "",
     alcanceCantidadesObra: fasePreparatoria.alcanceCantidadesObra ?? "",
     justificacionVentajas: fasePreparatoria.justificacionVentajas ?? "",
@@ -236,7 +228,6 @@ function buildPayload(
 
   const payload: CrearOActualizarFase1Payload = {
     datosActoAutorizacionInicio: values.datosActoAutorizacionInicio,
-    fechaActaInicio: buildFechaIso(values.fechaActaInicio),
     detallesTecnicosCalidad: values.detallesTecnicosCalidad ?? "",
     alcanceCantidadesObra: values.alcanceCantidadesObra ?? "",
     justificacionVentajas: values.justificacionVentajas ?? "",

@@ -1,3 +1,4 @@
+import { getDashboardRoute } from "@/lib/constants/routes";
 import type { SessionPayload } from "@/types/auth.types";
 import { ROLES, type UserRole } from "@/types/role.types";
 
@@ -65,6 +66,13 @@ export function getSupervisorOnboardingRedirect(session: SessionPayload): string
 
 export function getOnboardingRedirect(session: SessionPayload): string | null {
   return getAdminEnteOnboardingRedirect(session) ?? getSupervisorOnboardingRedirect(session);
+}
+
+/**
+ * Destino de un usuario ya autenticado: onboarding pendiente o su dashboard.
+ */
+export function getPostAuthRedirect(session: SessionPayload): string {
+  return getOnboardingRedirect(session) ?? getDashboardRoute(session.role);
 }
 
 export function resolveProtectedRouteRedirect(

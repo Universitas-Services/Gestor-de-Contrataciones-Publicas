@@ -112,17 +112,16 @@ export const generarDocumento = async (
 };
 
 /**
- * POST /generador-documentos/generar/lista-cotejo/{expedienteId}/{evaluacionId}
- * Genera el documento Lista de Cotejo para una evaluación específica.
+ * POST /generador-documentos/generar/lista-cotejo/{expedienteId}
+ * Genera la Lista de Cotejo única del expediente.
  */
 export const generarListaCotejo = async (
-  expedienteId: string,
-  evaluacionId: string
+  expedienteId: string
 ): Promise<GenerarDocumentoResponse> => {
   const token = await getServerToken();
 
   const response = await fetch(
-    `${API_URL}/generador-documentos/generar/lista-cotejo/${expedienteId}/${evaluacionId}`,
+    `${API_URL}/generador-documentos/generar/lista-cotejo/${expedienteId}`,
     {
       method: "POST",
       headers: {
@@ -257,81 +256,137 @@ export const descargarDocumento = async (
   return { data, fileName };
 };
 
+// ─── Documentos maestros Fase 1 (gestión de expedientes) ─────────────
+
+/** Claves de `progreso.documentos` en el panel de gestión. */
+export type DocumentoFase1MaestroId = "actividades-previas" | "pliego" | "acta-inicio" | "llamado";
+
+type DocumentoFase1MaestroConfig = {
+  /** Slug usado en preview/download (y en generar salvo Actividades Previas). */
+  previewDownloadKey: string;
+  /**
+   * true → POST /generador-documentos/actividades-previas/{id}/generar
+   * false → POST /generador-documentos/generar/{previewDownloadKey}/{id}
+   */
+  generarPathEspecial: boolean;
+};
+
+const DOCUMENTOS_FASE1_GESTION: Record<DocumentoFase1MaestroId, DocumentoFase1MaestroConfig> = {
+  "actividades-previas": {
+    previewDownloadKey: "actividades-previas",
+    generarPathEspecial: true,
+  },
+  pliego: {
+    previewDownloadKey: "pliego-condiciones",
+    generarPathEspecial: false,
+  },
+  "acta-inicio": {
+    previewDownloadKey: "acta-inicio",
+    generarPathEspecial: false,
+  },
+  llamado: {
+    previewDownloadKey: "llamado-participar",
+    generarPathEspecial: false,
+  },
+};
+
+function extractApiErrorMessage(errorData: unknown, fallback: string): string {
+  if (!errorData || typeof errorData !== "object") return fallback;
+  const message = (errorData as { message?: unknown }).message;
+  if (typeof message === "string" && message.trim()) return message;
+  if (Array.isArray(message) && message.length > 0) {
+    return message.map(String).join(". ");
+  }
+  return fallback;
+}
+
+function unwrapGenerarResponse(json: unknown): GenerarDocumentoResponse {
+  if (!json || typeof json !== "object") {
+    throw new Error("Respuesta inválida al generar el documento");
+  }
+  const maybeWrapped = json as {
+    data?: GenerarDocumentoResponse;
+  } & Partial<GenerarDocumentoResponse>;
+  const payload = maybeWrapped.data ?? maybeWrapped;
+  if (!payload.id || !payload.url) {
+    throw new Error("Respuesta incompleta al generar el documento");
+  }
+  return {
+    id: payload.id,
+    url: payload.url,
+    fileName: payload.fileName ?? "documento.docx",
+    tipoDocumento: payload.tipoDocumento ?? "",
+    generatedAt: payload.generatedAt ?? new Date().toISOString(),
+  };
+}
+
 /**
- * GET /generador-documentos/preview/lista-cotejo/evaluacion/{evaluacionId}
- * Preview de Lista de Cotejo por evaluación.
+ * POST generar para los 4 documentos maestros de Fase 1 (gestión).
+ * Actividades Previas usa ruta distinta al patrón histórico `/generar/{tipo}/{id}`.
  */
-export const previewListaCotejoEvaluacion = async (
-  evaluacionId: string
-): Promise<PreviewResponse> => {
+export const generarDocumentoFase1Maestro = async (
+  documentoId: DocumentoFase1MaestroId,
+  expedienteId: string
+): Promise<GenerarDocumentoResponse> => {
+  const config = DOCUMENTOS_FASE1_GESTION[documentoId];
   const token = await getServerToken();
 
-  const response = await fetch(
-    `${API_URL}/generador-documentos/preview/lista-cotejo/evaluacion/${evaluacionId}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const url = config.generarPathEspecial
+    ? `${API_URL}/generador-documentos/actividades-previas/${expedienteId}/generar`
+    : `${API_URL}/generador-documentos/generar/${config.previewDownloadKey}/${expedienteId}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({}),
+  });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Lista de cotejo no encontrada. Debe generarla primero.");
-    }
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
-      (errorData as Record<string, string>)?.message ?? "Error al previsualizar la lista de cotejo"
+      extractApiErrorMessage(errorData, `Error al generar el documento: ${documentoId}`)
     );
   }
 
-  return response.json() as Promise<PreviewResponse>;
+  const json: unknown = await response.json();
+  return unwrapGenerarResponse(json);
+};
+
+export const previewDocumentoFase1Maestro = async (
+  documentoId: DocumentoFase1MaestroId,
+  expedienteId: string
+): Promise<PreviewResponse> => {
+  const { previewDownloadKey } = DOCUMENTOS_FASE1_GESTION[documentoId];
+  return previewDocumento(previewDownloadKey, expedienteId);
+};
+
+export const descargarDocumentoFase1Maestro = async (
+  documentoId: DocumentoFase1MaestroId,
+  expedienteId: string
+): Promise<{ data: Uint8Array; fileName: string }> => {
+  const { previewDownloadKey } = DOCUMENTOS_FASE1_GESTION[documentoId];
+  return descargarDocumento(previewDownloadKey, expedienteId);
 };
 
 /**
- * GET /generador-documentos/download/lista-cotejo/evaluacion/{evaluacionId}
- * Descarga la Lista de Cotejo por evaluación.
+ * GET /generador-documentos/preview/lista-cotejo/{expedienteId}
+ * Preview de la Lista de Cotejo única del expediente.
  */
-export const descargarListaCotejoEvaluacion = async (
-  evaluacionId: string
+export const previewListaCotejo = async (expedienteId: string): Promise<PreviewResponse> => {
+  return previewDocumento("lista-cotejo", expedienteId);
+};
+
+/**
+ * GET /generador-documentos/download/lista-cotejo/{expedienteId}
+ * Descarga la Lista de Cotejo única del expediente.
+ */
+export const descargarListaCotejo = async (
+  expedienteId: string
 ): Promise<{ data: Uint8Array; fileName: string }> => {
-  const token = await getServerToken();
-
-  const response = await fetch(
-    `${API_URL}/generador-documentos/download/lista-cotejo/evaluacion/${evaluacionId}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Lista de cotejo no encontrada. Debe generarla primero.");
-    }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorData as Record<string, string>)?.message ?? "Error al descargar la lista de cotejo"
-    );
-  }
-
-  const contentDisposition = response.headers.get("Content-Disposition");
-  let fileName = "lista-cotejo.docx";
-
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
-    if (match?.[1]) {
-      fileName = match[1];
-    }
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  const data = new Uint8Array(arrayBuffer);
-
-  return { data, fileName };
+  return descargarDocumento("lista-cotejo", expedienteId);
 };
 
 /**

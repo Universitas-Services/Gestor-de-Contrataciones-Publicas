@@ -49,6 +49,7 @@ export const ROLE_ROUTES = {
     usuarios: "/admin_ente/gestion-datos/usuarios",
     elaboracionExpediente: "/elaboracion-expediente",
     gestionExpedientes: "/gestion-expedientes",
+    complianceExpediente: "/compliance-expediente",
   },
   [ROLES.SUPERVISOR]: {
     dashboard: "/supervisor/dashboard",
@@ -65,6 +66,7 @@ export const ROLE_ROUTES = {
     registroProveedores: "/registro-proveedores",
     elaboracionExpediente: "/elaboracion-expediente",
     gestionExpedientes: "/gestion-expedientes",
+    complianceExpediente: "/compliance-expediente",
     completarEnte: "/admin_ente/completar-ente",
     configuracion: "/admin_ente/configuracion",
     consultorIA: "/consultor-ia",
@@ -78,6 +80,7 @@ export const ROLE_ROUTES = {
     registroProveedores: "/registro-proveedores",
     elaboracionExpediente: "/elaboracion-expediente",
     gestionExpedientes: "/gestion-expedientes",
+    complianceExpediente: "/compliance-expediente",
     completarEnte: "/admin_ente/completar-ente",
     configuracion: "/admin_ente/configuracion",
     consultorIA: "/consultor-ia",
@@ -90,6 +93,11 @@ export const ROLE_ROUTES = {
  * Rutas públicas (no requieren autenticación)
  */
 export const PUBLIC_ROUTES = ["/login", "/"] as const;
+
+/**
+ * Rutas de entrada a autenticación. Con sesión activa no deben ser accesibles.
+ */
+export const AUTH_ENTRY_ROUTES = ["/login", "/"] as const;
 
 /**
  * Obtener la ruta de dashboard según el rol
@@ -110,13 +118,33 @@ export function getRoleRoutes(role: UserRole): string[] {
  */
 export function isRouteAllowedForRole(path: string, role: UserRole): boolean {
   const normalizedPath = path.split("?")[0]; // Remover query params
+  if (normalizedPath.startsWith(ROLE_BASE_ROUTES[role])) {
+    return true;
+  }
   const roleRoutes = getRoleRoutes(role);
   return roleRoutes.some((route) => normalizedPath.startsWith(route));
+}
+
+function matchesExactOrPrefix(path: string, routes: readonly string[]): boolean {
+  const normalizedPath = path.split("?")[0];
+  return routes.some((route) => {
+    if (route === "/") {
+      return normalizedPath === "/";
+    }
+    return normalizedPath === route || normalizedPath.startsWith(`${route}/`);
+  });
 }
 
 /**
  * Verificar si una ruta es pública
  */
 export function isPublicRoute(path: string): boolean {
-  return PUBLIC_ROUTES.some((route) => path === route || path.startsWith(route));
+  return matchesExactOrPrefix(path, PUBLIC_ROUTES);
+}
+
+/**
+ * Verificar si la ruta es login o home (entrada de autenticación)
+ */
+export function isAuthEntryRoute(path: string): boolean {
+  return matchesExactOrPrefix(path, AUTH_ENTRY_ROUTES);
 }

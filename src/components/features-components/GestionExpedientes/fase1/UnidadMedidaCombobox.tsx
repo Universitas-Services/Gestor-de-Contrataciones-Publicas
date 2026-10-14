@@ -64,7 +64,7 @@ export function UnidadMedidaCombobox({
   };
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={handleOpenChange} modal>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -84,9 +84,11 @@ export function UnidadMedidaCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
+        className="z-[80] w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
+        collisionPadding={8}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onWheel={(e) => e.stopPropagation()}
       >
         <div className="border-b border-border p-2">
           <Input
@@ -103,7 +105,10 @@ export function UnidadMedidaCombobox({
             }}
           />
         </div>
-        <div className="max-h-64 overflow-y-auto p-1">
+        <div
+          className="max-h-56 overflow-y-auto overscroll-contain p-1"
+          onWheel={(e) => e.stopPropagation()}
+        >
           {canCreateCustom ? (
             <button
               type="button"

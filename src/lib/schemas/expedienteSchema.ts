@@ -73,6 +73,24 @@ export const configuracionActoresSchema = z.object({
   fechaLlamadoParticipar: z.string().min(1, "Debe seleccionar la fecha del Llamado a participar"),
 });
 
+/**
+ * Misma validación de actores, con mínimo de fecha del llamado
+ * (un día después de la fecha de elaboración del acta de inicio).
+ */
+export function createConfiguracionActoresSchema(minFechaLlamadoIso?: string) {
+  if (!minFechaLlamadoIso) return configuracionActoresSchema;
+
+  return configuracionActoresSchema.superRefine((data, ctx) => {
+    if (data.fechaLlamadoParticipar && data.fechaLlamadoParticipar < minFechaLlamadoIso) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["fechaLlamadoParticipar"],
+        message: `La fecha del llamado debe ser a partir del ${minFechaLlamadoIso} (un día después del acta de inicio)`,
+      });
+    }
+  });
+}
+
 export type ConfiguracionActoresFormValues = z.infer<typeof configuracionActoresSchema>;
 
 // ─── Schema Paso 4: Cronograma ──────────────────────────────────────
