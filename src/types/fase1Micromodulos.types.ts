@@ -43,6 +43,9 @@ export interface MicromoduloBaseResponse {
   data?: Record<string, unknown>;
 }
 
+/** Base para respuestas que tipan su propio alias legacy `data`. */
+type MicromoduloTypedDataResponse = Omit<MicromoduloBaseResponse, "data">;
+
 export type ActividadesPreviasApiResponse = MicromoduloBaseResponse & Record<string, unknown>;
 
 export type LlamadoApiResponse = MicromoduloBaseResponse & Record<string, unknown>;
@@ -65,10 +68,10 @@ export interface ModeloContratoApiData {
   }>;
 }
 
-export interface ModeloContratoApiResponse extends MicromoduloBaseResponse {
+export type ModeloContratoApiResponse = MicromoduloTypedDataResponse & {
   /** Alias legacy; el payload real suele venir en `datos`. */
   data?: ModeloContratoApiData;
-}
+};
 
 export interface CalificacionLegalPersonalizadoApi {
   id: string;
@@ -85,10 +88,10 @@ export interface CalificacionLegalApiData {
   personalizados?: CalificacionLegalPersonalizadoApi[];
 }
 
-export interface CalificacionLegalApiResponse extends MicromoduloBaseResponse {
+export type CalificacionLegalApiResponse = MicromoduloTypedDataResponse & {
   /** Alias legacy; el payload real suele venir en `datos`. */
   data?: CalificacionLegalApiData;
-}
+};
 
 export interface CalificacionFinancieraRangosApi {
   rangoMaximo?: number;
@@ -116,10 +119,10 @@ export interface CalificacionFinancieraApiData {
   puntuacionMinimaCalifFinanciera?: number;
 }
 
-export interface CalificacionFinancieraApiResponse extends MicromoduloBaseResponse {
+export type CalificacionFinancieraApiResponse = MicromoduloTypedDataResponse & {
   /** Alias legacy; el payload real suele venir en `datos`. */
   data?: CalificacionFinancieraApiData;
-}
+};
 
 export interface CriterioTecnicoRangoApi {
   descripcion?: string;
@@ -146,10 +149,10 @@ export interface CalificacionTecnicaApiData {
   puntuacionMinimaCalifTecnicaAuAu?: number;
 }
 
-export interface CalificacionTecnicaApiResponse extends MicromoduloBaseResponse {
+export type CalificacionTecnicaApiResponse = MicromoduloTypedDataResponse & {
   /** Alias legacy; el payload real suele venir en `datos`. */
   data?: CalificacionTecnicaApiData;
-}
+};
 
 export interface EvaluacionBloqueApi {
   criterios?: Array<Record<string, unknown>>;
@@ -161,10 +164,10 @@ export interface EvaluacionTecnicaEconomicaApiData {
   economica?: EvaluacionBloqueApi;
 }
 
-export interface EvaluacionTecnicaEconomicaApiResponse extends MicromoduloBaseResponse {
+export type EvaluacionTecnicaEconomicaApiResponse = MicromoduloTypedDataResponse & {
   /** Alias legacy; el payload real suele venir en `datos`. */
   data?: EvaluacionTecnicaEconomicaApiData;
-}
+};
 
 export interface EspecificacionesTecnicasArchivoApi {
   id?: string;
